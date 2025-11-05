@@ -3,8 +3,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const buildDatabaseUrl = (): string => {
-  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
-    return process.env.DATABASE_URL;
+  const existingUrl = process.env.DATABASE_URL;
+  
+  if (existingUrl && !existingUrl.includes('[YOUR-PASSWORD]') && !existingUrl.includes('[YOUR-PROJECT-REF]')) {
+    return existingUrl;
   }
 
   const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
@@ -15,17 +17,18 @@ const buildDatabaseUrl = (): string => {
     
     if (projectRefMatch && projectRefMatch[1]) {
       const projectRef = projectRefMatch[1];
+      const encodedPassword = encodeURIComponent(dbPassword);
       const usePooling = process.env.SUPABASE_USE_POOLING !== 'false';
       
       if (usePooling) {
-        return `postgresql://postgres:${dbPassword}@db.${projectRef}.supabase.co:5432/postgres?pgbouncer=true&connection_limit=1`;
+        return `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres?pgbouncer=true&connection_limit=1`;
       } else {
-        return `postgresql://postgres:${dbPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+        return `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
       }
     }
   }
 
-  return process.env.DATABASE_URL || '';
+  return '';
 };
 
 export const config = {

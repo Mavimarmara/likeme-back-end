@@ -4,6 +4,55 @@ import { hashPassword, comparePassword, generateToken } from '@/utils/auth';
 import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, LoginData, AuthResponse } from '@/types';
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Registrar novo usuário
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *               - firstName
+ *               - lastName
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 50
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               surname:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               birthdate:
+ *                 type: string
+ *                 format: date
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *     responses:
+ *       201:
+ *         description: Usuário criado com sucesso
+ *       409:
+ *         description: Usuário ou email já existe
+ */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const userData: CreateUserData = req.body;
@@ -89,6 +138,32 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login de usuário
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login realizado com sucesso
+ *       401:
+ *         description: Credenciais inválidas
+ */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password }: LoginData = req.body;
@@ -130,6 +205,20 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Obter perfil do usuário autenticado
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Perfil obtido com sucesso
+ *       401:
+ *         description: Não autenticado
+ */
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -157,6 +246,43 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   put:
+ *     summary: Atualizar perfil do usuário autenticado
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               surname:
+ *                 type: string
+ *               birthdate:
+ *                 type: string
+ *                 format: date
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *     responses:
+ *       200:
+ *         description: Perfil atualizado com sucesso
+ *       401:
+ *         description: Não autenticado
+ *       404:
+ *         description: Usuário não encontrado
+ */
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -205,6 +331,20 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/account:
+ *   delete:
+ *     summary: Deletar conta do usuário autenticado (soft delete)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Conta desativada com sucesso
+ *       401:
+ *         description: Não autenticado
+ */
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;

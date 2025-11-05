@@ -6,7 +6,7 @@ import {
   deleteRoleGroupUser,
 } from '@/controllers/roleGroupUserController';
 import { createRoleGroupUserSchema, roleGroupUserParamsSchema } from '@/utils/validationSchemas';
-import { validate } from '@/middleware/validation';
+import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 
@@ -17,8 +17,8 @@ router.use(requireAuth);
 
 router.post('/', generalRateLimiter, validate(createRoleGroupUserSchema), createRoleGroupUser);
 router.get('/', generalRateLimiter, getAllRoleGroupUsers);
-router.get('/:userId/:roleGroupId', generalRateLimiter, validate(roleGroupUserParamsSchema, 'params'), getRoleGroupUser);
-router.delete('/:userId/:roleGroupId', generalRateLimiter, validate(roleGroupUserParamsSchema, 'params'), deleteRoleGroupUser);
+router.get('/:userId/:roleGroupId', generalRateLimiter, validateParams(roleGroupUserParamsSchema), getRoleGroupUser);
+router.delete('/:userId/:roleGroupId', generalRateLimiter, validateParams(roleGroupUserParamsSchema), deleteRoleGroupUser);
 
 export default router;
 

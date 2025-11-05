@@ -2,6 +2,46 @@ import { Request, Response } from 'express';
 import prisma from '@/config/database';
 import { sendSuccess, sendError } from '@/utils/response';
 
+/**
+ * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Criar um novo usuário
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - personId
+ *               - username
+ *               - password
+ *             properties:
+ *               personId:
+ *                 type: string
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               salt:
+ *                 type: string
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Usuário criado com sucesso
+ *       404:
+ *         description: Pessoa não encontrada
+ *       409:
+ *         description: Usuário já existe
+ */
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const userData = req.body;
@@ -59,6 +99,26 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Obter usuário por ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuário obtido com sucesso
+ *       404:
+ *         description: Usuário não encontrado
+ */
 export const getUserById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -87,6 +147,29 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Listar todos os usuários
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Lista de usuários obtida com sucesso
+ */
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -132,6 +215,44 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Atualizar usuário
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               salt:
+ *                 type: string
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Usuário atualizado com sucesso
+ *       404:
+ *         description: Usuário não encontrado
+ */
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -161,6 +282,26 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Deletar usuário (soft delete)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuário deletado com sucesso
+ *       404:
+ *         description: Usuário não encontrado
+ */
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;

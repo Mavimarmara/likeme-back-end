@@ -7,7 +7,7 @@ import {
   deleteUser,
 } from '@/controllers/userController';
 import { createUserCrudSchema, updateUserCrudSchema, idParamSchema } from '@/utils/validationSchemas';
-import { validate } from '@/middleware/validation';
+import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 
@@ -18,9 +18,9 @@ router.use(requireAuth);
 
 router.post('/', generalRateLimiter, validate(createUserCrudSchema), createUser);
 router.get('/', generalRateLimiter, getAllUsers);
-router.get('/:id', generalRateLimiter, validate(idParamSchema, 'params'), getUserById);
-router.put('/:id', generalRateLimiter, validate(updateUserCrudSchema), validate(idParamSchema, 'params'), updateUser);
-router.delete('/:id', generalRateLimiter, validate(idParamSchema, 'params'), deleteUser);
+router.get('/:id', generalRateLimiter, validateParams(idParamSchema), getUserById);
+router.put('/:id', generalRateLimiter, validate(updateUserCrudSchema), validateParams(idParamSchema), updateUser);
+router.delete('/:id', generalRateLimiter, validateParams(idParamSchema), deleteUser);
 
 export default router;
 
