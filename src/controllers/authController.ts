@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from '@/config/database';
-import { hashPassword, comparePassword, generateToken } from '@/utils/auth';
+import { hashPassword, generateToken } from '@/utils/auth';
+import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
-import { CreateUserData, LoginData, AuthResponse } from '@/types';
+import { CreateUserData, AuthResponse } from '@/types';
 
 /**
  * @swagger
@@ -148,7 +149,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Login de usuário
+ *     summary: Login com Auth0
+ *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. Aceita idToken no body ou no header Authorization.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -157,30 +159,124 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  *           schema:
  *             type: object
  *             required:
- *               - password
+ *               - idToken
  *             properties:
- *               username:
+ *               idToken:
  *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
+ *                 description: Token JWT do Auth0 (idToken)
+ *               user:
+ *                 type: object
+ *                 description: Informações do usuário do Auth0 (opcional)
+ *                 properties:
+ *                   email:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   picture:
+ *                     type: string
  *     responses:
  *       200:
  *         description: Login realizado com sucesso
+ *       400:
+ *         description: Token inválido ou ausente
  *       401:
- *         description: Credenciais inválidas
+ *         description: Token do Auth0 inválido
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password }: LoginData = req.body;
+    const idToken = req.body.idToken || (req.headers.authorization?.replace('Bearer ', ''));
+    
+    if (!idToken) {
+      sendError(res, 'Token do Auth0 não fornecido', 400);
+      return;
+    }
+
+    let decoded;
+    try {
+      decoded = await verifyAuth0Token(idToken);
+    } catch (error) {
+      console.error('Auth0 token validation error:', error);
+      sendError(res, 'Token do Auth0 inválido ou expirado', 401);
+      return;
+    }
+
+    const auth0User = extractUserInfoFromToken(decoded);
+    const userInfo = req.body.user || {};
+
+    const email = auth0User.email || userInfo.email;
+    if (!email) {
+      sendError(res, 'Email não encontrado no token do Auth0', 400);
+      return;
+    }
+
+    const existingContact = await prisma.personContact.findFirst({
+      where: {
+        type: 'email',
+        value: email,
+        deletedAt: null,
+      },
+      include: {
+        person: {
+          include: {
+            user: {
+              include: {
+                person: {
+                  include: {
+                    contacts: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
 
     let user;
+    let person;
 
-    if (username) {
-      user = await prisma.user.findUnique({
-        where: { username },
+    if (existingContact?.person?.user) {
+      user = existingContact.person.user;
+      person = existingContact.person;
+
+      if (userInfo.picture && userInfo.picture !== user.avatar) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { avatar: userInfo.picture },
+        });
+        user.avatar = userInfo.picture;
+      }
+    } else {
+      const name = auth0User.name || userInfo.name || email.split('@')[0];
+      const nameParts = name.split(' ');
+      const firstName = auth0User.given_name || nameParts[0] || '';
+      const lastName = auth0User.family_name || nameParts.slice(1).join(' ') || '';
+
+      person = await prisma.person.create({
+        data: {
+          firstName,
+          lastName,
+          surname: auth0User.nickname || undefined,
+        },
+      });
+
+      await prisma.personContact.create({
+        data: {
+          personId: person.id,
+          type: 'email',
+          value: email,
+        },
+      });
+
+      const randomPassword = await hashPassword(`auth0_${auth0User.sub}_${Date.now()}`);
+      
+      user = await prisma.user.create({
+        data: {
+          personId: person.id,
+          password: randomPassword,
+          avatar: auth0User.picture || userInfo.picture || undefined,
+          isActive: true,
+        },
         include: {
           person: {
             include: {
@@ -189,61 +285,25 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           },
         },
       });
-    } else if (email) {
-      const personContact = await prisma.personContact.findFirst({
-        where: {
-          type: 'email',
-          value: email,
-          deletedAt: null,
-        },
-        include: {
-          person: {
-            include: {
-              user: {
-                include: {
-                  person: {
-                    include: {
-                      contacts: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (personContact?.person?.user) {
-        user = {
-          ...personContact.person.user,
-          person: personContact.person,
-        };
-      }
     }
 
-    if (!user || !user.isActive) {
-      sendError(res, 'Credenciais inválidas', 401);
+    if (!user.isActive || user.deletedAt) {
+      sendError(res, 'Usuário inativo ou deletado', 401);
       return;
     }
 
-    const isPasswordValid = await comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      sendError(res, 'Credenciais inválidas', 401);
-      return;
-    }
-
-    const token = generateToken(user.id);
+    const sessionToken = generateToken(user.id);
     const { password: _, ...userWithoutPassword } = user;
 
     const response: AuthResponse = {
       user: userWithoutPassword,
-      token,
+      token: sessionToken,
     };
 
     sendSuccess(res, response, 'Login realizado com sucesso');
   } catch (error) {
-    console.error('Login error:', error);
-    sendError(res, 'Erro ao fazer login');
+    console.error('Auth0 login error:', error);
+    sendError(res, 'Erro ao fazer login com Auth0');
   }
 };
 
@@ -400,5 +460,29 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   } catch (error) {
     console.error('Delete account error:', error);
     sendError(res, 'Erro ao desativar conta');
+  }
+};
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout do usuário
+ *     description: Invalida a sessão do usuário (opcional, token será invalidado no frontend)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout realizado com sucesso
+ *       401:
+ *         description: Não autenticado
+ */
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    sendSuccess(res, null, 'Logout realizado com sucesso');
+  } catch (error) {
+    console.error('Logout error:', error);
+    sendError(res, 'Erro ao fazer logout');
   }
 };

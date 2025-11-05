@@ -26,12 +26,6 @@ export interface UpdateUserData {
   avatar?: string;
 }
 
-export interface LoginData {
-  username?: string;
-  email?: string;
-  password: string;
-}
-
 export interface AuthResponse {
   user: Omit<User, 'password'>;
   token: string;

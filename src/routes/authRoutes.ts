@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { 
   register, 
-  login, 
+  login,
+  logout,
   getProfile, 
   updateProfile, 
   deleteAccount 
 } from '@/controllers/authController';
 import { 
   createUserSchema, 
-  loginSchema, 
+  loginSchema,
   updateUserSchema 
 } from '@/utils/validationSchemas';
 import { validate } from '@/middleware/validation';
@@ -20,6 +21,7 @@ const router = Router();
 router.post('/register', authRateLimiter, validate(createUserSchema), register);
 router.post('/login', authRateLimiter, validate(loginSchema), login);
 
+router.post('/logout', authenticateToken, requireAuth, logout);
 router.get('/profile', authenticateToken, requireAuth, getProfile);
 router.put('/profile', authenticateToken, requireAuth, validate(updateUserSchema), updateProfile);
 router.delete('/account', authenticateToken, requireAuth, deleteAccount);

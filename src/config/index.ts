@@ -58,4 +58,10 @@ export const config = {
   },
   corsOrigin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
   apiDocsPath: process.env.API_DOCS_PATH || '/api-docs',
+  auth0: {
+    domain: process.env.AUTH0_DOMAIN || '',
+    clientId: process.env.AUTH0_CLIENT_ID || '',
+    clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
+    issuer: process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}/` : '',
+  },
 };
