@@ -136,6 +136,38 @@ export const roleGroupUserParamsSchema = Joi.object({
   roleGroupId: Joi.string().required(),
 });
 
+// PersonalObjective validation schemas
+export const createPersonalObjectiveSchema = Joi.object({
+  name: Joi.string().min(2).max(200).required(),
+  description: Joi.string().max(500).optional(),
+  order: Joi.number().integer().optional(),
+});
+
+export const updatePersonalObjectiveSchema = Joi.object({
+  name: Joi.string().min(2).max(200).optional(),
+  description: Joi.string().max(500).optional(),
+  order: Joi.number().integer().optional(),
+});
+
+// UserPersonalObjective validation schemas
+export const createUserPersonalObjectiveSchema = Joi.object({
+  userId: Joi.string().optional(), // Opcional para endpoints "me"
+  objectiveId: Joi.string().required(),
+});
+
+export const addMyObjectiveSchema = Joi.object({
+  objectiveId: Joi.string().required(),
+});
+
+export const userPersonalObjectiveParamsSchema = Joi.object({
+  userId: Joi.string().required(),
+  objectiveId: Joi.string().required(),
+});
+
+export const objectiveIdParamSchema = Joi.object({
+  objectiveId: Joi.string().required(),
+});
+
 // Params validation schemas
 export const idParamSchema = Joi.object({
   id: Joi.string().required(),

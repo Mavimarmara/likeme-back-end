@@ -18,6 +18,8 @@ import roleRoutes from '@/routes/roleRoutes';
 import roleGroupRoutes from '@/routes/roleGroupRoutes';
 import roleGroupRoleRoutes from '@/routes/roleGroupRoleRoutes';
 import roleGroupUserRoutes from '@/routes/roleGroupUserRoutes';
+import personalObjectiveRoutes from '@/routes/personalObjectiveRoutes';
+import userPersonalObjectiveRoutes from '@/routes/userPersonalObjectiveRoutes';
 
 const app = express();
 
@@ -102,6 +104,8 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/role-groups', roleGroupRoutes);
 app.use('/api/role-group-roles', roleGroupRoleRoutes);
 app.use('/api/role-group-users', roleGroupUserRoutes);
+app.use('/api/personal-objectives', personalObjectiveRoutes);
+app.use('/api/user-personal-objectives', userPersonalObjectiveRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

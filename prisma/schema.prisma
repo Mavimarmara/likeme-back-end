@@ -66,10 +66,28 @@ model User {
   person    Person   @relation("PersonUser", fields: [personId], references: [id], onDelete: Cascade)
   // Relations (inverse - apenas para validação Prisma)
   roleGroups RoleGroupUser[] @relation("UserRoleGroups")
+  personalObjectives UserPersonalObjective[] @relation("UserPersonalObjectives")
 
   @@map("user")
   @@index([personId])
   @@index([username])
+}
+
+model PersonalObjective {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  name        String   @unique
+  description String?
+  order       Int?     // Para ordenação dos objetivos
+
+  // Relations (inverse - apenas para validação Prisma)
+  users      UserPersonalObjective[] @relation("PersonalObjectiveUsers")
+
+  @@map("personal_objective")
+  @@index([name])
+  @@index([order])
 }
 
 model Role {
@@ -131,4 +149,19 @@ model RoleGroupUser {
 
   @@id([userId, roleGroupId])
   @@map("role_group_user")
+}
+
+model UserPersonalObjective {
+  userId      String   @map("user_id")
+  objectiveId String   @map("objective_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  // Relations
+  user      User             @relation("UserPersonalObjectives", fields: [userId], references: [id], onDelete: Cascade)
+  objective PersonalObjective @relation("PersonalObjectiveUsers", fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  @@id([userId, objectiveId])
+  @@map("user_personal_objective")
 }
