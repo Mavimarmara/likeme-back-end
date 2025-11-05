@@ -40,13 +40,13 @@ export const updateUserCrudSchema = Joi.object({
 });
 
 export const loginSchema = Joi.object({
-  idToken: Joi.string().required(),
+  idToken: Joi.string().optional(),
   user: Joi.object({
     email: Joi.string().email().optional(),
     name: Joi.string().optional(),
     picture: Joi.string().uri().optional(),
   }).optional(),
-});
+}).min(0);
 
 export const paginationSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),

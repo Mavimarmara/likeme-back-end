@@ -2,20 +2,14 @@ import jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 import { config } from '@/config';
 
-/**
- * Cliente JWKS para obter as chaves públicas do Auth0
- */
 const client = jwksClient({
   jwksUri: config.auth0.domain ? `https://${config.auth0.domain}/.well-known/jwks.json` : '',
   timeout: 30000,
   cache: true,
   cacheMaxEntries: 5,
-  cacheMaxAge: 600000, // 10 minutos
+  cacheMaxAge: 600000,
 });
 
-/**
- * Obtém a chave pública do Auth0 para validar o token
- */
 function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
   if (!config.auth0.domain) {
     return callback(new Error('AUTH0_DOMAIN não configurado'));
@@ -30,9 +24,6 @@ function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
   });
 }
 
-/**
- * Valida o idToken do Auth0 e retorna o payload decodificado
- */
 export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload> => {
   return new Promise((resolve, reject) => {
     if (!config.auth0.domain) {
@@ -61,11 +52,8 @@ export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload>
   });
 };
 
-/**
- * Extrai informações do usuário do token do Auth0
- */
 export interface Auth0UserInfo {
-  sub: string; // Auth0 user ID
+  sub: string;
   email?: string;
   email_verified?: boolean;
   name?: string;

@@ -150,23 +150,21 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  * /api/auth/login:
  *   post:
  *     summary: Login com Auth0
- *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. Aceita idToken no body ou no header Authorization.
+ *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. O idToken pode ser enviado no body ou no header Authorization (Bearer token).
  *     tags: [Auth]
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - idToken
  *             properties:
  *               idToken:
  *                 type: string
- *                 description: Token JWT do Auth0 (idToken)
+ *                 description: Token JWT do Auth0 (idToken). Opcional se enviado no header Authorization.
  *               user:
  *                 type: object
- *                 description: Informações do usuário do Auth0 (opcional)
+ *                 description: Informações adicionais do usuário do Auth0 (opcional)
  *                 properties:
  *                   email:
  *                     type: string
@@ -174,6 +172,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  *                     type: string
  *                   picture:
  *                     type: string
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Login realizado com sucesso
