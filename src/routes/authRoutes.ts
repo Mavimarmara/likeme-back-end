@@ -17,11 +17,9 @@ import { authRateLimiter } from '@/middleware/rateLimiter';
 
 const router = Router();
 
-// Public routes
 router.post('/register', authRateLimiter, validate(createUserSchema), register);
 router.post('/login', authRateLimiter, validate(loginSchema), login);
 
-// Protected routes
 router.get('/profile', authenticateToken, requireAuth, getProfile);
 router.put('/profile', authenticateToken, requireAuth, validate(updateUserSchema), updateProfile);
 router.delete('/account', authenticateToken, requireAuth, deleteAccount);

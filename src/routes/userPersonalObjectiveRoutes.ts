@@ -18,12 +18,10 @@ const router = Router();
 router.use(authenticateToken);
 router.use(requireAuth);
 
-// Endpoints do usuário autenticado (meus objetivos) - devem vir antes das rotas com params
 router.get('/me/objectives', generalRateLimiter, getMyObjectives);
 router.post('/me/objectives', generalRateLimiter, validate(addMyObjectiveSchema), addMyObjective);
 router.delete('/me/objectives/:objectiveId', generalRateLimiter, validate(objectiveIdParamSchema, 'params'), removeMyObjective);
 
-// Endpoints administrativos (CRUD completo)
 router.post('/', generalRateLimiter, validate(createUserPersonalObjectiveSchema), createUserPersonalObjective);
 router.get('/', generalRateLimiter, getAllUserPersonalObjectives);
 router.get('/:userId/:objectiveId', generalRateLimiter, validate(userPersonalObjectiveParamsSchema, 'params'), getUserPersonalObjective);

@@ -8,7 +8,6 @@ export const errorHandler = (
 ) => {
   console.error('Error:', error);
 
-  // Prisma errors
   if (error.code === 'P2002') {
     return res.status(409).json({
       success: false,
@@ -23,7 +22,6 @@ export const errorHandler = (
     });
   }
 
-  // Validation errors
   if (error.name === 'ValidationError') {
     return res.status(400).json({
       success: false,
@@ -32,7 +30,6 @@ export const errorHandler = (
     });
   }
 
-  // JWT errors
   if (error.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
@@ -47,7 +44,6 @@ export const errorHandler = (
     });
   }
 
-  // Default error
   const statusCode = error.statusCode || 500;
   const message = error.message || 'Erro interno do servidor';
 

@@ -1,6 +1,5 @@
 import Joi from 'joi';
 
-// User validation schemas (para auth - registro completo)
 export const createUserSchema = Joi.object({
   username: Joi.string().min(3).max(50).required(),
   email: Joi.string().email().required(),
@@ -13,7 +12,6 @@ export const createUserSchema = Joi.object({
   avatar: Joi.string().uri().optional(),
 });
 
-// User validation schemas (para CRUD - apenas campos do User)
 export const createUserCrudSchema = Joi.object({
   personId: Joi.string().required(),
   username: Joi.string().min(3).max(50).required(),
@@ -46,8 +44,6 @@ export const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
-
-// Query validation schemas
 export const paginationSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
@@ -62,7 +58,6 @@ export const searchSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
 });
 
-// Person validation schemas
 export const createPersonSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
@@ -79,7 +74,6 @@ export const updatePersonSchema = Joi.object({
   birthdate: Joi.date().max('now').optional(),
 });
 
-// PersonContact validation schemas
 export const createPersonContactSchema = Joi.object({
   personId: Joi.string().required(),
   type: Joi.string().valid('email', 'phone', 'whatsapp', 'other').required(),
@@ -91,7 +85,6 @@ export const updatePersonContactSchema = Joi.object({
   value: Joi.string().optional(),
 });
 
-// Role validation schemas
 export const createRoleSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   description: Joi.string().max(500).optional(),
@@ -102,7 +95,6 @@ export const updateRoleSchema = Joi.object({
   description: Joi.string().max(500).optional(),
 });
 
-// RoleGroup validation schemas
 export const createRoleGroupSchema = Joi.object({
   id: Joi.string().required(),
   name: Joi.string().min(2).max(100).required(),
@@ -114,7 +106,6 @@ export const updateRoleGroupSchema = Joi.object({
   description: Joi.string().max(500).optional(),
 });
 
-// RoleGroupRole validation schemas
 export const createRoleGroupRoleSchema = Joi.object({
   roleGroupId: Joi.string().required(),
   roleId: Joi.string().required(),
@@ -125,7 +116,6 @@ export const roleGroupRoleParamsSchema = Joi.object({
   roleId: Joi.string().required(),
 });
 
-// RoleGroupUser validation schemas
 export const createRoleGroupUserSchema = Joi.object({
   userId: Joi.string().required(),
   roleGroupId: Joi.string().required(),
@@ -136,7 +126,6 @@ export const roleGroupUserParamsSchema = Joi.object({
   roleGroupId: Joi.string().required(),
 });
 
-// PersonalObjective validation schemas
 export const createPersonalObjectiveSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   description: Joi.string().max(500).optional(),
@@ -149,9 +138,8 @@ export const updatePersonalObjectiveSchema = Joi.object({
   order: Joi.number().integer().optional(),
 });
 
-// UserPersonalObjective validation schemas
 export const createUserPersonalObjectiveSchema = Joi.object({
-  userId: Joi.string().optional(), // Opcional para endpoints "me"
+  userId: Joi.string().optional(),
   objectiveId: Joi.string().required(),
 });
 
@@ -168,7 +156,6 @@ export const objectiveIdParamSchema = Joi.object({
   objectiveId: Joi.string().required(),
 });
 
-// Params validation schemas
 export const idParamSchema = Joi.object({
   id: Joi.string().required(),
 });

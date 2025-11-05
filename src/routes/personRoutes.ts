@@ -13,11 +13,9 @@ import { generalRateLimiter } from '@/middleware/rateLimiter';
 
 const router = Router();
 
-// Todas as rotas requerem autenticação
 router.use(authenticateToken);
 router.use(requireAuth);
 
-// CRUD endpoints
 router.post('/', generalRateLimiter, validate(createPersonSchema), createPerson);
 router.get('/', generalRateLimiter, getAllPersons);
 router.get('/:id', generalRateLimiter, validate(idParamSchema, 'params'), getPersonById);

@@ -1,12 +1,10 @@
 import { Request } from 'express';
 import { User } from '@prisma/client';
 
-// Extend Express Request to include user
 export interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
-// User types
 export interface CreateUserData {
   username: string;
   email: string;
@@ -28,7 +26,6 @@ export interface UpdateUserData {
   avatar?: string;
 }
 
-// Auth types
 export interface LoginData {
   username: string;
   password: string;
@@ -39,7 +36,6 @@ export interface AuthResponse {
   token: string;
 }
 
-// Anamnese types
 export interface AnamneseAnswer {
   questionId: string;
   answer: string;
@@ -49,7 +45,6 @@ export interface CreateAnamneseData {
   answers: AnamneseAnswer[];
 }
 
-// Activity types
 export interface CreateActivityData {
   title: string;
   description?: string;
@@ -69,7 +64,6 @@ export interface UpdateActivityData {
   scheduledAt?: string;
 }
 
-// Wellness types
 export interface CreateWellnessData {
   category: 'physical' | 'mental' | 'emotional' | 'social';
   score: number;
@@ -77,7 +71,6 @@ export interface CreateWellnessData {
   date?: string;
 }
 
-// Post types
 export interface CreatePostData {
   content: string;
   category: 'tips' | 'experiences' | 'questions' | 'achievements';
@@ -90,7 +83,6 @@ export interface UpdatePostData {
   tags?: string[];
 }
 
-// Product types
 export interface CreateProductData {
   title: string;
   description: string;
@@ -115,7 +107,6 @@ export interface UpdateProductData {
   stock?: number;
 }
 
-// Order types
 export interface CreateOrderData {
   items: {
     productId: string;
@@ -130,7 +121,6 @@ export interface CreateOrderData {
   };
 }
 
-// Health Provider types
 export interface CreateHealthProviderData {
   name: string;
   specialty: string;
@@ -146,7 +136,6 @@ export interface UpdateHealthProviderData {
   isAvailable?: boolean;
 }
 
-// Appointment types
 export interface CreateAppointmentData {
   providerId: string;
   date: string;
@@ -161,7 +150,6 @@ export interface UpdateAppointmentData {
   notes?: string;
 }
 
-// API Response types
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
@@ -179,7 +167,6 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// Query parameters
 export interface PaginationQuery {
   page?: number;
   limit?: number;

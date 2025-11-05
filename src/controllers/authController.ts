@@ -8,7 +8,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const userData: CreateUserData = req.body;
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { username: userData.username },
     });
@@ -18,7 +17,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if person already exists by email
     const existingContact = await prisma.personContact.findFirst({
       where: {
         type: 'email',
@@ -31,10 +29,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Hash password
     const hashedPassword = await hashPassword(userData.password);
 
-    // Create person first
     const person = await prisma.person.create({
       data: {
         firstName: userData.firstName,
@@ -44,7 +40,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Create email contact
     await prisma.personContact.create({
       data: {
         personId: person.id,
@@ -53,7 +48,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Create phone contact if provided
     if (userData.phone) {
       await prisma.personContact.create({
         data: {
@@ -64,7 +58,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         personId: person.id,
@@ -81,10 +74,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Generate token
     const token = generateToken(user.id);
-
-    // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
 
     const response: AuthResponse = {
@@ -103,7 +93,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password }: LoginData = req.body;
 
-    // Find user by username
     const user = await prisma.user.findUnique({
       where: { username },
       include: {
@@ -120,17 +109,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check password
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
       sendError(res, 'Credenciais inválidas', 401);
       return;
     }
 
-    // Generate token
     const token = generateToken(user.id);
-
-    // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
 
     const response: AuthResponse = {
@@ -177,7 +162,6 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     const userId = (req as any).user.id;
     const updateData = req.body;
 
-    // Get user to access personId
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -187,19 +171,16 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Update user fields
     const userUpdateData: any = {};
     if (updateData.username) userUpdateData.username = updateData.username;
     if (updateData.avatar) userUpdateData.avatar = updateData.avatar;
 
-    // Update person fields
     const personUpdateData: any = {};
     if (updateData.firstName) personUpdateData.firstName = updateData.firstName;
     if (updateData.lastName) personUpdateData.lastName = updateData.lastName;
     if (updateData.surname) personUpdateData.surname = updateData.surname;
     if (updateData.birthdate) personUpdateData.birthdate = new Date(updateData.birthdate);
 
-    // Update user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -228,7 +209,6 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   try {
     const userId = (req as any).user.id;
 
-    // Soft delete - deactivate account
     await prisma.user.update({
       where: { id: userId },
       data: { isActive: false },

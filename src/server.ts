@@ -9,7 +9,6 @@ import { config } from '@/config';
 import { errorHandler } from '@/middleware/errorHandler';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 
-// Import routes
 import authRoutes from '@/routes/authRoutes';
 import personRoutes from '@/routes/personRoutes';
 import personContactRoutes from '@/routes/personContactRoutes';
@@ -23,27 +22,18 @@ import userPersonalObjectiveRoutes from '@/routes/userPersonalObjectiveRoutes';
 
 const app = express();
 
-// Security middleware
 app.use(helmet());
 app.use(cors({
   origin: config.corsOrigin,
   credentials: true,
 }));
 
-// Compression middleware
 app.use(compression());
-
-// Logging middleware
 app.use(morgan('combined'));
-
-// Rate limiting
 app.use(generalRateLimiter);
-
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -82,10 +72,8 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// API Documentation
 app.use(config.apiDocsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -95,7 +83,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/persons', personRoutes);
 app.use('/api/person-contacts', personContactRoutes);
@@ -107,7 +94,6 @@ app.use('/api/role-group-users', roleGroupUserRoutes);
 app.use('/api/personal-objectives', personalObjectiveRoutes);
 app.use('/api/user-personal-objectives', userPersonalObjectiveRoutes);
 
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -116,10 +102,8 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error handling middleware
 app.use(errorHandler);
 
-// Start server
 const PORT = config.port;
 
 app.listen(PORT, () => {

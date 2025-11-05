@@ -6,7 +6,6 @@ export const createUserPersonalObjective = async (req: Request, res: Response): 
   try {
     const { userId, objectiveId } = req.body;
 
-    // Verificar se objetivo existe
     const objective = await prisma.personalObjective.findUnique({
       where: { id: objectiveId },
     });
@@ -16,7 +15,6 @@ export const createUserPersonalObjective = async (req: Request, res: Response): 
       return;
     }
 
-    // Verificar se usuário existe
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -26,7 +24,6 @@ export const createUserPersonalObjective = async (req: Request, res: Response): 
       return;
     }
 
-    // Verificar se já existe
     const existing = await prisma.userPersonalObjective.findFirst({
       where: {
         userId,
@@ -180,7 +177,6 @@ export const deleteUserPersonalObjective = async (req: Request, res: Response): 
   }
 };
 
-// Endpoint especial para obter objetivos do usuário autenticado
 export const getMyObjectives = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -207,7 +203,6 @@ export const getMyObjectives = async (req: Request, res: Response): Promise<void
   }
 };
 
-// Endpoint para adicionar objetivo ao usuário autenticado
 export const addMyObjective = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -218,7 +213,6 @@ export const addMyObjective = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Verificar se objetivo existe
     const objective = await prisma.personalObjective.findUnique({
       where: { id: objectiveId },
     });
@@ -228,7 +222,6 @@ export const addMyObjective = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Verificar se já existe
     const existing = await prisma.userPersonalObjective.findFirst({
       where: {
         userId,
@@ -259,7 +252,6 @@ export const addMyObjective = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// Endpoint para remover objetivo do usuário autenticado
 export const removeMyObjective = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;

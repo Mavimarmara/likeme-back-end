@@ -6,7 +6,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const userData = req.body;
 
-    // Check if person exists
     const person = await prisma.person.findUnique({
       where: { id: userData.personId },
     });
@@ -16,7 +15,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Check if user already exists for this person
     const existingUser = await prisma.user.findUnique({
       where: { personId: userData.personId },
     });
@@ -26,7 +24,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Check if username is already taken
     const existingUsername = await prisma.user.findUnique({
       where: { username: userData.username },
     });
