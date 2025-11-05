@@ -18,7 +18,6 @@ import { sendSuccess, sendError } from '@/utils/response';
  *             type: object
  *             required:
  *               - personId
- *               - username
  *               - password
  *             properties:
  *               personId:
@@ -64,19 +63,21 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const existingUsername = await prisma.user.findUnique({
-      where: { username: userData.username },
-    });
+    if (userData.username) {
+      const existingUsername = await prisma.user.findUnique({
+        where: { username: userData.username },
+      });
 
-    if (existingUsername) {
-      sendError(res, 'Username já está em uso', 409);
-      return;
+      if (existingUsername) {
+        sendError(res, 'Username já está em uso', 409);
+        return;
+      }
     }
 
     const user = await prisma.user.create({
       data: {
         personId: userData.personId,
-        username: userData.username,
+        username: userData.username || null,
         password: userData.password,
         salt: userData.salt,
         avatar: userData.avatar,

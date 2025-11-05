@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export interface CreateUserData {
-  username: string;
+  username?: string;
   email: string;
   password: string;
   firstName: string;
@@ -27,7 +27,8 @@ export interface UpdateUserData {
 }
 
 export interface LoginData {
-  username: string;
+  username?: string;
+  email?: string;
   password: string;
 }
 

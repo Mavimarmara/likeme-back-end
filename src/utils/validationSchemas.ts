@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 export const createUserSchema = Joi.object({
-  username: Joi.string().min(3).max(50).required(),
+  username: Joi.string().min(3).max(50).optional(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).max(100).required(),
   firstName: Joi.string().min(2).max(100).required(),
@@ -14,7 +14,7 @@ export const createUserSchema = Joi.object({
 
 export const createUserCrudSchema = Joi.object({
   personId: Joi.string().required(),
-  username: Joi.string().min(3).max(50).required(),
+  username: Joi.string().min(3).max(50).optional(),
   password: Joi.string().min(6).max(100).required(),
   salt: Joi.string().optional(),
   avatar: Joi.string().uri().optional(),
@@ -40,9 +40,10 @@ export const updateUserCrudSchema = Joi.object({
 });
 
 export const loginSchema = Joi.object({
-  username: Joi.string().required(),
+  username: Joi.string().optional(),
+  email: Joi.string().email().optional(),
   password: Joi.string().required(),
-});
+}).or('username', 'email');
 
 export const paginationSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),

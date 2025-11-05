@@ -17,7 +17,6 @@ import { CreateUserData, LoginData, AuthResponse } from '@/types';
  *           schema:
  *             type: object
  *             required:
- *               - username
  *               - email
  *               - password
  *               - firstName
@@ -57,13 +56,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const userData: CreateUserData = req.body;
 
-    const existingUser = await prisma.user.findUnique({
-      where: { username: userData.username },
-    });
+    if (userData.username) {
+      const existingUser = await prisma.user.findUnique({
+        where: { username: userData.username },
+      });
 
-    if (existingUser) {
-      sendError(res, 'Usuário já existe com este username', 409);
-      return;
+      if (existingUser) {
+        sendError(res, 'Usuário já existe com este username', 409);
+        return;
+      }
     }
 
     const existingContact = await prisma.personContact.findFirst({
@@ -107,13 +108,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
+    const userDataToCreate: any = {
+      personId: person.id,
+      password: hashedPassword,
+      avatar: userData.avatar,
+    };
+
+    if (userData.username) {
+      userDataToCreate.username = userData.username;
+    }
+
     const user = await prisma.user.create({
-      data: {
-        personId: person.id,
-        username: userData.username,
-        password: hashedPassword,
-        avatar: userData.avatar,
-      },
+      data: userDataToCreate,
       include: {
         person: {
           include: {
@@ -151,11 +157,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  *           schema:
  *             type: object
  *             required:
- *               - username
  *               - password
  *             properties:
  *               username:
  *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
  *               password:
  *                 type: string
  *     responses:
@@ -166,18 +174,52 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, password }: LoginData = req.body;
+    const { username, email, password }: LoginData = req.body;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: {
-        person: {
-          include: {
-            contacts: true,
+    let user;
+
+    if (username) {
+      user = await prisma.user.findUnique({
+        where: { username },
+        include: {
+          person: {
+            include: {
+              contacts: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else if (email) {
+      const personContact = await prisma.personContact.findFirst({
+        where: {
+          type: 'email',
+          value: email,
+          deletedAt: null,
+        },
+        include: {
+          person: {
+            include: {
+              user: {
+                include: {
+                  person: {
+                    include: {
+                      contacts: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (personContact?.person?.user) {
+        user = {
+          ...personContact.person.user,
+          person: personContact.person,
+        };
+      }
+    }
 
     if (!user || !user.isActive) {
       sendError(res, 'Credenciais inválidas', 401);

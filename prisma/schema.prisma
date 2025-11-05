@@ -57,7 +57,7 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   personId  String   @unique @map("person_id")
-  username  String   @unique
+  username  String?  @unique
   password  String
   salt      String?
   avatar    String?
