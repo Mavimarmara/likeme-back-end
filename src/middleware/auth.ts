@@ -26,18 +26,24 @@ export const authenticateToken = async (
       where: { id: decoded.userId },
       select: {
         id: true,
-        email: true,
-        name: true,
-        phone: true,
+        personId: true,
+        username: true,
         password: true,
-        birthDate: true,
-        gender: true,
+        salt: true,
         avatar: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
       },
     });
+
+    if (user && user.deletedAt) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuário deletado',
+      });
+    }
 
     if (!user || !user.isActive) {
       return res.status(401).json({

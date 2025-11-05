@@ -8,25 +8,29 @@ export interface AuthenticatedRequest extends Request {
 
 // User types
 export interface CreateUserData {
-  name: string;
+  username: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
+  surname?: string;
   phone?: string;
-  birthDate?: string;
-  gender?: string;
+  birthdate?: string;
+  avatar?: string;
 }
 
 export interface UpdateUserData {
-  name?: string;
-  phone?: string;
-  birthDate?: string;
-  gender?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  surname?: string;
+  birthdate?: string;
   avatar?: string;
 }
 
 // Auth types
 export interface LoginData {
-  email: string;
+  username: string;
   password: string;
 }
 

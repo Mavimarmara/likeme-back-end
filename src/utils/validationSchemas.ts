@@ -1,151 +1,51 @@
 import Joi from 'joi';
 
-// User validation schemas
+// User validation schemas (para auth - registro completo)
 export const createUserSchema = Joi.object({
-  name: Joi.string().min(2).max(100).required(),
+  username: Joi.string().min(3).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).max(100).required(),
+  firstName: Joi.string().min(2).max(100).required(),
+  lastName: Joi.string().min(2).max(100).required(),
+  surname: Joi.string().min(2).max(100).optional(),
   phone: Joi.string().pattern(/^[0-9+\-\s()]+$/).optional(),
-  birthDate: Joi.date().max('now').optional(),
-  gender: Joi.string().valid('male', 'female', 'other').optional(),
-});
-
-export const updateUserSchema = Joi.object({
-  name: Joi.string().min(2).max(100).optional(),
-  phone: Joi.string().pattern(/^[0-9+\-\s()]+$/).optional(),
-  birthDate: Joi.date().max('now').optional(),
-  gender: Joi.string().valid('male', 'female', 'other').optional(),
+  birthdate: Joi.date().max('now').optional(),
   avatar: Joi.string().uri().optional(),
 });
 
+// User validation schemas (para CRUD - apenas campos do User)
+export const createUserCrudSchema = Joi.object({
+  personId: Joi.string().required(),
+  username: Joi.string().min(3).max(50).required(),
+  password: Joi.string().min(6).max(100).required(),
+  salt: Joi.string().optional(),
+  avatar: Joi.string().uri().optional(),
+  isActive: Joi.boolean().optional(),
+});
+
+export const updateUserSchema = Joi.object({
+  username: Joi.string().min(3).max(50).optional(),
+  firstName: Joi.string().min(2).max(100).optional(),
+  lastName: Joi.string().min(2).max(100).optional(),
+  surname: Joi.string().min(2).max(100).optional(),
+  birthdate: Joi.date().max('now').optional(),
+  avatar: Joi.string().uri().optional(),
+  isActive: Joi.boolean().optional(),
+});
+
+export const updateUserCrudSchema = Joi.object({
+  username: Joi.string().min(3).max(50).optional(),
+  password: Joi.string().min(6).max(100).optional(),
+  salt: Joi.string().optional(),
+  avatar: Joi.string().uri().optional(),
+  isActive: Joi.boolean().optional(),
+});
+
 export const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  username: Joi.string().required(),
   password: Joi.string().required(),
 });
 
-// Anamnese validation schemas
-export const createAnamneseSchema = Joi.object({
-  answers: Joi.array().items(
-    Joi.object({
-      questionId: Joi.string().required(),
-      answer: Joi.string().required(),
-    })
-  ).min(1).required(),
-});
-
-// Activity validation schemas
-export const createActivitySchema = Joi.object({
-  title: Joi.string().min(2).max(200).required(),
-  description: Joi.string().max(1000).optional(),
-  category: Joi.string().valid('exercise', 'nutrition', 'mental', 'medical').required(),
-  duration: Joi.number().integer().min(1).max(1440).optional(),
-  difficulty: Joi.string().valid('Easy', 'Medium', 'Hard').required(),
-  scheduledAt: Joi.date().min('now').optional(),
-});
-
-export const updateActivitySchema = Joi.object({
-  title: Joi.string().min(2).max(200).optional(),
-  description: Joi.string().max(1000).optional(),
-  category: Joi.string().valid('exercise', 'nutrition', 'mental', 'medical').optional(),
-  duration: Joi.number().integer().min(1).max(1440).optional(),
-  difficulty: Joi.string().valid('Easy', 'Medium', 'Hard').optional(),
-  completed: Joi.boolean().optional(),
-  scheduledAt: Joi.date().min('now').optional(),
-});
-
-// Wellness validation schemas
-export const createWellnessDataSchema = Joi.object({
-  category: Joi.string().valid('physical', 'mental', 'emotional', 'social').required(),
-  score: Joi.number().integer().min(0).max(100).required(),
-  notes: Joi.string().max(500).optional(),
-  date: Joi.date().max('now').optional(),
-});
-
-// Post validation schemas
-export const createPostSchema = Joi.object({
-  content: Joi.string().min(1).max(2000).required(),
-  category: Joi.string().valid('tips', 'experiences', 'questions', 'achievements').required(),
-  tags: Joi.array().items(Joi.string().max(50)).max(10).optional(),
-});
-
-export const updatePostSchema = Joi.object({
-  content: Joi.string().min(1).max(2000).optional(),
-  category: Joi.string().valid('tips', 'experiences', 'questions', 'achievements').optional(),
-  tags: Joi.array().items(Joi.string().max(50)).max(10).optional(),
-});
-
-// Product validation schemas
-export const createProductSchema = Joi.object({
-  title: Joi.string().min(2).max(200).required(),
-  description: Joi.string().min(10).max(2000).required(),
-  category: Joi.string().valid('supplements', 'equipment', 'books', 'courses').required(),
-  price: Joi.number().positive().precision(2).required(),
-  originalPrice: Joi.number().positive().precision(2).optional(),
-  discount: Joi.number().integer().min(0).max(100).optional(),
-  image: Joi.string().uri().optional(),
-  inStock: Joi.boolean().optional(),
-  stock: Joi.number().integer().min(0).optional(),
-});
-
-export const updateProductSchema = Joi.object({
-  title: Joi.string().min(2).max(200).optional(),
-  description: Joi.string().min(10).max(2000).optional(),
-  category: Joi.string().valid('supplements', 'equipment', 'books', 'courses').optional(),
-  price: Joi.number().positive().precision(2).optional(),
-  originalPrice: Joi.number().positive().precision(2).optional(),
-  discount: Joi.number().integer().min(0).max(100).optional(),
-  image: Joi.string().uri().optional(),
-  inStock: Joi.boolean().optional(),
-  stock: Joi.number().integer().min(0).optional(),
-});
-
-// Order validation schemas
-export const createOrderSchema = Joi.object({
-  items: Joi.array().items(
-    Joi.object({
-      productId: Joi.string().required(),
-      quantity: Joi.number().integer().min(1).required(),
-    })
-  ).min(1).required(),
-  address: Joi.object({
-    street: Joi.string().min(5).max(200).required(),
-    city: Joi.string().min(2).max(100).required(),
-    state: Joi.string().min(2).max(100).required(),
-    zipCode: Joi.string().pattern(/^[0-9]{5}-?[0-9]{3}$/).required(),
-    country: Joi.string().min(2).max(100).required(),
-  }).required(),
-});
-
-// Health Provider validation schemas
-export const createHealthProviderSchema = Joi.object({
-  name: Joi.string().min(2).max(200).required(),
-  specialty: Joi.string().min(2).max(100).required(),
-  description: Joi.string().max(1000).optional(),
-  experience: Joi.number().integer().min(0).max(50).required(),
-});
-
-export const updateHealthProviderSchema = Joi.object({
-  name: Joi.string().min(2).max(200).optional(),
-  specialty: Joi.string().min(2).max(100).optional(),
-  description: Joi.string().max(1000).optional(),
-  experience: Joi.number().integer().min(0).max(50).optional(),
-  isAvailable: Joi.boolean().optional(),
-});
-
-// Appointment validation schemas
-export const createAppointmentSchema = Joi.object({
-  providerId: Joi.string().required(),
-  date: Joi.date().min('now').required(),
-  duration: Joi.number().integer().min(15).max(480).required(), // 15 min to 8 hours
-  notes: Joi.string().max(500).optional(),
-});
-
-export const updateAppointmentSchema = Joi.object({
-  date: Joi.date().min('now').optional(),
-  duration: Joi.number().integer().min(15).max(480).optional(),
-  status: Joi.string().valid('scheduled', 'completed', 'cancelled').optional(),
-  notes: Joi.string().max(500).optional(),
-});
 
 // Query validation schemas
 export const paginationSchema = Joi.object({
@@ -160,6 +60,80 @@ export const searchSchema = Joi.object({
   sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
+});
+
+// Person validation schemas
+export const createPersonSchema = Joi.object({
+  firstName: Joi.string().min(2).max(100).required(),
+  lastName: Joi.string().min(2).max(100).required(),
+  surname: Joi.string().min(2).max(100).optional(),
+  nationalRegistration: Joi.string().max(50).optional(),
+  birthdate: Joi.date().max('now').optional(),
+});
+
+export const updatePersonSchema = Joi.object({
+  firstName: Joi.string().min(2).max(100).optional(),
+  lastName: Joi.string().min(2).max(100).optional(),
+  surname: Joi.string().min(2).max(100).optional(),
+  nationalRegistration: Joi.string().max(50).optional(),
+  birthdate: Joi.date().max('now').optional(),
+});
+
+// PersonContact validation schemas
+export const createPersonContactSchema = Joi.object({
+  personId: Joi.string().required(),
+  type: Joi.string().valid('email', 'phone', 'whatsapp', 'other').required(),
+  value: Joi.string().required(),
+});
+
+export const updatePersonContactSchema = Joi.object({
+  type: Joi.string().valid('email', 'phone', 'whatsapp', 'other').optional(),
+  value: Joi.string().optional(),
+});
+
+// Role validation schemas
+export const createRoleSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required(),
+  description: Joi.string().max(500).optional(),
+});
+
+export const updateRoleSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(500).optional(),
+});
+
+// RoleGroup validation schemas
+export const createRoleGroupSchema = Joi.object({
+  id: Joi.string().required(),
+  name: Joi.string().min(2).max(100).required(),
+  description: Joi.string().max(500).optional(),
+});
+
+export const updateRoleGroupSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(500).optional(),
+});
+
+// RoleGroupRole validation schemas
+export const createRoleGroupRoleSchema = Joi.object({
+  roleGroupId: Joi.string().required(),
+  roleId: Joi.string().required(),
+});
+
+export const roleGroupRoleParamsSchema = Joi.object({
+  roleGroupId: Joi.string().required(),
+  roleId: Joi.string().required(),
+});
+
+// RoleGroupUser validation schemas
+export const createRoleGroupUserSchema = Joi.object({
+  userId: Joi.string().required(),
+  roleGroupId: Joi.string().required(),
+});
+
+export const roleGroupUserParamsSchema = Joi.object({
+  userId: Joi.string().required(),
+  roleGroupId: Joi.string().required(),
 });
 
 // Params validation schemas

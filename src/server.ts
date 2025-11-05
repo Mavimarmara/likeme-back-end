@@ -11,12 +11,13 @@ import { generalRateLimiter } from '@/middleware/rateLimiter';
 
 // Import routes
 import authRoutes from '@/routes/authRoutes';
-import anamneseRoutes from '@/routes/anamneseRoutes';
-import activityRoutes from '@/routes/activityRoutes';
-import wellnessRoutes from '@/routes/wellnessRoutes';
-import communityRoutes from '@/routes/communityRoutes';
-import marketplaceRoutes from '@/routes/marketplaceRoutes';
-import healthProviderRoutes from '@/routes/healthProviderRoutes';
+import personRoutes from '@/routes/personRoutes';
+import personContactRoutes from '@/routes/personContactRoutes';
+import userRoutes from '@/routes/userRoutes';
+import roleRoutes from '@/routes/roleRoutes';
+import roleGroupRoutes from '@/routes/roleGroupRoutes';
+import roleGroupRoleRoutes from '@/routes/roleGroupRoleRoutes';
+import roleGroupUserRoutes from '@/routes/roleGroupUserRoutes';
 
 const app = express();
 
@@ -94,12 +95,13 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/anamnese', anamneseRoutes);
-app.use('/api/activities', activityRoutes);
-app.use('/api/wellness', wellnessRoutes);
-app.use('/api/community', communityRoutes);
-app.use('/api/marketplace', marketplaceRoutes);
-app.use('/api/health-providers', healthProviderRoutes);
+app.use('/api/persons', personRoutes);
+app.use('/api/person-contacts', personContactRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/role-groups', roleGroupRoutes);
+app.use('/api/role-group-roles', roleGroupRoleRoutes);
+app.use('/api/role-group-users', roleGroupUserRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

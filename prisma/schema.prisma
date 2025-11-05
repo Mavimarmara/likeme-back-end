@@ -10,215 +10,125 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// CORE MODELS - Person and User Management
+// ============================================
+
+model Person {
+  id                  String   @id @default(uuid())
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+  nationalRegistration String?  @map("national_registration") // CPF, RG, etc
+  firstName           String   @map("first_name")
+  lastName            String   @map("last_name")
+  surname             String?
+  birthdate           DateTime?
+
+  // Relations (inverse - apenas para validação Prisma, usar tabelas de relacionamento próprias)
+  contacts            PersonContact[] @relation("PersonContacts")
+  user                User?           @relation("PersonUser")
+
+  @@map("person")
+  @@index([nationalRegistration])
+}
+
+model PersonContact {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  personId  String   @map("person_id")
+  type      String   // email, phone, whatsapp, etc
+  value     String
+
+  // Relations
+  person    Person   @relation("PersonContacts", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@map("person_contact")
+  @@index([personId])
+  @@index([type])
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  phone     String?
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  personId  String   @unique @map("person_id")
+  username  String   @unique
   password  String
-  birthDate DateTime?
-  gender    String?
+  salt      String?
   avatar    String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true) @map("is_active")
 
   // Relations
-  anamnese     Anamnese[]
-  activities   Activity[]
-  wellnessData WellnessData[]
-  posts        Post[]
-  comments     Comment[]
-  likes        Like[]
-  orders       Order[]
-  appointments Appointment[]
-  healthProvider HealthProvider?
+  person    Person   @relation("PersonUser", fields: [personId], references: [id], onDelete: Cascade)
+  // Relations (inverse - apenas para validação Prisma)
+  roleGroups RoleGroupUser[] @relation("UserRoleGroups")
 
-  @@map("users")
+  @@map("user")
+  @@index([personId])
+  @@index([username])
 }
 
-model Anamnese {
-  id        String   @id @default(cuid())
-  userId    String
-  answers   Json     // Store questionnaire answers as JSON
-  completed Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("anamnese")
-}
-
-model Activity {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  description String?
-  category    String   // exercise, nutrition, mental, medical
-  duration    Int?     // in minutes
-  difficulty  String   // Easy, Medium, Hard
-  completed   Boolean  @default(false)
-  completedAt DateTime?
-  scheduledAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("activities")
-}
-
-model WellnessData {
-  id        String   @id @default(cuid())
-  userId    String
-  category  String   // physical, mental, emotional, social
-  score     Int      // 0-100
-  notes     String?
-  date      DateTime @default(now())
-  createdAt DateTime @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("wellness_data")
-}
-
-model Post {
-  id        String   @id @default(cuid())
-  userId    String
-  content   String
-  category  String   // tips, experiences, questions, achievements
-  tags      String[] // Array of tags
-  likesCount Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments Comment[]
-  likes    Like[]
-
-  @@map("posts")
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  postId    String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("comments")
-}
-
-model Like {
-  id     String @id @default(cuid())
-  postId String
-  userId String
-  createdAt DateTime @default(now())
-
-  // Relations
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, userId])
-  @@map("likes")
-}
-
-model Product {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  category    String   // supplements, equipment, books, courses
-  price       Decimal  @db.Decimal(10, 2)
-  originalPrice Decimal? @db.Decimal(10, 2)
-  discount    Int?     // percentage
-  rating      Decimal  @default(0) @db.Decimal(3, 2)
-  reviews     Int      @default(0)
-  image       String?
-  inStock     Boolean  @default(true)
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  orderItems OrderItem[]
-
-  @@map("products")
-}
-
-model Order {
-  id        String   @id @default(cuid())
-  userId    String
-  total     Decimal  @db.Decimal(10, 2)
-  status    String   @default("pending") // pending, confirmed, shipped, delivered, cancelled
-  address  Json     // Shipping address
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
-
-  @@map("orders")
-}
-
-model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Decimal @db.Decimal(10, 2)
-
-  // Relations
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@map("order_items")
-}
-
-model HealthProvider {
-  id          String   @id @default(cuid())
-  userId      String   @unique
+model Role {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
   name        String
-  specialty   String
   description String?
-  experience  Int      // years of experience
-  rating      Decimal  @default(0) @db.Decimal(3, 2)
-  reviews     Int      @default(0)
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
+  // Relations (inverse - apenas para validação Prisma)
+  roleGroups RoleGroupRole[] @relation("RoleRoleGroups")
 
-  @@map("health_providers")
+  @@map("role")
+  @@index([name])
 }
 
-model Appointment {
-  id        String   @id @default(cuid())
-  userId    String
-  providerId String
-  date      DateTime
-  duration  Int      // in minutes
-  status    String   @default("scheduled") // scheduled, completed, cancelled
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model RoleGroup {
+  id          String   @id // varchar, não auto-generated
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  name        String
+  description String?
+
+  // Relations (inverse - apenas para validação Prisma)
+  roles      RoleGroupRole[] @relation("RoleGroupRoles")
+  users      RoleGroupUser[] @relation("RoleGroupUsers")
+
+  @@map("role_group")
+  @@index([name])
+}
+
+model RoleGroupRole {
+  roleGroupId String   @map("role_group_id")
+  roleId      String   @map("role_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
 
   // Relations
-  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider HealthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  roleGroup RoleGroup @relation("RoleGroupRoles", fields: [roleGroupId], references: [id], onDelete: Cascade)
+  role     Role      @relation("RoleRoleGroups", fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@map("appointments")
+  @@id([roleGroupId, roleId])
+  @@map("role_group_role")
+}
+
+model RoleGroupUser {
+  userId      String   @map("user_id")
+  roleGroupId String   @map("role_group_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  // Relations
+  user      User      @relation("UserRoleGroups", fields: [userId], references: [id], onDelete: Cascade)
+  roleGroup RoleGroup @relation("RoleGroupUsers", fields: [roleGroupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleGroupId])
+  @@map("role_group_user")
 }
