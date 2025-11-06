@@ -31,7 +31,10 @@ export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload>
     }
 
     const verifyOptions: jwt.VerifyOptions = {
-      issuer: config.auth0.issuer,
+      issuer: [
+        config.auth0.issuer,
+        `https://${config.auth0.domain}/`,
+      ],
       algorithms: ['RS256'],
     };
 
@@ -41,6 +44,14 @@ export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload>
       verifyOptions,
       (err, decoded) => {
         if (err) {
+          console.error('JWT verification error:', err.message);
+          console.error('Token issuer expected:', config.auth0.issuer);
+          if (decoded && typeof decoded !== 'string' && 'iss' in decoded) {
+            console.error('Token issuer received:', decoded.iss);
+            if ('aud' in decoded) {
+              console.error('Token audience:', decoded.aud);
+            }
+          }
           return reject(err);
         }
         if (!decoded || typeof decoded === 'string') {

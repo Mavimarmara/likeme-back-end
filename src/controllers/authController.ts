@@ -193,10 +193,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     let decoded;
     try {
+      console.log('Validating Auth0 token, length:', idToken.length);
+      console.log('Token preview:', idToken.substring(0, 50) + '...');
       decoded = await verifyAuth0Token(idToken);
+      console.log('Token validated successfully');
+      console.log('Decoded token issuer:', decoded.iss);
+      console.log('Decoded token audience:', decoded.aud);
     } catch (error) {
       console.error('Auth0 token validation error:', error);
-      sendError(res, 'Token do Auth0 inválido ou expirado', 401);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      sendError(res, `Token do Auth0 inválido ou expirado: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 401);
       return;
     }
 
