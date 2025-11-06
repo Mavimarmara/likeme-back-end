@@ -104,13 +104,15 @@ app.use('*', (req, res) => {
 
 app.use(errorHandler);
 
-const PORT = config.port;
+const PORT = config.port || process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 LikeMe API rodando na porta ${PORT}`);
-  console.log(`📚 Documentação disponível em: http://localhost:${PORT}${config.apiDocsPath}`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-  console.log(`🌍 Ambiente: ${config.nodeEnv}`);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`🚀 LikeMe API rodando na porta ${PORT}`);
+    console.log(`📚 Documentação disponível em: http://localhost:${PORT}${config.apiDocsPath}`);
+    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+    console.log(`🌍 Ambiente: ${config.nodeEnv}`);
+  });
+}
 
 export default app;
