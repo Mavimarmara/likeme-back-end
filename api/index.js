@@ -37,5 +37,19 @@ if (require.main === module && !process.env.VERCEL) {
   });
 }
 
-module.exports = app;
+module.exports = (req, res) => {
+  const forwardedPath =
+    req.headers['x-vercel-forwarded-path'] ||
+    req.headers['x-forwarded-url'] ||
+    req.url;
+  const forwardedQuery = req.headers['x-vercel-forwarded-query'];
+
+  if (forwardedPath) {
+    req.url = forwardedQuery
+      ? `${forwardedPath}?${forwardedQuery}`
+      : forwardedPath;
+  }
+
+  return app(req, res);
+};
 

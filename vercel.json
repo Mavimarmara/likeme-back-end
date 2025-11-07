@@ -4,8 +4,6 @@
   "installCommand": "npm install",
   "framework": null,
   "rewrites": [
-    { "source": "/api-docs", "destination": "/api-docs" },
-    { "source": "/api-docs/(.*)", "destination": "/api-docs/$1" },
     { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
