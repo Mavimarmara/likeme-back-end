@@ -38,21 +38,37 @@ if (require.main === module && !process.env.VERCEL) {
 }
 
 module.exports = (req, res) => {
-  const forwardedPath =
-    req.headers['x-vercel-forwarded-path'] ||
-    req.headers['x-forwarded-url'] ||
-    req.url;
-  const forwardedQuery = req.headers['x-vercel-forwarded-query'];
+const forwardedPath =
+  req.headers['x-vercel-forwarded-path'] ||
+  req.headers['x-forwarded-url'] ||
+  req.url;
+const forwardedQuery = req.headers['x-vercel-forwarded-query'];
 
-  if (forwardedPath) {
-    const normalizedPath = forwardedPath.startsWith('/')
-      ? forwardedPath
-      : `/${forwardedPath}`;
+if (forwardedPath) {
+  let pathToUse = forwardedPath;
+  let queryToUse = forwardedQuery;
 
-    req.url = forwardedQuery
-      ? `${normalizedPath}?${forwardedQuery}`
-      : normalizedPath;
+  if (/^https?:\/\//i.test(pathToUse)) {
+    try {
+      const url = new URL(pathToUse);
+      pathToUse = url.pathname || '/';
+      if (!queryToUse && url.search.length > 1) {
+        queryToUse = url.search.substring(1);
+      }
+    } catch (error) {
+      console.warn('URL inválida recebida em cabeçalhos encaminhados:', error);
+      pathToUse = '/';
+    }
   }
+
+  const normalizedPath = pathToUse.startsWith('/')
+    ? pathToUse
+    : `/${pathToUse}`;
+
+  req.url = queryToUse
+    ? `${normalizedPath}?${queryToUse}`
+    : normalizedPath;
+}
 
   return app(req, res);
 };
