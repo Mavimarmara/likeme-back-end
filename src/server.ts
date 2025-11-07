@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -69,7 +70,10 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/controllers/*.ts'],
+  apis: [
+    path.resolve(__dirname, '../src/routes/**/*.ts'),
+    path.resolve(__dirname, '../src/controllers/**/*.ts'),
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
