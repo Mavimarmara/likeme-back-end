@@ -37,5 +37,25 @@ if (require.main === module && !process.env.VERCEL) {
   });
 }
 
-module.exports = app;
+module.exports = (req, res) => {
+  const { path: rewrittenPath, ...restQuery } = req.query || {};
+
+  if (typeof rewrittenPath !== 'undefined') {
+    const sanitizedPath = rewrittenPath === '' ? '/' : `/${rewrittenPath}`;
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(restQuery)) {
+      if (Array.isArray(value)) {
+        value.forEach((item) => searchParams.append(key, item));
+      } else if (typeof value !== 'undefined') {
+        searchParams.append(key, value);
+      }
+    }
+
+    const queryString = searchParams.toString();
+    req.url = queryString ? `${sanitizedPath}?${queryString}` : sanitizedPath;
+  }
+
+  return app(req, res);
+};
 
