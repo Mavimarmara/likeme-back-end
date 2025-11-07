@@ -22,6 +22,8 @@ import userPersonalObjectiveRoutes from '@/routes/userPersonalObjectiveRoutes';
 
 const app = express();
 
+app.set('trust proxy', process.env.VERCEL ? 1 : false);
+
 app.use(helmet());
 app.use(cors({
   origin: config.corsOrigin,
