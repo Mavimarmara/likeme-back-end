@@ -10,6 +10,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/likeme_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/likeme_test
+      JWT_SECRET: test-secret
+      NODE_ENV: test
+    
     services:
       postgres:
         image: postgres:15
@@ -41,30 +47,12 @@ jobs:
     
     - name: Run database migrations
       run: npx prisma db push
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/likeme_test
     
     - name: Run tests
       run: npm test
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/likeme_test
-        JWT_SECRET: test-secret
-        NODE_ENV: test
     
     - name: Run linting
       run: npm run lint
     
     - name: Build application
       run: npm run build
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to production
-      run: echo "Deploy to production server"
-      # Add your deployment commands here
