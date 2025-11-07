@@ -125,23 +125,38 @@ npm run db:seed
 
 ### 5. Execute o servidor
 ```bash
-# Desenvolvimento
+# Desenvolvimento (Vercel Dev)
 npm run dev
+# ou
+npm run vercel:dev
+# ou
+vercel dev
 
 # Produção
 npm run build
 npm start
 ```
 
+### 6. Acesse a API
+Após iniciar o servidor, acesse:
+- **Swagger UI**: http://localhost:3000/api-docs
+- **Health Check**: http://localhost:3000/health
+- **API Base**: http://localhost:3000/api
+
 ## 📚 Documentação da API
 
 A documentação completa da API está disponível através do **Swagger UI**:
 
 ### 🌐 Acesso à Documentação
-- **Desenvolvimento**: http://localhost:3000/api-docs
-- **Interface Interativa**: Teste todos os endpoints diretamente no navegador
-- **Esquemas de Dados**: Visualize todos os modelos e tipos de dados
-- **Autenticação**: Teste endpoints protegidos com JWT
+
+#### Desenvolvimento com Vercel (`vercel dev`)
+⚠️ **Importante**: O Vercel pode usar uma porta diferente da configurada. Verifique a porta no output do comando `npm run dev` ou `npm run vercel:dev`.
+
+- **Swagger UI**: http://localhost:[PORTA]/api-docs (substitua [PORTA] pela porta mostrada no output)
+- **Health Check**: http://localhost:[PORTA]/health
+- **API Base**: http://localhost:[PORTA]/api
+
+Exemplo: Se o Vercel mostrar `Ready! Available at http://localhost:3000`, use `http://localhost:3000/api-docs`
 
 ### 📖 Como Usar a Documentação
 1. Acesse http://localhost:3000/api-docs no seu navegador
@@ -266,7 +281,7 @@ npm run test:watch
 1. **Acesse a documentação**: http://localhost:3000/api-docs
 2. **Teste o Health Check**: GET `/health`
 3. **Registre um usuário**: POST `/api/auth/register`
-4. **Faça login**: POST `/api/auth/login`
+4. **Faça login**: POST `/api/auth/login` (com Auth0 idToken)
 5. **Use o token** para testar endpoints protegidos
 
 ### Exemplo de Teste Completo
@@ -277,29 +292,58 @@ curl http://localhost:3000/health
 # 2. Registrar usuário
 curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"Teste","email":"teste@example.com","password":"123456"}'
+  -d '{"firstName":"Teste","lastName":"Usuario","email":"teste@example.com","password":"123456"}'
 
-# 3. Fazer login
+# 3. Fazer login (Auth0)
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"teste@example.com","password":"123456"}'
+  -H "Authorization: Bearer SEU_ID_TOKEN_AUTH0" \
+  -d '{"idToken":"SEU_ID_TOKEN_AUTH0"}'
 ```
 
 ## 📝 Scripts Disponíveis
 
+### Desenvolvimento
 ```bash
-npm run dev          # Executar em modo desenvolvimento
-npm run build        # Compilar TypeScript
-npm start            # Executar em produção
-npm test             # Executar testes
-npm run lint         # Verificar código
-npm run lint:fix     # Corrigir problemas de lint
+npm run dev          # Executar em modo desenvolvimento (Vercel Dev)
+npm run build        # Compilar TypeScript (inclui geração do Prisma Client)
+npm run build:check  # Compilar e verificar se o build está correto
+npm start            # Executar em produção (após build)
+```
+
+### Banco de Dados
+```bash
 npm run db:generate  # Gerar cliente Prisma
-npm run db:push      # Sincronizar schema
+npm run db:push      # Sincronizar schema com o banco
 npm run db:migrate   # Executar migrações
-npm run db:studio    # Abrir Prisma Studio
+npm run db:studio    # Abrir Prisma Studio (interface visual)
 npm run db:seed      # Popular banco com dados iniciais
 ```
+
+### Qualidade de Código
+```bash
+npm test             # Executar testes
+npm run test:watch   # Executar testes em modo watch
+npm run lint         # Verificar código com ESLint
+npm run lint:fix     # Corrigir problemas de lint automaticamente
+```
+
+### Vercel
+```bash
+npm run vercel:dev     # Desenvolvimento local com Vercel
+npm run vercel:deploy  # Deploy para Vercel (preview)
+npm run vercel:prod    # Deploy para produção no Vercel
+```
+
+### Utilitários
+```bash
+npm run check:port     # Verificar portas disponíveis
+```
+
+### Notas Importantes
+- **`postinstall`**: O Prisma Client é gerado automaticamente após `npm install`
+- **`build`**: Inclui `prisma generate` para garantir que o cliente está atualizado
+- **`start`**: Requer que o build tenha sido executado previamente
 
 ## ✅ Status da Aplicação
 
@@ -310,7 +354,8 @@ npm run db:seed      # Popular banco com dados iniciais
 - ✅ **Compilação TypeScript**: Sem erros
 - ✅ **Estrutura de Rotas**: Todas configuradas
 - ✅ **Middlewares**: Autenticação, validação, rate limiting
-- ✅ **Docker**: Configurado e pronto
+- ✅ **Vercel**: Configurado para desenvolvimento e deploy
+- ✅ **Auth0**: Integração completa para autenticação
 
 ### ⚠️ Requer Configuração
 - 🔧 **Banco de Dados**: PostgreSQL precisa ser configurado
@@ -368,6 +413,44 @@ npm start
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🔧 Troubleshooting
+
+### Porta não está abrindo com Vercel Dev
+
+1. **Verifique a porta no output**: O Vercel mostra a porta que está usando quando inicia:
+   ```
+   Ready! Available at http://localhost:8081
+   ```
+   Use essa porta para acessar a API.
+
+2. **Verifique portas ocupadas**:
+   ```bash
+   npm run check:port
+   ```
+
+3. **Forçar porta específica**:
+   ```bash
+   npx vercel dev --listen 3000
+   ```
+
+4. **Reinicie o servidor Vercel**:
+   - Pare o processo (Ctrl+C)
+   - Execute novamente: `npm run vercel:dev`
+
+### Erro "Cannot find module '@/config'"
+
+Execute o build antes de rodar:
+```bash
+npm run build
+npm run vercel:dev
+```
+
+### URLs não estão funcionando
+
+- Certifique-se de que o servidor está rodando
+- Verifique se está usando a porta correta (mostrada no output)
+- Tente acessar `/health` primeiro para confirmar que o servidor está respondendo
 
 ## 📞 Suporte
 
