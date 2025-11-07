@@ -3,8 +3,10 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "framework": null,
-  "routes": [
-    { "src": "/(.*)", "dest": "/api/index" }
+  "rewrites": [
+    { "source": "/api-docs", "destination": "/api-docs" },
+    { "source": "/api-docs/(.*)", "destination": "/api-docs/$1" },
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
 
