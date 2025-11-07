@@ -45,9 +45,13 @@ module.exports = (req, res) => {
   const forwardedQuery = req.headers['x-vercel-forwarded-query'];
 
   if (forwardedPath) {
+    const normalizedPath = forwardedPath.startsWith('/')
+      ? forwardedPath
+      : `/${forwardedPath}`;
+
     req.url = forwardedQuery
-      ? `${forwardedPath}?${forwardedQuery}`
-      : forwardedPath;
+      ? `${normalizedPath}?${forwardedQuery}`
+      : normalizedPath;
   }
 
   return app(req, res);
