@@ -7,7 +7,7 @@
     "start": "node dist/server.js",
     "dev": "node api/index.js",
     "dev:local": "ts-node -r tsconfig-paths/register src/server.ts",
-    "build": "prisma generate && tsc && tsc-alias",
+    "build": "prisma generate && tsc && tsc-alias && node scripts/generate-swagger.js",
     "build:check": "npm run build && node -e \"console.log('✅ Build verificado com sucesso')\"",
     "test": "jest",
     "test:watch": "jest --watch",

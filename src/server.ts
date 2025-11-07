@@ -1,4 +1,3 @@
-import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,6 +6,7 @@ import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { config } from '@/config';
+import { swaggerOptions } from '@/config/swagger';
 import { errorHandler } from '@/middleware/errorHandler';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 
@@ -37,46 +37,21 @@ app.use(generalRateLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'LikeMe API',
-      version: '1.0.0',
-      description: 'API para o aplicativo LikeMe - Saúde e Bem-estar',
-      contact: {
-        name: 'LikeMe Team',
-        email: 'contato@likeme.com',
-      },
-    },
-    servers: [
-      {
-        url: `http://localhost:${config.port}`,
-        description: 'Servidor de desenvolvimento',
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
-  },
-  apis: [
-    path.resolve(__dirname, '../src/routes/**/*.ts'),
-    path.resolve(__dirname, '../src/controllers/**/*.ts'),
-  ],
+const getSwaggerSpec = () => {
+  if (process.env.VERCEL) {
+    try {
+      // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires, import/no-dynamic-require
+      return require('./swagger.json');
+    } catch (error) {
+      console.warn('Não foi possível carregar swagger.json pré-gerado. Recriando em tempo de execução.', error);
+      return swaggerJsdoc(swaggerOptions);
+    }
+  }
+
+  return swaggerJsdoc(swaggerOptions);
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+const swaggerSpec = getSwaggerSpec();
 
 app.use(config.apiDocsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
