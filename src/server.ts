@@ -106,14 +106,14 @@ app.use(errorHandler);
 
 const PORT = config.port || process.env.PORT || 3000;
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`🚀 LikeMe API rodando na porta ${PORT}`);
     console.log(`📚 Documentação disponível em: http://localhost:${PORT}${config.apiDocsPath}`);
     console.log(`🏥 Health check: http://localhost:${PORT}/health`);
     console.log(`🌍 Ambiente: ${config.nodeEnv}`);
   });
-} else {
+} else if (process.env.VERCEL) {
   console.log(`🚀 LikeMe API rodando no Vercel`);
   console.log(`🌍 Ambiente: ${config.nodeEnv}`);
 }
