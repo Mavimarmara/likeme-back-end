@@ -74,6 +74,20 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 app.use(config.apiDocsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'LikeMe API em produção',
+    links: {
+      health: '/health',
+      docs: config.apiDocsPath,
+      api: '/api',
+    },
+    timestamp: new Date().toISOString(),
+    environment: config.nodeEnv,
+  });
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
