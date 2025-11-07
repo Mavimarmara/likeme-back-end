@@ -1,7 +1,33 @@
 import request from 'supertest';
 import app from '../server';
+import prisma from '@/config/database';
 
 jest.setTimeout(20000);
+
+beforeAll(async () => {
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn('⚠️  NODE_ENV não está definido como "test". Os testes podem afetar o banco de dados de desenvolvimento!');
+  }
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+
+afterEach(async () => {
+  if (process.env.NODE_ENV === 'test') {
+    try {
+      await prisma.userPersonalObjective.deleteMany({});
+      await prisma.roleGroupUser.deleteMany({});
+      await prisma.roleGroupRole.deleteMany({});
+      await prisma.user.deleteMany({});
+      await prisma.personContact.deleteMany({});
+      await prisma.person.deleteMany({});
+    } catch (error) {
+      console.error('Erro ao limpar dados de teste:', error);
+    }
+  }
+});
 
 describe('Auth Endpoints', () => {
   describe('POST /api/auth/register', () => {

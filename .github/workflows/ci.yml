@@ -15,6 +15,9 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/likeme_test
       JWT_SECRET: test-secret
       NODE_ENV: test
+      AUTH0_DOMAIN: test-auth0-domain.auth0.com
+      AUTH0_CLIENT_ID: test-client-id
+      AUTH0_CLIENT_SECRET: test-client-secret
     
     services:
       postgres:

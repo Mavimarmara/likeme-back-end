@@ -109,7 +109,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    const userDataToCreate: any = {
+    const userDataToCreate: {
+      personId: string;
+      password: string;
+      avatar?: string;
+      username?: string;
+    } = {
       personId: person.id,
       password: hashedPassword,
       avatar: userData.avatar,
@@ -131,6 +136,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     const token = generateToken(user.id);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
 
     const response: AuthResponse = {
@@ -302,6 +308,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const sessionToken = generateToken(user.id);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
 
     const response: AuthResponse = {
