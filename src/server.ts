@@ -5,6 +5,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import { getAbsoluteFSPath as getSwaggerUiAssetPath } from 'swagger-ui-dist';
 import { config } from '@/config';
 import { swaggerOptions } from '@/config/swagger';
 import { errorHandler } from '@/middleware/errorHandler';
@@ -52,8 +53,35 @@ const getSwaggerSpec = () => {
 };
 
 const swaggerSpec = getSwaggerSpec();
+const swaggerUiOptions = {
+  swaggerOptions: {
+    url: `${config.apiDocsPath}/swagger.json`,
+    docExpansion: 'none',
+    deepLinking: true,
+  },
+};
+const swaggerAssetPath = getSwaggerUiAssetPath();
 
-app.use(config.apiDocsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get(`${config.apiDocsPath}.json`, (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+app.get(`${config.apiDocsPath}/swagger.json`, (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+app.use(
+  `${config.apiDocsPath}/`,
+  express.static(swaggerAssetPath, { index: false }),
+);
+
+app.use(
+  config.apiDocsPath,
+  swaggerUi.serveFiles(swaggerSpec, swaggerUiOptions),
+  swaggerUi.setup(swaggerSpec, swaggerUiOptions),
+);
 
 app.get('/', (req, res) => {
   res.status(200).json({

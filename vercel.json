@@ -3,6 +3,11 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "framework": null,
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "node_modules/swagger-ui-dist/**"
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]
