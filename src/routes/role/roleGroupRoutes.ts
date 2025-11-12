@@ -5,7 +5,7 @@ import {
   getAllRoleGroups,
   updateRoleGroup,
   deleteRoleGroup,
-} from '@/controllers/roleGroupController';
+} from '@/controllers/role/roleGroupController';
 import { createRoleGroupSchema, updateRoleGroupSchema, idParamSchema } from '@/utils/validationSchemas';
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrUpdateTip, deleteTip, getTips } from '@/controllers/tipController';
+import { createOrUpdateTip, deleteTip, getTips } from '@/controllers/tip/tipController';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';

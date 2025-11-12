@@ -5,7 +5,7 @@ import {
   addMember,
   removeMember,
   listMembers,
-} from '@/controllers/communityController';
+} from '@/controllers/community/communityController';
 import { authenticateToken } from '@/middleware/auth';
 
 const router = Router();

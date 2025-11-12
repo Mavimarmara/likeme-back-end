@@ -75,7 +75,7 @@ class SocialPlusClient {
       }
 
       const response = await fetch(url, options);
-      const data = await response.json();
+      const data = (await response.json()) as any;
 
       if (!response.ok) {
         return {
@@ -87,7 +87,7 @@ class SocialPlusClient {
 
       return {
         success: true,
-        data: data.data || data,
+        data: (data.data || data) as T,
       };
     } catch (error) {
       console.error('Social.plus API error:', error);

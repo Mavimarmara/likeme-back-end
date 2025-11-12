@@ -1,6 +1,30 @@
-import { Request, Response } from 'express';
-import prisma from '@/config/database';
-import { sendSuccess, sendError } from '@/utils/response';
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Person:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         firstName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         surname:
+ *           type: string
+ *         nationalRegistration:
+ *           type: string
+ *         birthdate:
+ *           type: string
+ *           format: date-time
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
 
 /**
  * @swagger
@@ -34,27 +58,20 @@ import { sendSuccess, sendError } from '@/utils/response';
  *     responses:
  *       201:
  *         description: Pessoa criada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Person'
+ *                 message:
+ *                   type: string
  *       400:
  *         description: Dados inválidos
  */
-export const createPerson = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const personData = req.body;
-
-    const person = await prisma.person.create({
-      data: personData,
-      include: {
-        contacts: true,
-        user: true,
-      },
-    });
-
-    sendSuccess(res, person, 'Pessoa criada com sucesso', 201);
-  } catch (error) {
-    console.error('Create person error:', error);
-    sendError(res, 'Erro ao criar pessoa');
-  }
-};
 
 /**
  * @swagger
@@ -74,32 +91,20 @@ export const createPerson = async (req: Request, res: Response): Promise<void> =
  *     responses:
  *       200:
  *         description: Pessoa obtida com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Person'
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Pessoa não encontrada
  */
-export const getPersonById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-
-    const person = await prisma.person.findUnique({
-      where: { id },
-      include: {
-        contacts: true,
-        user: true,
-      },
-    });
-
-    if (!person) {
-      sendError(res, 'Pessoa não encontrada', 404);
-      return;
-    }
-
-    sendSuccess(res, person, 'Pessoa obtida com sucesso');
-  } catch (error) {
-    console.error('Get person error:', error);
-    sendError(res, 'Erro ao obter pessoa');
-  }
-};
 
 /**
  * @swagger
@@ -125,47 +130,25 @@ export const getPersonById = async (req: Request, res: Response): Promise<void> 
  *     responses:
  *       200:
  *         description: Lista de pessoas obtida com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     persons:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Person'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *                 message:
+ *                   type: string
  */
-export const getAllPersons = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
-
-    const [persons, total] = await Promise.all([
-      prisma.person.findMany({
-        skip,
-        take: limit,
-        include: {
-          contacts: true,
-          user: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        where: {
-          deletedAt: null,
-        },
-      }),
-      prisma.person.count({
-        where: {
-          deletedAt: null,
-        },
-      }),
-    ]);
-
-    sendSuccess(res, {
-      persons,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    }, 'Pessoas obtidas com sucesso');
-  } catch (error) {
-    console.error('Get all persons error:', error);
-    sendError(res, 'Erro ao obter pessoas');
-  }
-};
 
 /**
  * @swagger
@@ -206,30 +189,6 @@ export const getAllPersons = async (req: Request, res: Response): Promise<void> 
  *       404:
  *         description: Pessoa não encontrada
  */
-export const updatePerson = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const person = await prisma.person.update({
-      where: { id },
-      data: updateData,
-      include: {
-        contacts: true,
-        user: true,
-      },
-    });
-
-    sendSuccess(res, person, 'Pessoa atualizada com sucesso');
-  } catch (error) {
-    console.error('Update person error:', error);
-    if ((error as any).code === 'P2025') {
-      sendError(res, 'Pessoa não encontrada', 404);
-      return;
-    }
-    sendError(res, 'Erro ao atualizar pessoa');
-  }
-};
 
 /**
  * @swagger
@@ -252,23 +211,4 @@ export const updatePerson = async (req: Request, res: Response): Promise<void> =
  *       404:
  *         description: Pessoa não encontrada
  */
-export const deletePerson = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-
-    await prisma.person.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-
-    sendSuccess(res, null, 'Pessoa deletada com sucesso');
-  } catch (error) {
-    console.error('Delete person error:', error);
-    if ((error as any).code === 'P2025') {
-      sendError(res, 'Pessoa não encontrada', 404);
-      return;
-    }
-    sendError(res, 'Erro ao deletar pessoa');
-  }
-};
 

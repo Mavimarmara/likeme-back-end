@@ -5,7 +5,7 @@ import {
   getAllUsers,
   updateUser,
   deleteUser,
-} from '@/controllers/userController';
+} from '@/controllers/user/userController';
 import { createUserCrudSchema, updateUserCrudSchema, idParamSchema } from '@/utils/validationSchemas';
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';

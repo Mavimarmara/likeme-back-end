@@ -32,6 +32,7 @@ export const authenticateToken = async (
         salt: true,
         avatar: true,
         isActive: true,
+        socialPlusUserId: true,
         createdAt: true,
         updatedAt: true,
         deletedAt: true,

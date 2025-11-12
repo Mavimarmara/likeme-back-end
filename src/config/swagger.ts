@@ -38,8 +38,10 @@ export const swaggerOptions = {
   apis: [
     path.resolve(projectRoot, 'src/routes/**/*.ts'),
     path.resolve(projectRoot, 'src/controllers/**/*.ts'),
+    path.resolve(projectRoot, 'src/controllers/**/*.docs.ts'),
     path.resolve(projectRoot, 'dist/routes/**/*.js'),
     path.resolve(projectRoot, 'dist/controllers/**/*.js'),
+    path.resolve(projectRoot, 'dist/controllers/**/*.docs.js'),
   ],
 };
 

@@ -6,7 +6,7 @@ import {
   getProfile, 
   updateProfile, 
   deleteAccount 
-} from '@/controllers/authController';
+} from '@/controllers/auth/authController';
 import { 
   createUserSchema, 
   loginSchema,

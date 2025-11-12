@@ -7,7 +7,7 @@ import {
   getMyObjectives,
   addMyObjective,
   removeMyObjective,
-} from '@/controllers/userPersonalObjectiveController';
+} from '@/controllers/objective/userPersonalObjectiveController';
 import { createUserPersonalObjectiveSchema, userPersonalObjectiveParamsSchema, objectiveIdParamSchema, addMyObjectiveSchema } from '@/utils/validationSchemas';
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';

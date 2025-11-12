@@ -12,18 +12,18 @@ import { swaggerOptions } from '@/config/swagger';
 import { errorHandler } from '@/middleware/errorHandler';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 
-import authRoutes from '@/routes/authRoutes';
-import personRoutes from '@/routes/personRoutes';
-import personContactRoutes from '@/routes/personContactRoutes';
-import userRoutes from '@/routes/userRoutes';
-import roleRoutes from '@/routes/roleRoutes';
-import roleGroupRoutes from '@/routes/roleGroupRoutes';
-import roleGroupRoleRoutes from '@/routes/roleGroupRoleRoutes';
-import roleGroupUserRoutes from '@/routes/roleGroupUserRoutes';
-import personalObjectiveRoutes from '@/routes/personalObjectiveRoutes';
-import userPersonalObjectiveRoutes from '@/routes/userPersonalObjectiveRoutes';
-import tipRoutes from '@/routes/tipRoutes';
-import communityRoutes from '@/routes/communityRoutes';
+import authRoutes from '@/routes/auth/authRoutes';
+import personRoutes from '@/routes/person/personRoutes';
+import personContactRoutes from '@/routes/person/personContactRoutes';
+import userRoutes from '@/routes/user/userRoutes';
+import roleRoutes from '@/routes/role/roleRoutes';
+import roleGroupRoutes from '@/routes/role/roleGroupRoutes';
+import roleGroupRoleRoutes from '@/routes/role/roleGroupRoleRoutes';
+import roleGroupUserRoutes from '@/routes/role/roleGroupUserRoutes';
+import personalObjectiveRoutes from '@/routes/objective/personalObjectiveRoutes';
+import userPersonalObjectiveRoutes from '@/routes/objective/userPersonalObjectiveRoutes';
+import tipRoutes from '@/routes/tip/tipRoutes';
+import communityRoutes from '@/routes/community/communityRoutes';
 
 const app = express();
 

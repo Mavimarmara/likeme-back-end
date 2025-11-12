@@ -6,54 +6,6 @@ import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, AuthResponse } from '@/types';
 import { socialPlusClient } from '@/utils/socialPlus';
 
-/**
- * @swagger
- * /api/auth/register:
- *   post:
- *     summary: Registrar novo usuário
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - firstName
- *               - lastName
- *             properties:
- *               username:
- *                 type: string
- *                 minLength: 3
- *                 maxLength: 50
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 minLength: 6
- *               firstName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               surname:
- *                 type: string
- *               phone:
- *                 type: string
- *               birthdate:
- *                 type: string
- *                 format: date
- *               avatar:
- *                 type: string
- *                 format: uri
- *     responses:
- *       201:
- *         description: Usuário criado com sucesso
- *       409:
- *         description: Usuário ou email já existe
- */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const userData: CreateUserData = req.body;
@@ -177,43 +129,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-/**
- * @swagger
- * /api/auth/login:
- *   post:
- *     summary: Login com Auth0
- *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. O idToken pode ser enviado no body ou no header Authorization (Bearer token).
- *     tags: [Auth]
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               idToken:
- *                 type: string
- *                 description: Token JWT do Auth0 (idToken). Opcional se enviado no header Authorization.
- *               user:
- *                 type: object
- *                 description: Informações adicionais do usuário do Auth0 (opcional)
- *                 properties:
- *                   email:
- *                     type: string
- *                   name:
- *                     type: string
- *                   picture:
- *                     type: string
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Login realizado com sucesso
- *       400:
- *         description: Token inválido ou ausente
- *       401:
- *         description: Token do Auth0 inválido
- */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const idToken = req.body.idToken || (req.headers.authorization?.replace('Bearer ', ''));
@@ -287,6 +202,30 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         });
         user.avatar = userInfo.picture;
       }
+
+      // Se o usuário já existe, verificar se precisa criar na social.plus
+      if (!user.socialPlusUserId) {
+        try {
+          const emailContact = user.person?.contacts?.find((c: any) => c.type === 'email');
+          const socialPlusResponse = await socialPlusClient.createUser({
+            username: user.username || undefined,
+            email: emailContact?.value || email,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            avatar: user.avatar || undefined,
+          });
+
+          if (socialPlusResponse.success && socialPlusResponse.data?.id) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { socialPlusUserId: socialPlusResponse.data.id },
+            });
+            user.socialPlusUserId = socialPlusResponse.data.id;
+          }
+        } catch (error) {
+          console.error('Erro ao criar usuário na social.plus:', error);
+        }
+      }
     } else {
       const name = auth0User.name || userInfo.name || email.split('@')[0];
       const nameParts = name.split(' ');
@@ -349,30 +288,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         console.error('Erro ao criar usuário na social.plus:', error);
         // Não falha o login se a integração com social.plus falhar
       }
-    } else {
-      // Se o usuário já existe, verificar se precisa criar na social.plus
-      if (!user.socialPlusUserId) {
-        try {
-          const emailContact = person.contacts.find((c) => c.type === 'email');
-          const socialPlusResponse = await socialPlusClient.createUser({
-            username: user.username || undefined,
-            email: emailContact?.value || email,
-            firstName: person.firstName,
-            lastName: person.lastName,
-            avatar: user.avatar || undefined,
-          });
-
-          if (socialPlusResponse.success && socialPlusResponse.data?.id) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { socialPlusUserId: socialPlusResponse.data.id },
-            });
-            user.socialPlusUserId = socialPlusResponse.data.id;
-          }
-        } catch (error) {
-          console.error('Erro ao criar usuário na social.plus:', error);
-        }
-      }
     }
 
     if (!user.isActive || user.deletedAt) {
@@ -396,20 +311,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-/**
- * @swagger
- * /api/auth/profile:
- *   get:
- *     summary: Obter perfil do usuário autenticado
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Perfil obtido com sucesso
- *       401:
- *         description: Não autenticado
- */
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -437,43 +338,6 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-/**
- * @swagger
- * /api/auth/profile:
- *   put:
- *     summary: Atualizar perfil do usuário autenticado
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               firstName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               surname:
- *                 type: string
- *               birthdate:
- *                 type: string
- *                 format: date
- *               avatar:
- *                 type: string
- *                 format: uri
- *     responses:
- *       200:
- *         description: Perfil atualizado com sucesso
- *       401:
- *         description: Não autenticado
- *       404:
- *         description: Usuário não encontrado
- */
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -522,20 +386,6 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-/**
- * @swagger
- * /api/auth/account:
- *   delete:
- *     summary: Deletar conta do usuário autenticado (soft delete)
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Conta desativada com sucesso
- *       401:
- *         description: Não autenticado
- */
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
@@ -552,21 +402,6 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-/**
- * @swagger
- * /api/auth/logout:
- *   post:
- *     summary: Logout do usuário
- *     description: Invalida a sessão do usuário (opcional, token será invalidado no frontend)
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Logout realizado com sucesso
- *       401:
- *         description: Não autenticado
- */
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     sendSuccess(res, null, 'Logout realizado com sucesso');
