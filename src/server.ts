@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -21,6 +22,7 @@ import roleGroupRoleRoutes from '@/routes/roleGroupRoleRoutes';
 import roleGroupUserRoutes from '@/routes/roleGroupUserRoutes';
 import personalObjectiveRoutes from '@/routes/personalObjectiveRoutes';
 import userPersonalObjectiveRoutes from '@/routes/userPersonalObjectiveRoutes';
+import tipRoutes from '@/routes/tipRoutes';
 
 const app = express();
 
@@ -78,6 +80,11 @@ app.use(
 );
 
 app.use(
+  '/static',
+  express.static(path.join(process.cwd(), 'public')),
+);
+
+app.use(
   config.apiDocsPath,
   swaggerUi.serveFiles(swaggerSpec, swaggerUiOptions),
   swaggerUi.setup(swaggerSpec, swaggerUiOptions),
@@ -116,6 +123,7 @@ app.use('/api/role-group-roles', roleGroupRoleRoutes);
 app.use('/api/role-group-users', roleGroupUserRoutes);
 app.use('/api/personal-objectives', personalObjectiveRoutes);
 app.use('/api/user-personal-objectives', userPersonalObjectiveRoutes);
+app.use('/api/tips', tipRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({

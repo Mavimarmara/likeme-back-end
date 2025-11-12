@@ -5,11 +5,10 @@
   "framework": null,
   "functions": {
     "api/index.js": {
-      "includeFiles": "node_modules/swagger-ui-dist/**"
+      "includeFiles": "{node_modules/swagger-ui-dist/**,public/**}"
     }
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
-

@@ -37,6 +37,47 @@ async function main() {
 
   console.log('✅ Objetivos pessoais criados');
 
+  const tips = [
+    {
+      id: 'self-care-overload',
+      title: 'So many tips and apps... and self care still feels confusing?',
+      description: 'Everything that matters is in one place – from health trackers to wellbeing programs and a curated marketplace.',
+      image: 'https://images.unsplash.com/photo-1549576490-b0b4831ef60a?auto=format&fit=crop&w=720&q=80',
+      order: 1,
+    },
+    {
+      id: 'build-your-routine',
+      title: 'Construa uma rotina com propósito',
+      description: 'Organize metas semanais, acompanhe seu sono, alimentação e atividades físicas sem complicação.',
+      image: 'https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=720&q=80',
+      order: 2,
+    },
+    {
+      id: 'find-your-community',
+      title: 'Encontre apoio na comunidade',
+      description: 'Compartilhe avanços, troque experiências e participe de desafios que incentivam hábitos saudáveis.',
+      image: 'https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=720&q=80',
+      order: 3,
+    },
+  ];
+
+  console.log('💡 Criando dicas iniciais...');
+
+  for (const tip of tips) {
+    await prisma.tip.upsert({
+      where: { id: tip.id },
+      update: {
+        title: tip.title,
+        description: tip.description,
+        image: tip.image,
+        order: tip.order,
+      },
+      create: tip,
+    });
+  }
+
+  console.log('✅ Dicas criadas');
+
   console.log('🎉 Seed concluído com sucesso!');
 }
 

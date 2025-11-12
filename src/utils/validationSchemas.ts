@@ -62,6 +62,14 @@ export const searchSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
 });
 
+export const upsertTipSchema = Joi.object({
+  id: Joi.string().uuid({ version: 'uuidv4' }).optional(),
+  title: Joi.string().min(3).max(200).required(),
+  description: Joi.string().min(3).max(500).required(),
+  image: Joi.string().uri({ allowRelative: true }).max(500).required(),
+  order: Joi.number().integer().min(0).optional(),
+});
+
 export const createPersonSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),

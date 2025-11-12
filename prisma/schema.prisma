@@ -166,3 +166,17 @@ model UserPersonalObjective {
   @@id([userId, objectiveId])
   @@map("user_personal_objective")
 }
+
+model Tip {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  title       String
+  description String
+  image       String
+  order       Int?     @map("display_order")
+
+  @@map("tip")
+  @@index([order])
+}
