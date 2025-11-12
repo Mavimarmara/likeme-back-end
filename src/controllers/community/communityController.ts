@@ -148,6 +148,40 @@ const listMembersQuery = async (communityId: string, skip: number, limit: number
   ]);
 };
 
+const listUserCommunitiesQuery = async (userId: string, skip: number, limit: number) => {
+  const where = {
+    userId,
+    deletedAt: null,
+    community: {
+      deletedAt: null,
+    },
+  };
+
+  return Promise.all([
+    prisma.communityMember.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        community: {
+          include: {
+            creator: { select: CREATOR_SELECT },
+            members: {
+              where: { deletedAt: null },
+              select: {
+                id: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.communityMember.count({ where }),
+  ]);
+};
+
 const createMember = async (userId: string, communityId: string, role: string) => {
   return prisma.communityMember.create({
     data: {
@@ -425,5 +459,36 @@ export const listMembers = async (req: AuthenticatedRequest, res: Response): Pro
     );
   } catch (error) {
     handleError(res, error, 'listar membros');
+  }
+};
+
+export const getUserCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const currentUserId = req.user?.id;
+
+    if (!validateAuthenticatedUser(currentUserId)) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    const { page, limit, skip } = buildPaginationParams(req.query);
+    const [memberships, total] = await listUserCommunitiesQuery(currentUserId!, skip, limit);
+
+    const communities = memberships.map((membership) => ({
+      ...membership.community,
+      role: membership.role,
+      joinedAt: membership.createdAt,
+    }));
+
+    sendSuccess(
+      res,
+      {
+        communities,
+        pagination: buildPaginationResponse(page, limit, total),
+      },
+      'Comunidades do usuário obtidas com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar comunidades do usuário');
   }
 };

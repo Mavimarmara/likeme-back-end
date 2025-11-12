@@ -104,6 +104,62 @@
 
 /**
  * @swagger
+ * /api/communities/user/me:
+ *   get:
+ *     summary: Listar comunidades do usuário autenticado
+ *     description: Retorna todas as comunidades que o usuário autenticado está participando, incluindo seu papel (role) e data de entrada
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Lista de comunidades do usuário obtida com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communities:
+ *                       type: array
+ *                       items:
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Community'
+ *                           - type: object
+ *                             properties:
+ *                               role:
+ *                                 type: string
+ *                                 enum: [member, admin, moderator]
+ *                                 description: Papel do usuário na comunidade
+ *                               joinedAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                                 description: Data em que o usuário entrou na comunidade
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Usuário não autenticado
+ */
+
+/**
+ * @swagger
  * /api/communities/{id}:
  *   get:
  *     summary: Obter comunidade por ID

@@ -5,6 +5,7 @@ import {
   addMember,
   removeMember,
   listMembers,
+  getUserCommunities,
 } from '@/controllers/community/communityController';
 import { authenticateToken } from '@/middleware/auth';
 
@@ -15,6 +16,7 @@ router.use(authenticateToken);
 
 // Rotas de comunidades (apenas leitura - criação via dashboard)
 router.get('/', listCommunities);
+router.get('/user/me', getUserCommunities);
 router.get('/:id', getCommunityById);
 
 // Rotas de membros
