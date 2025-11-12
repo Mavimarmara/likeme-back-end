@@ -4,6 +4,7 @@ import { hashPassword, generateToken } from '@/utils/auth';
 import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, AuthResponse } from '@/types';
+import { socialPlusClient } from '@/utils/socialPlus';
 
 /**
  * @swagger
@@ -134,6 +135,31 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         },
       },
     });
+
+    // Criar usuário na social.plus
+    try {
+      const emailContact = user.person.contacts.find((c) => c.type === 'email');
+      const socialPlusResponse = await socialPlusClient.createUser({
+        username: user.username || undefined,
+        email: emailContact?.value || userData.email,
+        firstName: user.person.firstName,
+        lastName: user.person.lastName,
+        avatar: user.avatar || undefined,
+      });
+
+      if (socialPlusResponse.success && socialPlusResponse.data?.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { socialPlusUserId: socialPlusResponse.data.id },
+        });
+        user.socialPlusUserId = socialPlusResponse.data.id;
+      } else {
+        console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
+      }
+    } catch (error) {
+      console.error('Erro ao criar usuário na social.plus:', error);
+      // Não falha o registro se a integração com social.plus falhar
+    }
 
     const token = generateToken(user.id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -300,6 +326,53 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           },
         },
       });
+
+      // Criar usuário na social.plus
+      try {
+        const socialPlusResponse = await socialPlusClient.createUser({
+          email: email,
+          firstName: person.firstName,
+          lastName: person.lastName,
+          avatar: user.avatar || undefined,
+        });
+
+        if (socialPlusResponse.success && socialPlusResponse.data?.id) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { socialPlusUserId: socialPlusResponse.data.id },
+          });
+          user.socialPlusUserId = socialPlusResponse.data.id;
+        } else {
+          console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
+        }
+      } catch (error) {
+        console.error('Erro ao criar usuário na social.plus:', error);
+        // Não falha o login se a integração com social.plus falhar
+      }
+    } else {
+      // Se o usuário já existe, verificar se precisa criar na social.plus
+      if (!user.socialPlusUserId) {
+        try {
+          const emailContact = person.contacts.find((c) => c.type === 'email');
+          const socialPlusResponse = await socialPlusClient.createUser({
+            username: user.username || undefined,
+            email: emailContact?.value || email,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            avatar: user.avatar || undefined,
+          });
+
+          if (socialPlusResponse.success && socialPlusResponse.data?.id) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { socialPlusUserId: socialPlusResponse.data.id },
+            });
+            user.socialPlusUserId = socialPlusResponse.data.id;
+          }
+        } catch (error) {
+          console.error('Erro ao criar usuário na social.plus:', error);
+        }
+      }
     }
 
     if (!user.isActive || user.deletedAt) {

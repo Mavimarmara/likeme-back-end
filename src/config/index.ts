@@ -64,4 +64,9 @@ export const config = {
     clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
     issuer: process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}/` : '',
   },
+  socialPlus: {
+    apiKey: process.env.SOCIAL_PLUS_API_KEY || '',
+    region: process.env.SOCIAL_PLUS_REGION || 'US', // US, EU, SG
+    baseUrl: process.env.SOCIAL_PLUS_BASE_URL || 'https://api.social.plus',
+  },
 };

@@ -52,26 +52,30 @@ model PersonContact {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-  personId  String   @unique @map("person_id")
-  username  String?  @unique
-  password  String
-  salt      String?
-  avatar    String?
-  isActive  Boolean  @default(true) @map("is_active")
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  personId          String   @unique @map("person_id")
+  username          String?  @unique
+  password          String
+  salt              String?
+  avatar            String?
+  isActive          Boolean  @default(true) @map("is_active")
+  socialPlusUserId  String?  @unique @map("social_plus_user_id")
 
   // Relations
   person    Person   @relation("PersonUser", fields: [personId], references: [id], onDelete: Cascade)
   // Relations (inverse - apenas para validação Prisma)
   roleGroups RoleGroupUser[] @relation("UserRoleGroups")
   personalObjectives UserPersonalObjective[] @relation("UserPersonalObjectives")
+  communities CommunityMember[] @relation("UserCommunities")
+  createdCommunities Community[] @relation("UserCreatedCommunities")
 
   @@map("user")
   @@index([personId])
   @@index([username])
+  @@index([socialPlusUserId])
 }
 
 model PersonalObjective {
@@ -179,4 +183,49 @@ model Tip {
 
   @@map("tip")
   @@index([order])
+}
+
+// ============================================
+// SOCIAL.PLUS INTEGRATION MODELS
+// ============================================
+
+model Community {
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  name              String
+  description       String?
+  type              String   // public, private, official, unofficial
+  avatar            String?
+  socialPlusCommunityId String? @unique @map("social_plus_community_id")
+  createdBy         String   @map("created_by") // userId
+
+  // Relations
+  creator           User     @relation("UserCreatedCommunities", fields: [createdBy], references: [id])
+  members           CommunityMember[] @relation("CommunityMembers")
+
+  @@map("community")
+  @@index([socialPlusCommunityId])
+  @@index([createdBy])
+  @@index([type])
+}
+
+model CommunityMember {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  userId      String   @map("user_id")
+  communityId String   @map("community_id")
+  role        String   @default("member") // member, admin, moderator
+
+  // Relations
+  user        User      @relation("UserCommunities", fields: [userId], references: [id], onDelete: Cascade)
+  community   Community @relation("CommunityMembers", fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+  @@map("community_member")
+  @@index([userId])
+  @@index([communityId])
 }

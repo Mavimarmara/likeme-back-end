@@ -23,6 +23,7 @@ import roleGroupUserRoutes from '@/routes/roleGroupUserRoutes';
 import personalObjectiveRoutes from '@/routes/personalObjectiveRoutes';
 import userPersonalObjectiveRoutes from '@/routes/userPersonalObjectiveRoutes';
 import tipRoutes from '@/routes/tipRoutes';
+import communityRoutes from '@/routes/communityRoutes';
 
 const app = express();
 
@@ -124,6 +125,7 @@ app.use('/api/role-group-users', roleGroupUserRoutes);
 app.use('/api/personal-objectives', personalObjectiveRoutes);
 app.use('/api/user-personal-objectives', userPersonalObjectiveRoutes);
 app.use('/api/tips', tipRoutes);
+app.use('/api/communities', communityRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({
