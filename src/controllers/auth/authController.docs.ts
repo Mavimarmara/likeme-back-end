@@ -135,6 +135,109 @@
 
 /**
  * @swagger
+ * /api/auth/idtoken:
+ *   post:
+ *     summary: Obter idToken do Auth0
+ *     description: Autentica com Auth0 usando email e senha, e retorna o idToken. Este endpoint é útil para obter o idToken que pode ser usado no Swagger UI (botão Authorize) ou em outros endpoints que requerem autenticação Auth0.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email do usuário no Auth0
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: Senha do usuário no Auth0
+ *     responses:
+ *       200:
+ *         description: idToken obtido com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     idToken:
+ *                       type: string
+ *                       description: Token JWT do Auth0 (idToken) - use este token no Swagger Authorize
+ *                     accessToken:
+ *                       type: string
+ *                       description: Access token do Auth0
+ *                     tokenType:
+ *                       type: string
+ *                       description: Tipo do token (geralmente "Bearer")
+ *                     expiresIn:
+ *                       type: integer
+ *                       description: Tempo de expiração em segundos
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Email ou senha não fornecidos
+ *       401:
+ *         description: Credenciais inválidas
+ *       500:
+ *         description: Auth0 não configurado corretamente
+ */
+
+/**
+ * @swagger
+ * /api/auth/verify:
+ *   post:
+ *     summary: Verificar idToken do Auth0 e obter token de sessão
+ *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. Diferente do login, este endpoint não cria usuário automaticamente - o usuário deve estar previamente cadastrado. O idToken pode ser enviado no body ou no header Authorization (Bearer token).
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Token JWT do Auth0 (idToken). Também pode ser enviado no header Authorization (Bearer token).
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token verificado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/AuthResponse'
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Token inválido ou ausente, ou email não encontrado no token
+ *       401:
+ *         description: Token do Auth0 inválido ou expirado, ou usuário inativo/deletado
+ *       404:
+ *         description: Usuário não encontrado. Faça o registro primeiro.
+ */
+
+/**
+ * @swagger
  * /api/auth/profile:
  *   get:
  *     summary: Obter perfil do usuário autenticado

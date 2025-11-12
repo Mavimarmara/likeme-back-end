@@ -48,6 +48,15 @@ export const loginSchema = Joi.object({
   }).optional(),
 }).min(0);
 
+export const verifyTokenSchema = Joi.object({
+  idToken: Joi.string().required(),
+});
+
+export const getIdTokenSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().required(),
+});
+
 export const paginationSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),

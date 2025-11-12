@@ -96,6 +96,91 @@ const swaggerUiOptions = {
   },
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'LikeMe API Documentation',
+  customJs: `
+    (function() {
+      // Script para auto-preenchimento do idToken no Swagger
+      function autoFillAuthToken() {
+        // Observa mudanças no DOM para detectar quando a resposta é exibida
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) {
+                const responseBody = node.querySelector && node.querySelector('.response-body');
+                if (responseBody) {
+                  const responseText = responseBody.textContent || '';
+                  if (responseText.includes('idToken') && responseText.includes('success')) {
+                    try {
+                      const response = JSON.parse(responseText);
+                      if (response.success && response.data && response.data.idToken) {
+                        // Aguarda um pouco para garantir que o Swagger UI está pronto
+                        setTimeout(function() {
+                          // Tenta usar a API do Swagger UI
+                          if (window.ui && window.ui.preauthorizeApiKey) {
+                            window.ui.preauthorizeApiKey('bearerAuth', response.data.idToken);
+                            console.log('✅ idToken automaticamente adicionado ao Authorize!');
+                          } else {
+                            // Fallback: preenche manualmente o campo
+                            const authModal = document.querySelector('.auth-modal');
+                            if (authModal) {
+                              const authInput = authModal.querySelector('input[type="text"]');
+                              if (authInput) {
+                                authInput.value = response.data.idToken;
+                                authInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                const authorizeBtn = authModal.querySelector('.btn.authorize');
+                                if (authorizeBtn) {
+                                  authorizeBtn.click();
+                                }
+                                console.log('✅ idToken automaticamente adicionado ao Authorize!');
+                              }
+                            }
+                          }
+                        }, 500);
+                      }
+                    } catch (e) {
+                      // Ignora erros de parsing
+                    }
+                  }
+                }
+              }
+            });
+          });
+        });
+        
+        // Observa mudanças no body
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+        
+        // Também intercepta requisições fetch/xhr se possível
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+          return originalFetch.apply(this, args).then(function(response) {
+            if (response.url && response.url.includes('/api/auth/idtoken')) {
+              response.clone().json().then(function(data) {
+                if (data.success && data.data && data.data.idToken) {
+                  setTimeout(function() {
+                    if (window.ui && window.ui.preauthorizeApiKey) {
+                      window.ui.preauthorizeApiKey('bearerAuth', data.data.idToken);
+                      console.log('✅ idToken automaticamente adicionado ao Authorize!');
+                    }
+                  }, 500);
+                }
+              }).catch(function() {});
+            }
+            return response;
+          });
+        };
+      }
+      
+      // Executa quando a página carregar
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', autoFillAuthToken);
+      } else {
+        autoFillAuthToken();
+      }
+    })();
+  `,
 };
 const swaggerAssetPath = getSwaggerUiAssetPath();
 

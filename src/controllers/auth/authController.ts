@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '@/config/database';
+import { config } from '@/config';
 import { hashPassword, generateToken } from '@/utils/auth';
 import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
@@ -308,6 +309,152 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error('Auth0 login error:', error);
     sendError(res, 'Erro ao fazer login com Auth0');
+  }
+};
+
+export const getIdToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      sendError(res, 'Email e senha são obrigatórios', 400);
+      return;
+    }
+
+    if (!config.auth0.domain || !config.auth0.clientId) {
+      sendError(res, 'Auth0 não configurado corretamente', 500);
+      return;
+    }
+
+    // Autenticar com Auth0 usando Resource Owner Password Credentials Grant
+    const auth0Domain = config.auth0.domain;
+    const clientId = config.auth0.clientId;
+    const clientSecret = config.auth0.clientSecret;
+    const audience = process.env.AUTH0_AUDIENCE || `https://${auth0Domain}/api/v2/`;
+
+    const tokenUrl = `https://${auth0Domain}/oauth/token`;
+
+    const body = new URLSearchParams();
+    body.append('grant_type', 'password');
+    body.append('username', email);
+    body.append('password', password);
+    body.append('client_id', clientId);
+    body.append('audience', audience);
+
+    if (clientSecret) {
+      body.append('client_secret', clientSecret);
+    }
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    const data = (await response.json()) as any;
+
+    if (!response.ok) {
+      const errorMessage = data.error_description || data.error || 'Erro ao autenticar com Auth0';
+      sendError(res, errorMessage, response.status);
+      return;
+    }
+
+    // Retornar o idToken
+    sendSuccess(
+      res,
+      {
+        idToken: data.id_token,
+        accessToken: data.access_token,
+        tokenType: data.token_type,
+        expiresIn: data.expires_in,
+      },
+      'idToken obtido com sucesso'
+    );
+  } catch (error) {
+    console.error('Auth0 idToken error:', error);
+    sendError(res, 'Erro ao obter idToken do Auth0');
+  }
+};
+
+export const verifyToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const idToken = req.body.idToken || (req.headers.authorization?.replace('Bearer ', ''));
+
+    if (!idToken) {
+      sendError(res, 'Token do Auth0 não fornecido', 400);
+      return;
+    }
+
+    let decoded;
+    try {
+      decoded = await verifyAuth0Token(idToken);
+    } catch (error) {
+      sendError(
+        res,
+        `Token do Auth0 inválido ou expirado: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        401
+      );
+      return;
+    }
+
+    const auth0User = extractUserInfoFromToken(decoded);
+    const email = auth0User.email;
+
+    if (!email) {
+      sendError(res, 'Email não encontrado no token do Auth0', 400);
+      return;
+    }
+
+    const existingContact = await prisma.personContact.findFirst({
+      where: {
+        type: 'email',
+        value: email,
+        deletedAt: null,
+      },
+      include: {
+        person: {
+          include: {
+            user: {
+              include: {
+                person: {
+                  include: {
+                    contacts: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!existingContact?.person?.user) {
+      sendError(res, 'Usuário não encontrado. Faça o registro primeiro.', 404);
+      return;
+    }
+
+    const user = existingContact.person.user;
+
+    if (!user.isActive || user.deletedAt) {
+      sendError(res, 'Usuário inativo ou deletado', 401);
+      return;
+    }
+
+    const sessionToken = generateToken(user.id);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = user;
+
+    const response: AuthResponse = {
+      user: userWithoutPassword,
+      token: sessionToken,
+    };
+
+    sendSuccess(res, response, 'Token verificado com sucesso');
+  } catch (error) {
+    console.error('Token verification error:', error);
+    sendError(res, 'Erro ao verificar token do Auth0');
   }
 };
 
