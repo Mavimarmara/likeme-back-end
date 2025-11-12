@@ -29,10 +29,10 @@ app.use(helmet({
   contentSecurityPolicy: false, // Desabilita CSP para permitir Swagger UI
 }));
 
-// CORS configurado para permitir requisições do Swagger UI
+// CORS configurado para permitir requisições do Swagger UI e do próprio domínio
 app.use(cors({
   origin: (origin, callback) => {
-    // Permite requisições sem origin (como do Swagger UI no mesmo servidor)
+    // Permite requisições sem origin (como do Swagger UI no mesmo servidor, curl, Postman)
     if (!origin) {
       return callback(null, true);
     }
@@ -42,7 +42,21 @@ app.use(cors({
       ? config.corsOrigin 
       : [config.corsOrigin];
     
+    // Permite se estiver na lista ou se for '*'
     if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
+    // Permite requisições do próprio domínio (Vercel)
+    if (process.env.VERCEL_URL) {
+      const vercelUrl = `https://${process.env.VERCEL_URL}`;
+      if (origin === vercelUrl || origin.startsWith(vercelUrl)) {
+        return callback(null, true);
+      }
+    }
+    
+    // Permite requisições de qualquer subdomínio do Vercel
+    if (origin.includes('.vercel.app') || origin.includes('vercel.app')) {
       return callback(null, true);
     }
     
@@ -51,11 +65,17 @@ app.use(cors({
       return callback(null, true);
     }
     
+    // Em produção no Vercel, permite requisições do próprio domínio
+    if (process.env.VERCEL) {
+      return callback(null, true);
+    }
+    
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(compression());
