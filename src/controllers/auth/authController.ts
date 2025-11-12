@@ -331,6 +331,7 @@ export const getIdToken = async (req: Request, res: Response): Promise<void> => 
     const clientId = config.auth0.clientId;
     const clientSecret = config.auth0.clientSecret;
     const audience = process.env.AUTH0_AUDIENCE || `https://${auth0Domain}/api/v2/`;
+    const connection = config.auth0.connection;
 
     const tokenUrl = `https://${auth0Domain}/oauth/token`;
 
@@ -340,6 +341,7 @@ export const getIdToken = async (req: Request, res: Response): Promise<void> => 
     body.append('password', password);
     body.append('client_id', clientId);
     body.append('audience', audience);
+    body.append('connection', connection);
 
     if (clientSecret) {
       body.append('client_secret', clientSecret);

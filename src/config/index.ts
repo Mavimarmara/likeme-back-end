@@ -63,6 +63,7 @@ export const config = {
     clientId: process.env.AUTH0_CLIENT_ID || '',
     clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
     issuer: process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}/` : '',
+    connection: process.env.AUTH0_CONNECTION || 'Username-Password-Authentication',
   },
   socialPlus: {
     apiKey: process.env.SOCIAL_PLUS_API_KEY || '',
