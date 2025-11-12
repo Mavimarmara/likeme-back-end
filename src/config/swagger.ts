@@ -2,6 +2,32 @@ import path from 'path';
 
 const projectRoot = process.cwd();
 
+const getServerUrl = (): string => {
+  // Em produção no Vercel, usar a URL do Vercel
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Se tiver uma URL base configurada explicitamente
+  if (process.env.API_BASE_URL) {
+    return process.env.API_BASE_URL;
+  }
+  
+  // Em desenvolvimento, usar localhost
+  const port = process.env.PORT || 3000;
+  return `http://localhost:${port}`;
+};
+
+const getServerDescription = (): string => {
+  if (process.env.VERCEL_URL) {
+    return 'Servidor de produção (Vercel)';
+  }
+  if (process.env.API_BASE_URL) {
+    return 'Servidor de produção';
+  }
+  return 'Servidor de desenvolvimento';
+};
+
 export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -16,8 +42,8 @@ export const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${process.env.PORT || 3000}`,
-        description: 'Servidor de desenvolvimento',
+        url: getServerUrl(),
+        description: getServerDescription(),
       },
     ],
     components: {
