@@ -341,7 +341,12 @@ export const getIdToken = async (req: Request, res: Response): Promise<void> => 
     body.append('password', password);
     body.append('client_id', clientId);
     body.append('audience', audience);
-    body.append('connection', connection);
+    
+    // Connection é obrigatório para o grant type password
+    // Se não especificado, o Auth0 tenta usar a conexão padrão
+    if (connection) {
+      body.append('connection', connection);
+    }
 
     if (clientSecret) {
       body.append('client_secret', clientSecret);
@@ -358,7 +363,20 @@ export const getIdToken = async (req: Request, res: Response): Promise<void> => 
     const data = (await response.json()) as any;
 
     if (!response.ok) {
-      const errorMessage = data.error_description || data.error || 'Erro ao autenticar com Auth0';
+      let errorMessage = data.error_description || data.error || 'Erro ao autenticar com Auth0';
+      
+      // Mensagens de erro mais claras
+      if (errorMessage.includes('default connection')) {
+        errorMessage = 'Conexão padrão não configurada no Auth0. ' +
+          'Configure uma conexão padrão em: Auth0 Dashboard > Authentication > Database > [Sua Conexão] > Settings > ' +
+          'ou especifique AUTH0_CONNECTION no .env com o nome exato da sua conexão (ex: "Username-Password-Authentication").';
+      } else if (errorMessage.includes('invalid_grant') || errorMessage.includes('Wrong email or password')) {
+        errorMessage = 'Email ou senha inválidos. Verifique suas credenciais.';
+      } else if (errorMessage.includes('Grant type') && errorMessage.includes('not allowed')) {
+        errorMessage = 'Grant type "password" não está habilitado. ' +
+          'Habilite em: Auth0 Dashboard > Applications > [Seu App] > Settings > Advanced Settings > Grant Types > Password';
+      }
+      
       sendError(res, errorMessage, response.status);
       return;
     }

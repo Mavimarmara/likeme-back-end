@@ -89,7 +89,10 @@ CORS_ORIGIN="http://localhost:3000"
 
 # Auth0
 AUTH0_DOMAIN="your-auth0-domain.auth0.com"
+AUTH0_CLIENT_ID="your-auth0-client-id"
+AUTH0_CLIENT_SECRET="your-auth0-client-secret"
 AUTH0_AUDIENCE="your-auth0-audience"
+AUTH0_CONNECTION="Username-Password-Authentication"
 
 # Social.plus
 SOCIAL_PLUS_API_KEY="your-social-plus-api-key"
@@ -404,6 +407,24 @@ likeme-back-end/
 - 🔧 **Variáveis de Ambiente**: Arquivo `.env` precisa ser criado
 - 🔧 **Migrações**: Banco precisa ser inicializado
 - 🔧 **Auth0**: Credenciais precisam ser configuradas
+  - ⚠️ **Importante**: Para usar o endpoint `/api/auth/idtoken`, você precisa:
+    1. **Habilitar o grant type "Password"**:
+       - Auth0 Dashboard > Applications > [Seu App] > Settings
+       - Role até "Advanced Settings" > "Grant Types"
+       - Habilite "Password" (Resource Owner Password Credentials)
+       - Salve as alterações
+    2. **Configurar a conexão**:
+       - Verifique o nome da sua conexão em: Authentication > Database
+       - Configure `AUTH0_CONNECTION` no `.env` com o nome exato (ex: "Username-Password-Authentication")
+       - OU configure uma conexão padrão no Auth0
+    3. **Habilitar a conexão para o cliente**:
+       - Applications > [Seu App] > Connections
+       - Certifique-se de que a conexão de Database está habilitada
+  - ⚠️ **Nota de Segurança**: O grant type "Password" é desabilitado por padrão por questões de segurança. 
+    - **Para testes manuais em produção**: Pode ser usado, mas recomenda-se:
+      - Restringir acesso apenas para IPs específicos ou VPN
+      - Usar apenas para desenvolvimento/testes, não para usuários finais
+      - Considerar usar o Authorization Code Flow padrão para produção
 - 🔧 **social.plus**: API key precisa ser configurada
 
 ### 🚀 Para Começar Agora
