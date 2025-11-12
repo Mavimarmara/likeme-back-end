@@ -5,7 +5,7 @@ import {
   getAllPersonContacts,
   updatePersonContact,
   deletePersonContact,
-} from '@/controllers/person/personContactController';
+} from '@/controllers/person/personContact/personContactController';
 import { createPersonContactSchema, updatePersonContactSchema, idParamSchema } from '@/utils/validationSchemas';
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';

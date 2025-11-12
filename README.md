@@ -5,45 +5,30 @@ Backend API completo para o aplicativo LikeMe - Saúde e Bem-estar, desenvolvido
 ## 🚀 Funcionalidades
 
 ### 🔐 Autenticação e Usuários
-- Registro e login de usuários
+- Registro e login de usuários com Auth0
 - Autenticação JWT
 - Gerenciamento de perfil
-- Sistema de permissões
+- Integração com social.plus para comunidades
 
-### 📋 Anamnese
-- Questionários de saúde personalizados
-- Armazenamento de respostas em JSON
-- Histórico de anamneses
+### 👤 Pessoas e Contatos
+- CRUD de pessoas (Person)
+- Gerenciamento de contatos (PersonContact)
+- Suporte a múltiplos tipos de contato (email, telefone, etc.)
 
-### 🏃‍♂️ Atividades
-- CRUD de atividades de saúde
-- Categorização (exercício, nutrição, mental, médico)
-- Sistema de dificuldade
-- Agendamento e conclusão
+### 🎯 Objetivos Pessoais
+- CRUD de objetivos pessoais
+- Vinculação de objetivos a usuários
+- Acompanhamento de progresso
 
-### 📊 Bem-estar
-- Dashboard com métricas de saúde
-- Categorias: físico, mental, emocional, social
-- Histórico de dados
-- Resumos e análises
+### 💡 Dicas
+- Sistema de dicas e conteúdos educativos
+- Categorização e organização
 
-### 👥 Comunidade
-- Posts e compartilhamentos
-- Sistema de likes e comentários
-- Categorização de conteúdo
-- Tags e busca
-
-### 🛒 Marketplace
-- Catálogo de produtos
-- Sistema de carrinho e pedidos
-- Categorias: suplementos, equipamentos, livros, cursos
-- Controle de estoque
-
-### 👩‍⚕️ Provedores de Saúde
-- Cadastro de profissionais
-- Sistema de agendamentos
-- Especialidades médicas
-- Avaliações e reviews
+### 👥 Comunidades
+- Integração com social.plus
+- Gerenciamento de comunidades
+- Sistema de membros e permissões
+- Listagem e visualização de comunidades
 
 ## 🛠 Tecnologias Utilizadas
 
@@ -53,6 +38,7 @@ Backend API completo para o aplicativo LikeMe - Saúde e Bem-estar, desenvolvido
 - **Prisma ORM** - ORM para banco de dados
 - **PostgreSQL** - Banco de dados
 - **JWT** - Autenticação
+- **Auth0** - Autenticação OAuth
 - **Joi** - Validação de dados
 - **Swagger** - Documentação da API
 - **Bcrypt** - Hash de senhas
@@ -60,6 +46,7 @@ Backend API completo para o aplicativo LikeMe - Saúde e Bem-estar, desenvolvido
 - **Helmet** - Segurança
 - **Morgan** - Logging
 - **Compression** - Compressão de respostas
+- **social.plus** - Plataforma de comunidades
 
 ## 📦 Instalação
 
@@ -98,14 +85,24 @@ JWT_EXPIRES_IN="7d"
 # Server
 PORT=3000
 NODE_ENV="development"
+CORS_ORIGIN="http://localhost:3000"
 
-# Email (Nodemailer)
+# Auth0
+AUTH0_DOMAIN="your-auth0-domain.auth0.com"
+AUTH0_AUDIENCE="your-auth0-audience"
+
+# Social.plus
+SOCIAL_PLUS_API_KEY="your-social-plus-api-key"
+SOCIAL_PLUS_REGION="US"
+SOCIAL_PLUS_BASE_URL="https://api.social.plus"
+
+# Email (Nodemailer) - Opcional
 EMAIL_HOST="smtp.gmail.com"
 EMAIL_PORT=587
 EMAIL_USER="your-email@gmail.com"
 EMAIL_PASS="your-app-password"
 
-# Cloudinary (for file uploads)
+# Cloudinary (for file uploads) - Opcional
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
@@ -119,7 +116,7 @@ npm run db:generate
 # Execute as migrações
 npm run db:migrate
 
-# Popule o banco com dados iniciais
+# Popule o banco com dados iniciais (opcional)
 npm run db:seed
 ```
 
@@ -131,6 +128,9 @@ npm run dev
 npm run vercel:dev
 # ou
 vercel dev
+
+# Desenvolvimento local (TypeScript direto)
+npm run dev:local
 
 # Produção
 npm run build
@@ -167,7 +167,7 @@ Exemplo: Se o Vercel mostrar `Ready! Available at http://localhost:3000`, use `h
 
 ### 🔐 Autenticação na Documentação
 Para testar endpoints protegidos:
-1. Faça login via `/api/auth/login`
+1. Faça login via `/api/auth/login` (com Auth0 idToken)
 2. Copie o token retornado
 3. Clique em "Authorize" no Swagger
 4. Cole o token no formato: `Bearer SEU_TOKEN_AQUI`
@@ -176,95 +176,103 @@ Para testar endpoints protegidos:
 
 #### 🔐 Autenticação
 ```
-POST /api/auth/register     # Registro de usuário
-POST /api/auth/login        # Login
-GET  /api/auth/profile      # Perfil do usuário
-PUT  /api/auth/profile      # Atualizar perfil
-DELETE /api/auth/account    # Deletar conta
+POST   /api/auth/register     # Registro de usuário
+POST   /api/auth/login         # Login com Auth0
+GET    /api/auth/profile       # Perfil do usuário
+PUT    /api/auth/profile       # Atualizar perfil
+DELETE /api/auth/account       # Deletar conta (soft delete)
+POST   /api/auth/logout        # Logout
 ```
 
-#### 📋 Anamnese
+#### 👤 Pessoas
 ```
-POST /api/anamnese          # Criar anamnese
-GET  /api/anamnese          # Obter anamnese
-PUT  /api/anamnese          # Atualizar anamnese
-DELETE /api/anamnese        # Deletar anamnese
-```
-
-#### 🏃‍♂️ Atividades
-```
-POST   /api/activities           # Criar atividade
-GET    /api/activities           # Listar atividades
-GET    /api/activities/:id       # Obter atividade
-PUT    /api/activities/:id       # Atualizar atividade
-DELETE /api/activities/:id       # Deletar atividade
-PATCH  /api/activities/:id/complete # Completar atividade
+POST   /api/persons            # Criar pessoa
+GET    /api/persons            # Listar pessoas
+GET    /api/persons/:id        # Obter pessoa
+PUT    /api/persons/:id        # Atualizar pessoa
+DELETE /api/persons/:id        # Deletar pessoa
 ```
 
-#### 📊 Bem-estar
+#### 📞 Contatos de Pessoas
 ```
-POST /api/wellness              # Criar dados de bem-estar
-GET  /api/wellness              # Listar dados
-GET  /api/wellness/summary      # Resumo de bem-estar
-PUT  /api/wellness/:id          # Atualizar dados
-DELETE /api/wellness/:id        # Deletar dados
-```
-
-#### 👥 Comunidade
-```
-POST   /api/community           # Criar post
-GET    /api/community           # Listar posts
-GET    /api/community/:id       # Obter post
-PUT    /api/community/:id       # Atualizar post
-DELETE /api/community/:id       # Deletar post
-POST   /api/community/:id/like  # Curtir post
-POST   /api/community/:id/comments # Comentar
+POST   /api/person-contacts    # Criar contato
+GET    /api/person-contacts    # Listar contatos
+GET    /api/person-contacts/:id # Obter contato
+PUT    /api/person-contacts/:id # Atualizar contato
+DELETE /api/person-contacts/:id # Deletar contato
 ```
 
-#### 🛒 Marketplace
+#### 👥 Usuários
 ```
-GET    /api/marketplace/products     # Listar produtos
-GET    /api/marketplace/products/:id # Obter produto
-POST   /api/marketplace/orders       # Criar pedido
-GET    /api/marketplace/orders       # Listar pedidos
-GET    /api/marketplace/orders/:id   # Obter pedido
+POST   /api/users              # Criar usuário
+GET    /api/users              # Listar usuários
+GET    /api/users/:id          # Obter usuário
+PUT    /api/users/:id          # Atualizar usuário
+DELETE /api/users/:id          # Deletar usuário
 ```
 
-#### 👩‍⚕️ Provedores de Saúde
+#### 🎯 Objetivos Pessoais
 ```
-GET    /api/health-providers/providers     # Listar provedores
-GET    /api/health-providers/providers/:id # Obter provedor
-POST   /api/health-providers/providers     # Criar provedor
-POST   /api/health-providers/appointments  # Criar agendamento
-GET    /api/health-providers/appointments  # Listar agendamentos
+POST   /api/personal-objectives           # Criar objetivo
+GET    /api/personal-objectives          # Listar objetivos
+GET    /api/personal-objectives/:id      # Obter objetivo
+PUT    /api/personal-objectives/:id      # Atualizar objetivo
+DELETE /api/personal-objectives/:id      # Deletar objetivo
 ```
+
+#### 🎯 Objetivos de Usuários
+```
+POST   /api/user-personal-objectives    # Vincular objetivo a usuário
+GET    /api/user-personal-objectives     # Listar objetivos do usuário
+GET    /api/user-personal-objectives/:id # Obter objetivo do usuário
+PUT    /api/user-personal-objectives/:id # Atualizar objetivo do usuário
+DELETE /api/user-personal-objectives/:id # Remover objetivo do usuário
+```
+
+#### 💡 Dicas
+```
+POST   /api/tips               # Criar dica
+GET    /api/tips               # Listar dicas
+GET    /api/tips/:id           # Obter dica
+PUT    /api/tips/:id           # Atualizar dica
+DELETE /api/tips/:id           # Deletar dica
+```
+
+#### 👥 Comunidades
+```
+GET    /api/communities                    # Listar comunidades
+GET    /api/communities/:id               # Obter comunidade
+POST   /api/communities/:id/members       # Adicionar membro
+GET    /api/communities/:id/members       # Listar membros
+DELETE /api/communities/:id/members/:userId # Remover membro
+```
+
+**Nota**: A criação, atualização e exclusão de comunidades é feita via dashboard da social.plus.
 
 ## 🗄 Estrutura do Banco de Dados
 
 ### Principais Tabelas
 
 - **users** - Usuários do sistema
-- **anamnese** - Questionários de saúde
-- **activities** - Atividades de saúde
-- **wellness_data** - Dados de bem-estar
-- **posts** - Posts da comunidade
-- **comments** - Comentários
-- **likes** - Curtidas
-- **products** - Produtos do marketplace
-- **orders** - Pedidos
-- **order_items** - Itens dos pedidos
-- **health_providers** - Provedores de saúde
-- **appointments** - Agendamentos
+- **persons** - Pessoas cadastradas
+- **person_contacts** - Contatos das pessoas
+- **personal_objectives** - Objetivos pessoais disponíveis
+- **user_personal_objectives** - Objetivos vinculados a usuários
+- **tips** - Dicas e conteúdos educativos
+- **community** - Comunidades (sincronizadas com social.plus)
+- **community_member** - Membros das comunidades
 
 ## 🔒 Segurança
 
 - **JWT Authentication** - Tokens seguros para autenticação
+- **Auth0 Integration** - Autenticação OAuth via Auth0
 - **Password Hashing** - Senhas criptografadas com bcrypt
 - **Rate Limiting** - Proteção contra spam e ataques
 - **CORS** - Configuração de origens permitidas
 - **Helmet** - Headers de segurança
-- **Input Validation** - Validação rigorosa de dados
+- **Input Validation** - Validação rigorosa de dados com Joi
 - **SQL Injection Protection** - Prisma ORM previne SQL injection
+- **Soft Delete** - Registros marcados como deletados ao invés de removidos
 
 ## 🧪 Testes
 
@@ -306,6 +314,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 ### Desenvolvimento
 ```bash
 npm run dev          # Executar em modo desenvolvimento (Vercel Dev)
+npm run dev:local    # Executar em modo desenvolvimento local (TypeScript direto)
 npm run build        # Compilar TypeScript (inclui geração do Prisma Client)
 npm run build:check  # Compilar e verificar se o build está correto
 npm start            # Executar em produção (após build)
@@ -335,15 +344,47 @@ npm run vercel:deploy  # Deploy para Vercel (preview)
 npm run vercel:prod    # Deploy para produção no Vercel
 ```
 
-### Utilitários
-```bash
-npm run check:port     # Verificar portas disponíveis
-```
-
 ### Notas Importantes
 - **`postinstall`**: O Prisma Client é gerado automaticamente após `npm install`
 - **`build`**: Inclui `prisma generate` para garantir que o cliente está atualizado
 - **`start`**: Requer que o build tenha sido executado previamente
+
+## 🏗 Estrutura do Projeto
+
+```
+likeme-back-end/
+├── src/
+│   ├── controllers/        # Controllers organizados por domínio
+│   │   ├── auth/
+│   │   ├── community/
+│   │   ├── objective/
+│   │   ├── person/
+│   │   │   ├── person/
+│   │   │   └── personContact/
+│   │   ├── tip/
+│   │   └── user/
+│   ├── routes/             # Rotas organizadas por domínio
+│   │   ├── auth/
+│   │   ├── community/
+│   │   ├── objective/
+│   │   ├── person/
+│   │   │   ├── person/
+│   │   │   └── personContact/
+│   │   ├── tip/
+│   │   └── user/
+│   ├── middleware/         # Middlewares (auth, validation, error handling)
+│   ├── config/             # Configurações (database, swagger, etc.)
+│   ├── utils/              # Utilitários (auth, response, validation, socialPlus)
+│   ├── types/              # Tipos TypeScript
+│   └── server.ts           # Arquivo principal do servidor
+├── prisma/
+│   ├── schema.prisma       # Schema do banco de dados
+│   └── seed.ts             # Seed do banco de dados
+├── api/
+│   └── index.js            # Entry point para Vercel
+├── dist/                   # Arquivos compilados
+└── public/                 # Arquivos estáticos
+```
 
 ## ✅ Status da Aplicação
 
@@ -356,11 +397,14 @@ npm run check:port     # Verificar portas disponíveis
 - ✅ **Middlewares**: Autenticação, validação, rate limiting
 - ✅ **Vercel**: Configurado para desenvolvimento e deploy
 - ✅ **Auth0**: Integração completa para autenticação
+- ✅ **social.plus**: Integração para comunidades
 
 ### ⚠️ Requer Configuração
 - 🔧 **Banco de Dados**: PostgreSQL precisa ser configurado
 - 🔧 **Variáveis de Ambiente**: Arquivo `.env` precisa ser criado
 - 🔧 **Migrações**: Banco precisa ser inicializado
+- 🔧 **Auth0**: Credenciais precisam ser configuradas
+- 🔧 **social.plus**: API key precisa ser configurada
 
 ### 🚀 Para Começar Agora
 ```bash
@@ -371,7 +415,7 @@ cp env.example .env
 # 3. Executar migrações
 npm run db:push
 
-# 4. Popular com dados iniciais
+# 4. Popular com dados iniciais (opcional)
 npm run db:seed
 
 # 5. Testar endpoints via Swagger
@@ -386,7 +430,13 @@ npm run db:seed
 NODE_ENV=production
 DATABASE_URL=postgresql://user:password@host:port/database
 JWT_SECRET=your-production-secret
+AUTH0_DOMAIN=your-auth0-domain.auth0.com
+AUTH0_AUDIENCE=your-auth0-audience
+SOCIAL_PLUS_API_KEY=your-social-plus-api-key
+SOCIAL_PLUS_REGION=US
+SOCIAL_PLUS_BASE_URL=https://api.social.plus
 PORT=3000
+CORS_ORIGIN=https://your-frontend-domain.com
 ```
 
 ### Comandos de Deploy
@@ -426,7 +476,7 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 2. **Verifique portas ocupadas**:
    ```bash
-   npm run check:port
+   lsof -i -P | grep -i listen
    ```
 
 3. **Forçar porta específica**:
@@ -451,6 +501,13 @@ npm run vercel:dev
 - Certifique-se de que o servidor está rodando
 - Verifique se está usando a porta correta (mostrada no output)
 - Tente acessar `/health` primeiro para confirmar que o servidor está respondendo
+
+### Erros de compilação TypeScript
+
+Execute o build para verificar erros:
+```bash
+npm run build
+```
 
 ## 📞 Suporte
 
