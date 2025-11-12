@@ -3,29 +3,16 @@ import path from 'path';
 const projectRoot = process.cwd();
 
 const getServerUrl = (): string => {
-  // Em produção no Vercel, usar a URL do Vercel
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  
-  // Se tiver uma URL base configurada explicitamente
-  if (process.env.API_BASE_URL) {
-    return process.env.API_BASE_URL;
-  }
-  
-  // Em desenvolvimento, usar localhost
-  const port = process.env.PORT || 3000;
-  return `http://localhost:${port}`;
+  // Usar URL relativa "/" para fazer requisições ao mesmo servidor
+  // Isso evita problemas de CORS quando o Swagger UI está no mesmo domínio
+  // O Swagger fará requisições relativas ao domínio atual
+  return '/';
 };
 
 const getServerDescription = (): string => {
-  if (process.env.VERCEL_URL) {
-    return 'Servidor de produção (Vercel)';
-  }
-  if (process.env.API_BASE_URL) {
-    return 'Servidor de produção';
-  }
-  return 'Servidor de desenvolvimento';
+  // Usando URL relativa, o Swagger fará requisições para o mesmo servidor
+  // Isso resolve problemas de CORS automaticamente
+  return 'Servidor atual';
 };
 
 export const swaggerOptions = {

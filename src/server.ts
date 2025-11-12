@@ -25,10 +25,37 @@ const app = express();
 
 app.set('trust proxy', process.env.VERCEL ? 1 : false);
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Desabilita CSP para permitir Swagger UI
+}));
+
+// CORS configurado para permitir requisições do Swagger UI
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: (origin, callback) => {
+    // Permite requisições sem origin (como do Swagger UI no mesmo servidor)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Verifica se a origin está na lista permitida
+    const allowedOrigins = Array.isArray(config.corsOrigin) 
+      ? config.corsOrigin 
+      : [config.corsOrigin];
+    
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
+    // Em desenvolvimento, permite qualquer origin
+    if (config.nodeEnv === 'development') {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
 }));
 
 app.use(compression());
@@ -57,7 +84,18 @@ const swaggerUiOptions = {
     url: `${config.apiDocsPath}/swagger.json`,
     docExpansion: 'none',
     deepLinking: true,
+    persistAuthorization: true,
+    requestInterceptor: (req: any) => {
+      // Garante que as requisições do Swagger usem a URL correta
+      if (req.url && !req.url.startsWith('http') && !req.url.startsWith('https')) {
+        // Se for uma URL relativa, mantém como está (será resolvida pelo navegador)
+        return req;
+      }
+      return req;
+    },
   },
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'LikeMe API Documentation',
 };
 const swaggerAssetPath = getSwaggerUiAssetPath();
 
