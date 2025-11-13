@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { 
   register, 
   login,
-  getIdToken,
+  getAuthUrl,
+  handleAuthCallback,
+  exchangeCodeForToken,
   verifyToken,
   logout,
   getProfile, 
@@ -12,7 +14,7 @@ import {
 import { 
   createUserSchema, 
   loginSchema,
-  getIdTokenSchema,
+  exchangeCodeSchema,
   verifyTokenSchema,
   updateUserSchema 
 } from '@/utils/validationSchemas';
@@ -24,8 +26,12 @@ const router = Router();
 
 router.post('/register', authRateLimiter, validate(createUserSchema), register);
 router.post('/login', authRateLimiter, validate(loginSchema), login);
-router.post('/idtoken', authRateLimiter, validate(getIdTokenSchema), getIdToken);
 router.post('/verify', authRateLimiter, validate(verifyTokenSchema), verifyToken);
+
+// Authorization Code Flow endpoints
+router.get('/auth-url', authRateLimiter, getAuthUrl);
+router.get('/callback', handleAuthCallback);
+router.post('/exchange-code', authRateLimiter, validate(exchangeCodeSchema), exchangeCodeForToken);
 
 router.post('/logout', authenticateToken, requireAuth, logout);
 router.get('/profile', authenticateToken, requireAuth, getProfile);

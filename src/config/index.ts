@@ -58,12 +58,12 @@ export const config = {
   },
   corsOrigin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
   apiDocsPath: process.env.API_DOCS_PATH || '/api-docs',
+  baseUrl: process.env.API_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`),
   auth0: {
     domain: process.env.AUTH0_DOMAIN || '',
     clientId: process.env.AUTH0_CLIENT_ID || '',
     clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
     issuer: process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}/` : '',
-    connection: process.env.AUTH0_CONNECTION || 'Username-Password-Authentication',
   },
   socialPlus: {
     apiKey: process.env.SOCIAL_PLUS_API_KEY || '',

@@ -312,45 +312,76 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getIdToken = async (req: Request, res: Response): Promise<void> => {
+export const getAuthUrl = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      sendError(res, 'Email e senha são obrigatórios', 400);
-      return;
-    }
-
     if (!config.auth0.domain || !config.auth0.clientId) {
       sendError(res, 'Auth0 não configurado corretamente', 500);
       return;
     }
 
-    // Autenticar com Auth0 usando Resource Owner Password Credentials Grant
+    const auth0Domain = config.auth0.domain;
+    const clientId = config.auth0.clientId;
+    const redirectUri = `${config.baseUrl}/api/auth/callback`;
+    const responseType = 'code';
+    const scope = 'openid profile email';
+    const state = req.query.state as string || Math.random().toString(36).substring(7);
+
+    const authUrl = `https://${auth0Domain}/authorize?` +
+      `client_id=${encodeURIComponent(clientId)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=${responseType}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `state=${encodeURIComponent(state)}`;
+
+    sendSuccess(
+      res,
+      {
+        authUrl,
+        redirectUri,
+        state,
+        instructions: 'Acesse a URL authUrl no navegador para fazer login. Após o login, você será redirecionado com um código.',
+      },
+      'URL de autorização gerada com sucesso'
+    );
+  } catch (error) {
+    console.error('Auth0 auth URL error:', error);
+    sendError(res, 'Erro ao gerar URL de autorização');
+  }
+};
+
+export const handleAuthCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code, state, error } = req.query;
+
+    if (error) {
+      sendError(res, `Erro na autorização: ${error}`, 400);
+      return;
+    }
+
+    if (!code) {
+      sendError(res, 'Código de autorização não fornecido', 400);
+      return;
+    }
+
+    if (!config.auth0.domain || !config.auth0.clientId || !config.auth0.clientSecret) {
+      sendError(res, 'Auth0 não configurado corretamente', 500);
+      return;
+    }
+
     const auth0Domain = config.auth0.domain;
     const clientId = config.auth0.clientId;
     const clientSecret = config.auth0.clientSecret;
-    const audience = process.env.AUTH0_AUDIENCE || `https://${auth0Domain}/api/v2/`;
-    const connection = config.auth0.connection;
+    const redirectUri = `${config.baseUrl}/api/auth/callback`;
 
+    // Trocar código por tokens
     const tokenUrl = `https://${auth0Domain}/oauth/token`;
 
     const body = new URLSearchParams();
-    body.append('grant_type', 'password');
-    body.append('username', email);
-    body.append('password', password);
+    body.append('grant_type', 'authorization_code');
     body.append('client_id', clientId);
-    body.append('audience', audience);
-    
-    // Connection é obrigatório para o grant type password
-    // Se não especificado, o Auth0 tenta usar a conexão padrão
-    if (connection) {
-      body.append('connection', connection);
-    }
-
-    if (clientSecret) {
-      body.append('client_secret', clientSecret);
-    }
+    body.append('client_secret', clientSecret);
+    body.append('code', code as string);
+    body.append('redirect_uri', redirectUri);
 
     const response = await fetch(tokenUrl, {
       method: 'POST',
@@ -363,20 +394,144 @@ export const getIdToken = async (req: Request, res: Response): Promise<void> => 
     const data = (await response.json()) as any;
 
     if (!response.ok) {
-      let errorMessage = data.error_description || data.error || 'Erro ao autenticar com Auth0';
-      
-      // Mensagens de erro mais claras
-      if (errorMessage.includes('default connection')) {
-        errorMessage = 'Conexão padrão não configurada no Auth0. ' +
-          'Configure uma conexão padrão em: Auth0 Dashboard > Authentication > Database > [Sua Conexão] > Settings > ' +
-          'ou especifique AUTH0_CONNECTION no .env com o nome exato da sua conexão (ex: "Username-Password-Authentication").';
-      } else if (errorMessage.includes('invalid_grant') || errorMessage.includes('Wrong email or password')) {
-        errorMessage = 'Email ou senha inválidos. Verifique suas credenciais.';
-      } else if (errorMessage.includes('Grant type') && errorMessage.includes('not allowed')) {
-        errorMessage = 'Grant type "password" não está habilitado. ' +
-          'Habilite em: Auth0 Dashboard > Applications > [Seu App] > Settings > Advanced Settings > Grant Types > Password';
+      const errorMessage = data.error_description || data.error || 'Erro ao trocar código por tokens';
+      sendError(res, errorMessage, response.status);
+      return;
+    }
+
+    // Retornar HTML com script para preencher o Swagger automaticamente
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth0 Login - Sucesso</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 500px;
+    }
+    .success {
+      color: #4CAF50;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .token {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 20px 0;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="success">✅ Login realizado com sucesso!</div>
+    <p>Seu idToken foi obtido. Você pode fechar esta janela.</p>
+    <div class="token">idToken: ${data.id_token.substring(0, 50)}...</div>
+    <p><strong>Copie o idToken abaixo e cole no Swagger Authorize:</strong></p>
+    <textarea id="token" readonly style="width: 100%; height: 100px; margin: 10px 0; padding: 10px; font-family: monospace; font-size: 12px;">${data.id_token}</textarea>
+    <button onclick="copyToken()">Copiar idToken</button>
+    <script>
+      function copyToken() {
+        const token = document.getElementById('token');
+        token.select();
+        document.execCommand('copy');
+        alert('idToken copiado! Cole no Swagger Authorize.');
       }
-      
+      // Tenta preencher automaticamente se o Swagger estiver aberto
+      if (window.opener) {
+        try {
+          if (window.opener.ui && window.opener.ui.preauthorizeApiKey) {
+            window.opener.ui.preauthorizeApiKey('bearerAuth', '${data.id_token}');
+            alert('idToken automaticamente adicionado ao Swagger!');
+          }
+        } catch (e) {
+          console.log('Não foi possível preencher automaticamente');
+        }
+      }
+    </script>
+  </div>
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('Auth0 callback error:', error);
+    sendError(res, 'Erro ao processar callback do Auth0');
+  }
+};
+
+export const exchangeCodeForToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      sendError(res, 'Código de autorização não fornecido', 400);
+      return;
+    }
+
+    if (!config.auth0.domain || !config.auth0.clientId || !config.auth0.clientSecret) {
+      sendError(res, 'Auth0 não configurado corretamente', 500);
+      return;
+    }
+
+    const auth0Domain = config.auth0.domain;
+    const clientId = config.auth0.clientId;
+    const clientSecret = config.auth0.clientSecret;
+    const redirectUri = `${config.baseUrl}/api/auth/callback`;
+
+    // Trocar código por tokens
+    const tokenUrl = `https://${auth0Domain}/oauth/token`;
+
+    const body = new URLSearchParams();
+    body.append('grant_type', 'authorization_code');
+    body.append('client_id', clientId);
+    body.append('client_secret', clientSecret);
+    body.append('code', code);
+    body.append('redirect_uri', redirectUri);
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    const data = (await response.json()) as any;
+
+    if (!response.ok) {
+      const errorMessage = data.error_description || data.error || 'Erro ao trocar código por tokens';
       sendError(res, errorMessage, response.status);
       return;
     }
@@ -390,11 +545,11 @@ export const getIdToken = async (req: Request, res: Response): Promise<void> => 
         tokenType: data.token_type,
         expiresIn: data.expires_in,
       },
-      'idToken obtido com sucesso'
+      'idToken obtido com sucesso via Authorization Code Flow'
     );
   } catch (error) {
-    console.error('Auth0 idToken error:', error);
-    sendError(res, 'Erro ao obter idToken do Auth0');
+    console.error('Auth0 code exchange error:', error);
+    sendError(res, 'Erro ao trocar código por tokens');
   }
 };
 

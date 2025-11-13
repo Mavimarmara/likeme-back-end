@@ -135,10 +135,91 @@
 
 /**
  * @swagger
- * /api/auth/idtoken:
+ * /api/auth/auth-url:
+ *   get:
+ *     summary: Obter URL de autorização do Auth0 (Authorization Code Flow)
+ *     description: Retorna a URL para redirecionar o usuário ao Auth0 para fazer login usando o Authorization Code Flow. Este é o método recomendado e mais seguro para produção. Após o login, o usuário será redirecionado para /api/auth/callback com um código que pode ser trocado por tokens.
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *         description: Valor opcional para prevenir CSRF attacks
+ *     responses:
+ *       200:
+ *         description: URL de autorização gerada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     authUrl:
+ *                       type: string
+ *                       format: uri
+ *                       description: URL para redirecionar o usuário ao Auth0
+ *                     redirectUri:
+ *                       type: string
+ *                       description: URI de callback configurada
+ *                     state:
+ *                       type: string
+ *                       description: Valor de state gerado
+ *                     instructions:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Auth0 não configurado corretamente
+ */
+
+/**
+ * @swagger
+ * /api/auth/callback:
+ *   get:
+ *     summary: Callback do Auth0 (Authorization Code Flow)
+ *     description: Endpoint de callback que recebe o código de autorização do Auth0 após o login. Este endpoint troca o código por tokens e retorna uma página HTML com o idToken para copiar e usar no Swagger.
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Código de autorização retornado pelo Auth0
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *         description: Valor de state enviado na requisição inicial
+ *       - in: query
+ *         name: error
+ *         schema:
+ *           type: string
+ *         description: Erro retornado pelo Auth0 (se houver)
+ *     responses:
+ *       200:
+ *         description: Página HTML com o idToken para copiar
+ *         content:
+ *           text/html:
+ *             schema:
+ *               type: string
+ *       400:
+ *         description: Código não fornecido ou erro na autorização
+ *       500:
+ *         description: Erro ao processar callback
+ */
+
+/**
+ * @swagger
+ * /api/auth/exchange-code:
  *   post:
- *     summary: Obter idToken do Auth0
- *     description: Autentica com Auth0 usando email e senha, e retorna o idToken. Este endpoint é útil para obter o idToken que pode ser usado no Swagger UI (botão Authorize) ou em outros endpoints que requerem autenticação Auth0.
+ *     summary: Trocar código de autorização por tokens (Authorization Code Flow)
+ *     description: Troca o código de autorização retornado pelo Auth0 por tokens (idToken, accessToken). Use este endpoint se preferir receber os tokens via JSON ao invés da página HTML do callback.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -147,20 +228,14 @@
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
+ *               - code
  *             properties:
- *               email:
+ *               code:
  *                 type: string
- *                 format: email
- *                 description: Email do usuário no Auth0
- *               password:
- *                 type: string
- *                 format: password
- *                 description: Senha do usuário no Auth0
+ *                 description: Código de autorização retornado pelo Auth0 após o login
  *     responses:
  *       200:
- *         description: idToken obtido com sucesso
+ *         description: Tokens obtidos com sucesso
  *         content:
  *           application/json:
  *             schema:
@@ -186,9 +261,9 @@
  *                 message:
  *                   type: string
  *       400:
- *         description: Email ou senha não fornecidos
+ *         description: Código não fornecido
  *       401:
- *         description: Credenciais inválidas
+ *         description: Código inválido ou expirado
  *       500:
  *         description: Auth0 não configurado corretamente
  */

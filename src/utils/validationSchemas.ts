@@ -52,9 +52,8 @@ export const verifyTokenSchema = Joi.object({
   idToken: Joi.string().required(),
 });
 
-export const getIdTokenSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().required(),
+export const exchangeCodeSchema = Joi.object({
+  code: Joi.string().required(),
 });
 
 export const paginationSchema = Joi.object({

@@ -92,7 +92,6 @@ AUTH0_DOMAIN="your-auth0-domain.auth0.com"
 AUTH0_CLIENT_ID="your-auth0-client-id"
 AUTH0_CLIENT_SECRET="your-auth0-client-secret"
 AUTH0_AUDIENCE="your-auth0-audience"
-AUTH0_CONNECTION="Username-Password-Authentication"
 
 # Social.plus
 SOCIAL_PLUS_API_KEY="your-social-plus-api-key"
@@ -169,7 +168,15 @@ Exemplo: Se o Vercel mostrar `Ready! Available at http://localhost:3000`, use `h
 5. Visualize os esquemas de request/response
 
 ### 🔐 Autenticação na Documentação
-Para testar endpoints protegidos:
+
+#### Método 1: Authorization Code Flow (Recomendado)
+1. Chame `GET /api/auth/auth-url` para obter a URL de autorização
+2. Abra a URL `authUrl` retornada no navegador
+3. Faça login no Auth0
+4. Você será redirecionado para uma página com o idToken
+5. Copie o idToken e cole no Swagger "Authorize"
+
+#### Método 2: Login Direto
 1. Faça login via `/api/auth/login` (com Auth0 idToken)
 2. Copie o token retornado
 3. Clique em "Authorize" no Swagger
@@ -179,8 +186,12 @@ Para testar endpoints protegidos:
 
 #### 🔐 Autenticação
 ```
-POST   /api/auth/register     # Registro de usuário
-POST   /api/auth/login         # Login com Auth0
+POST   /api/auth/register      # Registro de usuário
+POST   /api/auth/login         # Login com Auth0 (cria usuário automaticamente)
+POST   /api/auth/verify        # Verificar idToken e obter token de sessão
+GET    /api/auth/auth-url      # Obter URL de autorização (Authorization Code Flow)
+GET    /api/auth/callback      # Callback do Auth0 (Authorization Code Flow)
+POST   /api/auth/exchange-code # Trocar código por tokens (Authorization Code Flow)
 GET    /api/auth/profile       # Perfil do usuário
 PUT    /api/auth/profile       # Atualizar perfil
 DELETE /api/auth/account       # Deletar conta (soft delete)
@@ -407,24 +418,19 @@ likeme-back-end/
 - 🔧 **Variáveis de Ambiente**: Arquivo `.env` precisa ser criado
 - 🔧 **Migrações**: Banco precisa ser inicializado
 - 🔧 **Auth0**: Credenciais precisam ser configuradas
-  - ⚠️ **Importante**: Para usar o endpoint `/api/auth/idtoken`, você precisa:
-    1. **Habilitar o grant type "Password"**:
+  - ⚠️ **Importante**: Para usar o Authorization Code Flow (`/api/auth/auth-url`), você precisa:
+    1. **Configurar a URL de callback**:
        - Auth0 Dashboard > Applications > [Seu App] > Settings
-       - Role até "Advanced Settings" > "Grant Types"
-       - Habilite "Password" (Resource Owner Password Credentials)
+       - Adicione a URL de callback em "Allowed Callback URLs":
+         ```
+         https://seu-dominio.com/api/auth/callback
+         http://localhost:3000/api/auth/callback
+         ```
        - Salve as alterações
-    2. **Configurar a conexão**:
-       - Verifique o nome da sua conexão em: Authentication > Database
-       - Configure `AUTH0_CONNECTION` no `.env` com o nome exato (ex: "Username-Password-Authentication")
-       - OU configure uma conexão padrão no Auth0
-    3. **Habilitar a conexão para o cliente**:
-       - Applications > [Seu App] > Connections
-       - Certifique-se de que a conexão de Database está habilitada
-  - ⚠️ **Nota de Segurança**: O grant type "Password" é desabilitado por padrão por questões de segurança. 
-    - **Para testes manuais em produção**: Pode ser usado, mas recomenda-se:
-      - Restringir acesso apenas para IPs específicos ou VPN
-      - Usar apenas para desenvolvimento/testes, não para usuários finais
-      - Considerar usar o Authorization Code Flow padrão para produção
+    2. **Verificar configurações**:
+       - Certifique-se de que a conexão de Database está habilitada para o cliente
+       - Applications > [Seu App] > aba "Connections"
+       - Marque a conexão de Database e salve
 - 🔧 **social.plus**: API key precisa ser configurada
 
 ### 🚀 Para Começar Agora

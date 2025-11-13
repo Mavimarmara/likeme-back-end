@@ -172,25 +172,6 @@ const swaggerUiOptions = {
           subtree: true
         });
         
-        // Também intercepta requisições fetch/xhr se possível
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-          return originalFetch.apply(this, args).then(function(response) {
-            if (response.url && response.url.includes('/api/auth/idtoken')) {
-              response.clone().json().then(function(data) {
-                if (data.success && data.data && data.data.idToken) {
-                  setTimeout(function() {
-                    if (window.ui && window.ui.preauthorizeApiKey) {
-                      window.ui.preauthorizeApiKey('bearerAuth', data.data.idToken);
-                      console.log('✅ idToken automaticamente adicionado ao Authorize!');
-                    }
-                  }, 500);
-                }
-              }).catch(function() {});
-            }
-            return response;
-          });
-        };
       }
       
       // Executa quando a página carregar
