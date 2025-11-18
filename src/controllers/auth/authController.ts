@@ -788,6 +788,33 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getCurrentToken = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    // Gera um novo token JWT do backend para o usuário autenticado
+    const token = generateToken(currentUserId);
+
+    sendSuccess(
+      res,
+      {
+        token,
+        expiresIn: config.jwtExpiresIn,
+        message: 'Use este token no header Authorization: Bearer <token>',
+      },
+      'Token obtido com sucesso'
+    );
+  } catch (error) {
+    console.error('Get current token error:', error);
+    sendError(res, 'Erro ao obter token');
+  }
+};
+
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     sendSuccess(res, null, 'Logout realizado com sucesso');

@@ -23,41 +23,41 @@ export const authenticateToken = async (
 
     // Tenta verificar como token do backend primeiro
     try {
-      const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
-      
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: {
-          id: true,
-          personId: true,
-          username: true,
-          password: true,
-          salt: true,
-          avatar: true,
-          isActive: true,
+    const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        personId: true,
+        username: true,
+        password: true,
+        salt: true,
+        avatar: true,
+        isActive: true,
           socialPlusUserId: true,
-          createdAt: true,
-          updatedAt: true,
-          deletedAt: true,
-        },
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
+    });
+
+    if (user && user.deletedAt) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuário deletado',
       });
+    }
 
-      if (user && user.deletedAt) {
-        return res.status(401).json({
-          success: false,
-          message: 'Usuário deletado',
-        });
-      }
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuário não encontrado ou inativo',
+      });
+    }
 
-      if (!user || !user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Usuário não encontrado ou inativo',
-        });
-      }
-
-      req.user = user;
-      return next();
+    req.user = user;
+    return next();
     } catch (backendTokenError) {
       // Se não for token do backend, tenta verificar como idToken do Auth0
       try {
@@ -129,11 +129,11 @@ export const authenticateToken = async (
         return next();
       } catch (auth0TokenError) {
         // Se ambos falharem, retorna erro
-        return res.status(401).json({
-          success: false,
-          message: 'Token inválido',
-        });
-      }
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido',
+      });
+    }
     }
   } catch (error) {
     return res.status(500).json({

@@ -415,6 +415,43 @@
 
 /**
  * @swagger
+ * /api/auth/token:
+ *   get:
+ *     summary: Obter token JWT atual do usuário autenticado
+ *     description: Retorna o token JWT do backend para o usuário autenticado. Útil para copiar e usar no Swagger Authorize sem precisar fazer login novamente. O token retornado pode ser usado no header Authorization: Bearer <token>.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token obtido com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: Token JWT do backend - use no Swagger Authorize
+ *                     expiresIn:
+ *                       type: string
+ *                       description: Tempo de expiração do token (ex: "7d")
+ *                     message:
+ *                       type: string
+ *                       description: Instruções de uso
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Usuário não autenticado
+ */
+
+/**
+ * @swagger
  * /api/auth/logout:
  *   post:
  *     summary: Logout do usuário

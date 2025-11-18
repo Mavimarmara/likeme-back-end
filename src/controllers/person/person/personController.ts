@@ -41,12 +41,12 @@ export const createOrUpdatePerson = async (req: AuthenticatedRequest, res: Respo
     } else {
       // Se não tem personId, cria nova person e associa ao usuário
       person = await prisma.person.create({
-        data: personData,
-        include: {
-          contacts: true,
-          user: true,
-        },
-      });
+      data: personData,
+      include: {
+        contacts: true,
+        user: true,
+      },
+    });
 
       // Associa a person ao usuário
       await prisma.user.update({

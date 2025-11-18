@@ -6,6 +6,7 @@ import {
   handleAuthCallback,
   exchangeCodeForToken,
   verifyToken,
+  getCurrentToken,
   logout,
   getProfile, 
   updateProfile, 
@@ -33,6 +34,7 @@ router.get('/auth-url', authRateLimiter, getAuthUrl);
 router.get('/callback', handleAuthCallback);
 router.post('/exchange-code', authRateLimiter, validate(exchangeCodeSchema), exchangeCodeForToken);
 
+router.get('/token', authenticateToken, requireAuth, getCurrentToken);
 router.post('/logout', authenticateToken, requireAuth, logout);
 router.get('/profile', authenticateToken, requireAuth, getProfile);
 router.put('/profile', authenticateToken, requireAuth, validate(updateUserSchema), updateProfile);
