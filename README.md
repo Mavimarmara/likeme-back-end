@@ -343,6 +343,28 @@ npm run db:studio    # Abrir Prisma Studio (interface visual)
 npm run db:seed      # Popular banco com dados iniciais
 ```
 
+### Migrações em Produção
+Para aplicar migrações em produção, você pode:
+
+1. **Usar o script SQL diretamente**:
+   ```bash
+   psql $DATABASE_URL -f prisma/migrations/add_social_plus_user_id.sql
+   ```
+
+2. **Ou usar o script helper** (requer psql instalado):
+   ```bash
+   ./scripts/apply-production-migration.sh
+   ```
+
+3. **Via Prisma Migrate** (se o banco estiver sincronizado):
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+4. **Diretamente via dashboard do Supabase:**
+
+Acessar dashboard do Supabase, no editor SQL, colar o script de migration
+
 ### Qualidade de Código
 ```bash
 npm test             # Executar testes

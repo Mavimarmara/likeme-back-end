@@ -29,6 +29,8 @@ export interface UpdateUserData {
 export interface AuthResponse {
   user: Omit<User, 'password'>;
   token: string;
+  registerCompletedAt?: Date | null; // Data em que o registro foi completado (calculado)
+  objectivesSelectedAt?: Date | null; // Data em que os objetivos foram selecionados (calculado)
 }
 
 export interface AnamneseAnswer {

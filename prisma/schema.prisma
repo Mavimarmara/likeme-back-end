@@ -16,89 +16,89 @@ datasource db {
 // ============================================
 
 model Person {
-  id                  String   @id @default(uuid())
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-  deletedAt           DateTime? @map("deleted_at")
-  nationalRegistration String?  @map("national_registration") // CPF, RG, etc
-  firstName           String   @map("first_name")
-  lastName            String   @map("last_name")
-  surname             String?
-  birthdate           DateTime?
+  id                   String    @id @default(uuid())
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  deletedAt            DateTime? @map("deleted_at")
+  nationalRegistration String?   @map("national_registration") // CPF, RG, etc
+  firstName            String    @map("first_name")
+  lastName             String    @map("last_name")
+  surname              String?
+  birthdate            DateTime?
 
   // Relations (inverse - apenas para validação Prisma, usar tabelas de relacionamento próprias)
-  contacts            PersonContact[] @relation("PersonContacts")
-  user                User?           @relation("PersonUser")
+  contacts PersonContact[] @relation("PersonContacts")
+  user     User?           @relation("PersonUser")
 
-  @@map("person")
   @@index([nationalRegistration])
+  @@map("person")
 }
 
 model PersonContact {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
-  personId  String   @map("person_id")
-  type      String   // email, phone, whatsapp, etc
+  personId  String    @map("person_id")
+  type      String // email, phone, whatsapp, etc
   value     String
 
   // Relations
-  person    Person   @relation("PersonContacts", fields: [personId], references: [id], onDelete: Cascade)
+  person Person @relation("PersonContacts", fields: [personId], references: [id], onDelete: Cascade)
 
-  @@map("person_contact")
   @@index([personId])
   @@index([type])
+  @@map("person_contact")
 }
 
 model User {
-  id                String   @id @default(uuid())
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  deletedAt         DateTime? @map("deleted_at")
-  personId          String   @unique @map("person_id")
-  username          String?  @unique
-  password          String
-  salt              String?
-  avatar            String?
-  isActive          Boolean  @default(true) @map("is_active")
-  socialPlusUserId  String?  @unique @map("social_plus_user_id")
+  id                    String    @id @default(uuid())
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+  personId              String    @unique @map("person_id")
+  username              String?   @unique
+  password              String
+  salt                  String?
+  avatar                String?
+  isActive            Boolean  @default(true) @map("is_active")
+  socialPlusUserId    String?  @unique @map("social_plus_user_id")
 
   // Relations
-  person    Person   @relation("PersonUser", fields: [personId], references: [id], onDelete: Cascade)
+  person             Person                  @relation("PersonUser", fields: [personId], references: [id], onDelete: Cascade)
   // Relations (inverse - apenas para validação Prisma)
-  roleGroups RoleGroupUser[] @relation("UserRoleGroups")
+  roleGroups         RoleGroupUser[]         @relation("UserRoleGroups")
   personalObjectives UserPersonalObjective[] @relation("UserPersonalObjectives")
-  communities CommunityMember[] @relation("UserCommunities")
-  createdCommunities Community[] @relation("UserCreatedCommunities")
+  communities        CommunityMember[]       @relation("UserCommunities")
+  createdCommunities Community[]             @relation("UserCreatedCommunities")
 
-  @@map("user")
   @@index([personId])
   @@index([username])
   @@index([socialPlusUserId])
+  @@map("user")
 }
 
 model PersonalObjective {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
-  name        String   @unique
+  name        String    @unique
   description String?
-  order       Int?     // Para ordenação dos objetivos
+  order       Int? // Para ordenação dos objetivos
 
   // Relations (inverse - apenas para validação Prisma)
-  users      UserPersonalObjective[] @relation("PersonalObjectiveUsers")
+  users UserPersonalObjective[] @relation("PersonalObjectiveUsers")
 
-  @@map("personal_objective")
   @@index([name])
   @@index([order])
+  @@map("personal_objective")
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
   name        String
   description String?
@@ -106,46 +106,46 @@ model Role {
   // Relations (inverse - apenas para validação Prisma)
   roleGroups RoleGroupRole[] @relation("RoleRoleGroups")
 
-  @@map("role")
   @@index([name])
+  @@map("role")
 }
 
 model RoleGroup {
-  id          String   @id // varchar, não auto-generated
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          String    @id // varchar, não auto-generated
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
   name        String
   description String?
 
   // Relations (inverse - apenas para validação Prisma)
-  roles      RoleGroupRole[] @relation("RoleGroupRoles")
-  users      RoleGroupUser[] @relation("RoleGroupUsers")
+  roles RoleGroupRole[] @relation("RoleGroupRoles")
+  users RoleGroupUser[] @relation("RoleGroupUsers")
 
-  @@map("role_group")
   @@index([name])
+  @@map("role_group")
 }
 
 model RoleGroupRole {
-  roleGroupId String   @map("role_group_id")
-  roleId      String   @map("role_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  roleGroupId String    @map("role_group_id")
+  roleId      String    @map("role_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
   // Relations
   roleGroup RoleGroup @relation("RoleGroupRoles", fields: [roleGroupId], references: [id], onDelete: Cascade)
-  role     Role      @relation("RoleRoleGroups", fields: [roleId], references: [id], onDelete: Cascade)
+  role      Role      @relation("RoleRoleGroups", fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([roleGroupId, roleId])
   @@map("role_group_role")
 }
 
 model RoleGroupUser {
-  userId      String   @map("user_id")
-  roleGroupId String   @map("role_group_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  userId      String    @map("user_id")
+  roleGroupId String    @map("role_group_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
   // Relations
@@ -157,14 +157,14 @@ model RoleGroupUser {
 }
 
 model UserPersonalObjective {
-  userId      String   @map("user_id")
-  objectiveId String   @map("objective_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  userId      String    @map("user_id")
+  objectiveId String    @map("objective_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
   // Relations
-  user      User             @relation("UserPersonalObjectives", fields: [userId], references: [id], onDelete: Cascade)
+  user      User              @relation("UserPersonalObjectives", fields: [userId], references: [id], onDelete: Cascade)
   objective PersonalObjective @relation("PersonalObjectiveUsers", fields: [objectiveId], references: [id], onDelete: Cascade)
 
   @@id([userId, objectiveId])
@@ -172,17 +172,17 @@ model UserPersonalObjective {
 }
 
 model Tip {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
   title       String
   description String
   image       String
-  order       Int?     @map("display_order")
+  order       Int?      @map("display_order")
 
-  @@map("tip")
   @@index([order])
+  @@map("tip")
 }
 
 // ============================================
@@ -190,42 +190,42 @@ model Tip {
 // ============================================
 
 model Community {
-  id                String   @id @default(uuid())
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  deletedAt         DateTime? @map("deleted_at")
-  name              String
-  description       String?
-  type              String   // public, private, official, unofficial
-  avatar            String?
-  socialPlusCommunityId String? @unique @map("social_plus_community_id")
-  createdBy         String   @map("created_by") // userId
+  id                    String    @id @default(uuid())
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+  name                  String
+  description           String?
+  type                  String // public, private, official, unofficial
+  avatar                String?
+  socialPlusCommunityId String?   @unique @map("social_plus_community_id")
+  createdBy             String    @map("created_by") // userId
 
   // Relations
-  creator           User     @relation("UserCreatedCommunities", fields: [createdBy], references: [id])
-  members           CommunityMember[] @relation("CommunityMembers")
+  creator User              @relation("UserCreatedCommunities", fields: [createdBy], references: [id])
+  members CommunityMember[] @relation("CommunityMembers")
 
-  @@map("community")
   @@index([socialPlusCommunityId])
   @@index([createdBy])
   @@index([type])
+  @@map("community")
 }
 
 model CommunityMember {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
-  userId      String   @map("user_id")
-  communityId String   @map("community_id")
-  role        String   @default("member") // member, admin, moderator
+  userId      String    @map("user_id")
+  communityId String    @map("community_id")
+  role        String    @default("member") // member, admin, moderator
 
   // Relations
-  user        User      @relation("UserCommunities", fields: [userId], references: [id], onDelete: Cascade)
-  community   Community @relation("CommunityMembers", fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation("UserCommunities", fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation("CommunityMembers", fields: [communityId], references: [id], onDelete: Cascade)
 
   @@unique([userId, communityId])
-  @@map("community_member")
   @@index([userId])
   @@index([communityId])
+  @@map("community_member")
 }

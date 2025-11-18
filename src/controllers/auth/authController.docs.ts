@@ -9,6 +9,16 @@
  *           $ref: '#/components/schemas/User'
  *         token:
  *           type: string
+ *         registerCompletedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: Data em que o registro foi completado (calculado - true se houver dados adicionais na Person)
+ *         objectivesSelectedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: Data em que os objetivos foram selecionados (calculado - true se houver objetivos em UserPersonalObjective)
  *     User:
  *       type: object
  *       properties:
@@ -124,7 +134,20 @@
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/AuthResponse'
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/AuthResponse'
+ *                     - type: object
+ *                       properties:
+ *                         registerCompletedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           nullable: true
+ *                           description: Data em que o registro foi completado (null se não completado)
+ *                         objectivesSelectedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           nullable: true
+ *                           description: Data em que os objetivos foram selecionados (null se não selecionados)
  *                 message:
  *                   type: string
  *       400:

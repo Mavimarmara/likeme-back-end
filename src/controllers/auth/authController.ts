@@ -4,7 +4,7 @@ import { config } from '@/config';
 import { hashPassword, generateToken } from '@/utils/auth';
 import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
-import { CreateUserData, AuthResponse } from '@/types';
+import { CreateUserData, AuthResponse, AuthenticatedRequest } from '@/types';
 import { socialPlusClient } from '@/utils/socialPlus';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -190,11 +190,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     let user;
-    let person;
+    let existingPerson;
 
     if (existingContact?.person?.user) {
       user = existingContact.person.user;
-      person = existingContact.person;
+      existingPerson = existingContact.person;
 
       if (userInfo.picture && userInfo.picture !== user.avatar) {
         await prisma.user.update({
@@ -211,8 +211,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           const socialPlusResponse = await socialPlusClient.createUser({
             username: user.username || undefined,
             email: emailContact?.value || email,
-            firstName: person.firstName,
-            lastName: person.lastName,
+            firstName: existingPerson.firstName,
+            lastName: existingPerson.lastName,
             avatar: user.avatar || undefined,
           });
 
@@ -233,7 +233,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       const firstName = auth0User.given_name || nameParts[0] || '';
       const lastName = auth0User.family_name || nameParts.slice(1).join(' ') || '';
 
-      person = await prisma.person.create({
+      const newPerson = await prisma.person.create({
         data: {
           firstName,
           lastName,
@@ -243,7 +243,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
       await prisma.personContact.create({
         data: {
-          personId: person.id,
+          personId: newPerson.id,
           type: 'email',
           value: email,
         },
@@ -253,7 +253,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       
       user = await prisma.user.create({
         data: {
-          personId: person.id,
+          personId: newPerson.id,
           password: randomPassword,
           avatar: auth0User.picture || userInfo.picture || undefined,
           isActive: true,
@@ -271,8 +271,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       try {
         const socialPlusResponse = await socialPlusClient.createUser({
           email: email,
-          firstName: person.firstName,
-          lastName: person.lastName,
+          firstName: newPerson.firstName,
+          lastName: newPerson.lastName,
           avatar: user.avatar || undefined,
         });
 
@@ -296,13 +296,74 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const sessionToken = generateToken(user.id);
+    // Buscar usuário completo com person e objetivos
+    const fullUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        personId: true,
+        username: true,
+        password: true,
+        salt: true,
+        avatar: true,
+        isActive: true,
+        socialPlusUserId: true,
+        person: {
+          include: {
+            contacts: true,
+          },
+        },
+        personalObjectives: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            createdAt: true,
+          },
+          take: 1,
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!fullUser) {
+      sendError(res, 'Usuário não encontrado', 404);
+      return;
+    }
+
+    // Calcular registerCompletedAt: true se houver dados adicionais na Person
+    // Considera completo se tiver: nationalRegistration, birthdate, surname, ou contatos além de email
+    const userPerson = fullUser.person;
+    const hasNationalRegistration = !!userPerson?.nationalRegistration;
+    const hasBirthdate = !!userPerson?.birthdate;
+    const hasSurname = !!userPerson?.surname;
+    const hasAdditionalContacts = userPerson?.contacts?.some(
+      (contact: { type: string; deletedAt: Date | null }) => contact.type !== 'email' && !contact.deletedAt
+    ) || false;
+    
+    const registerCompletedAt = (hasNationalRegistration || hasBirthdate || hasSurname || hasAdditionalContacts)
+      ? userPerson?.updatedAt || userPerson?.createdAt || null
+      : null;
+
+    // Calcular objectivesSelectedAt: true se houver objetivos selecionados
+    const objectivesSelectedAt = fullUser.personalObjectives && fullUser.personalObjectives.length > 0
+      ? fullUser.personalObjectives[0].createdAt
+      : null;
+
+    const sessionToken = generateToken(fullUser.id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, personalObjectives: __, ...userWithoutPassword } = fullUser;
 
     const response: AuthResponse = {
       user: userWithoutPassword,
       token: sessionToken,
+      registerCompletedAt,
+      objectivesSelectedAt,
     };
 
     sendSuccess(res, response, 'Login realizado com sucesso');
@@ -552,6 +613,9 @@ export const exchangeCodeForToken = async (req: Request, res: Response): Promise
     sendError(res, 'Erro ao trocar código por tokens');
   }
 };
+
+// Endpoint removido: os campos registerCompletedAt e objectivesSelectedAt são calculados
+// Não há necessidade de salvar no banco, são calculados dinamicamente no login
 
 export const verifyToken = async (req: Request, res: Response): Promise<void> => {
   try {
