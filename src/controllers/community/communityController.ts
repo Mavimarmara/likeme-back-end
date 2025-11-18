@@ -492,3 +492,110 @@ export const getUserCommunities = async (req: AuthenticatedRequest, res: Respons
     handleError(res, error, 'listar comunidades do usuário');
   }
 };
+
+const fetchPostsFromCommunities = async (communityIds: string[]): Promise<any[]> => {
+  const postsPromises = communityIds.map(async (communityId) => {
+    try {
+      const response = await socialPlusClient.getCommunityPosts(communityId, {
+        page: 1,
+        limit: 100,
+      });
+
+      if (response.success && response.data?.posts) {
+        return response.data.posts.map((post: any) => ({
+          ...post,
+          communityId,
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error(`Erro ao buscar posts da comunidade ${communityId}:`, error);
+      return [];
+    }
+  });
+
+  const postsArrays = await Promise.all(postsPromises);
+  return postsArrays.flat();
+};
+
+const sortPostsByDate = (posts: any[]): any[] => {
+  return posts.sort((a, b) => {
+    const getPostDate = (post: any): number => {
+      const dateStr = post.createdAt || post.created_at || post.date || post.timestamp;
+      if (!dateStr) return 0;
+      const date = new Date(dateStr);
+      return date.getTime() || 0;
+    };
+
+    const dateA = getPostDate(a);
+    const dateB = getPostDate(b);
+
+    return dateB - dateA;
+  });
+};
+
+export const getUserCommunityPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const currentUserId = req.user?.id;
+
+    if (!validateAuthenticatedUser(currentUserId)) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    const { page, limit, skip } = buildPaginationParams(req.query);
+
+    const memberships = await prisma.communityMember.findMany({
+      where: {
+        userId: currentUserId,
+        deletedAt: null,
+        community: {
+          deletedAt: null,
+          socialPlusCommunityId: {
+            not: null,
+          },
+        },
+      },
+      select: {
+        community: {
+          select: {
+            socialPlusCommunityId: true,
+          },
+        },
+      },
+    });
+
+    const communityIds = memberships
+      .map((m) => m.community.socialPlusCommunityId)
+      .filter((id): id is string => id !== null);
+
+    if (communityIds.length === 0) {
+      sendSuccess(
+        res,
+        {
+          posts: [],
+          pagination: buildPaginationResponse(page, limit, 0),
+        },
+        'Nenhum post encontrado'
+      );
+      return;
+    }
+
+    const allPosts = await fetchPostsFromCommunities(communityIds);
+    const sortedPosts = sortPostsByDate(allPosts);
+    const total = sortedPosts.length;
+    const paginatedPosts = sortedPosts.slice(skip, skip + limit);
+
+    sendSuccess(
+      res,
+      {
+        posts: paginatedPosts,
+        pagination: buildPaginationResponse(page, limit, total),
+      },
+      'Posts das comunidades obtidos com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar posts das comunidades');
+  }
+};

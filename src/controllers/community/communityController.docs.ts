@@ -316,3 +316,75 @@
  *                   type: string
  */
 
+/**
+ * @swagger
+ * /api/communities/user/me/posts:
+ *   get:
+ *     summary: Listar posts das comunidades do usuário autenticado
+ *     description: Retorna todos os posts das comunidades que o usuário autenticado está participando, ordenados por data (mais recente primeiro) com paginação
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número da página
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Número de itens por página
+ *     responses:
+ *       200:
+ *         description: Posts das comunidades obtidos com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             description: ID do post no social.plus
+ *                           communityId:
+ *                             type: string
+ *                             description: ID da comunidade no social.plus
+ *                           userId:
+ *                             type: string
+ *                             description: ID do usuário que criou o post
+ *                           content:
+ *                             type: string
+ *                             description: Conteúdo do post
+ *                           media:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             description: URLs de mídia do post
+ *                           metadata:
+ *                             type: object
+ *                             description: Metadados adicionais do post
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                             description: Data de criação do post
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Usuário não autenticado
+ */
+
