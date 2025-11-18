@@ -30,7 +30,8 @@
  * @swagger
  * /api/persons:
  *   post:
- *     summary: Criar uma nova pessoa
+ *     summary: Criar ou atualizar pessoa do usuário autenticado (Create or Update)
+ *     description: Cria uma nova pessoa se o usuário não tiver uma associada, ou atualiza a pessoa existente do usuário autenticado. O endpoint identifica automaticamente a pessoa do usuário através do token de autenticação.
  *     tags: [Persons]
  *     security:
  *       - bearerAuth: []
@@ -46,18 +47,43 @@
  *             properties:
  *               firstName:
  *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 description: Primeiro nome
  *               lastName:
  *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 description: Último nome
  *               surname:
  *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 description: Sobrenome (opcional)
  *               nationalRegistration:
  *                 type: string
+ *                 maxLength: 50
+ *                 description: CPF, RG ou outro documento de identificação (opcional)
  *               birthdate:
  *                 type: string
- *                 format: date-time
+ *                 format: date
+ *                 description: Data de nascimento (opcional)
  *     responses:
+ *       200:
+ *         description: Pessoa atualizada com sucesso (quando já existe)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Person'
+ *                 message:
+ *                   type: string
  *       201:
- *         description: Pessoa criada com sucesso
+ *         description: Pessoa criada com sucesso (quando não existia)
  *         content:
  *           application/json:
  *             schema:
@@ -71,6 +97,10 @@
  *                   type: string
  *       400:
  *         description: Dados inválidos
+ *       401:
+ *         description: Usuário não autenticado
+ *       404:
+ *         description: Usuário não encontrado
  */
 
 /**

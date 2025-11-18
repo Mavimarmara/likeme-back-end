@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  createPerson,
+  createOrUpdatePerson,
   getPersonById,
   getAllPersons,
   updatePerson,
@@ -16,7 +16,8 @@ const router = Router();
 router.use(authenticateToken);
 router.use(requireAuth);
 
-router.post('/', generalRateLimiter, validate(createPersonSchema), createPerson);
+// POST agora é create or update (upsert) - atualiza a person do usuário autenticado
+router.post('/', generalRateLimiter, validate(createPersonSchema), createOrUpdatePerson);
 router.get('/', generalRateLimiter, getAllPersons);
 router.get('/:id', generalRateLimiter, validateParams(idParamSchema), getPersonById);
 router.put('/:id', generalRateLimiter, validate(updatePersonSchema), validateParams(idParamSchema), updatePerson);

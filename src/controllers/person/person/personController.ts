@@ -1,27 +1,77 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import prisma from '@/config/database';
 import { sendSuccess, sendError } from '@/utils/response';
+import { AuthenticatedRequest } from '@/types';
 
-export const createPerson = async (req: Request, res: Response): Promise<void> => {
+export const createOrUpdatePerson = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
+    const currentUserId = req.user?.id;
     const personData = req.body;
 
-    const person = await prisma.person.create({
-      data: personData,
-      include: {
-        contacts: true,
-        user: true,
-      },
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    // Buscar usuário completo para obter personId
+    const user = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { personId: true },
     });
 
-    sendSuccess(res, person, 'Pessoa criada com sucesso', 201);
+    if (!user) {
+      sendError(res, 'Usuário não encontrado', 404);
+      return;
+    }
+
+    let person;
+    let isUpdate = false;
+
+    if (user.personId) {
+      // Se já tem personId, atualiza a person existente
+      person = await prisma.person.update({
+        where: { id: user.personId },
+        data: personData,
+        include: {
+          contacts: true,
+          user: true,
+        },
+      });
+      isUpdate = true;
+    } else {
+      // Se não tem personId, cria nova person e associa ao usuário
+      person = await prisma.person.create({
+        data: personData,
+        include: {
+          contacts: true,
+          user: true,
+        },
+      });
+
+      // Associa a person ao usuário
+      await prisma.user.update({
+        where: { id: currentUserId },
+        data: { personId: person.id },
+      });
+    }
+
+    sendSuccess(
+      res,
+      person,
+      isUpdate ? 'Pessoa atualizada com sucesso' : 'Pessoa criada com sucesso',
+      isUpdate ? 200 : 201
+    );
   } catch (error) {
-    console.error('Create person error:', error);
-    sendError(res, 'Erro ao criar pessoa');
+    console.error('Create or update person error:', error);
+    if ((error as any).code === 'P2025') {
+      sendError(res, 'Pessoa não encontrada', 404);
+      return;
+    }
+    sendError(res, 'Erro ao criar ou atualizar pessoa');
   }
 };
 
-export const getPersonById = async (req: Request, res: Response): Promise<void> => {
+export const getPersonById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -45,7 +95,7 @@ export const getPersonById = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getAllPersons = async (req: Request, res: Response): Promise<void> => {
+export const getAllPersons = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -86,7 +136,7 @@ export const getAllPersons = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const updatePerson = async (req: Request, res: Response): Promise<void> => {
+export const updatePerson = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -111,7 +161,7 @@ export const updatePerson = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const deletePerson = async (req: Request, res: Response): Promise<void> => {
+export const deletePerson = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
