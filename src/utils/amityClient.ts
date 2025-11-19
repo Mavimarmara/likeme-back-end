@@ -159,17 +159,20 @@ export const createUserAccessToken = async (userId: string): Promise<string | nu
   try {
     // PRIORIDADE: Usar Server Key via API REST (método recomendado e seguro)
     if (config.socialPlus.serverKey) {
-      try {
-        const token = await createUserAccessTokenViaREST(userId);
-        if (token) {
-          return token;
-        }
-      } catch (restError: any) {
-        console.warn(`Erro ao gerar token via REST com server key: ${restError?.message || restError}. Tentando SDK como fallback.`);
+      console.log(`[Amity] Tentando gerar token de usuário ${userId} usando Server Key via REST API`);
+      const token = await createUserAccessTokenViaREST(userId);
+      if (token) {
+        console.log(`[Amity] Token de usuário gerado com sucesso via Server Key para ${userId}`);
+        return token;
       }
+      // Se Server Key está configurada mas falhou, não tentar SDK (Server Key é o método correto)
+      console.warn(`[Amity] Server Key configurada mas não foi possível gerar token. Verifique se SOCIAL_PLUS_SERVER_KEY está correta.`);
+      return null;
     }
 
-    // Fallback: Tentar usar o SDK (pode não funcionar se API key não for válida para SDK)
+    // Se Server Key não está configurada, tentar SDK como fallback (não recomendado)
+    console.warn('[Amity] Server Key não configurada. Tentando SDK como fallback (não recomendado). Configure SOCIAL_PLUS_SERVER_KEY para usar o método seguro.');
+    
     if (!config.socialPlus.apiKey || !config.socialPlus.region) {
       console.warn('Amity: API Key ou Region não configurados. Token não será gerado.');
       return null;
@@ -200,20 +203,20 @@ export const createUserAccessToken = async (userId: string): Promise<string | nu
         { userId }
       );
 
-      console.log(`Access token gerado com sucesso via SDK para o usuário ${userId}`);
+      console.log(`[Amity] Access token gerado com sucesso via SDK para o usuário ${userId}`);
       return accessToken;
     } catch (sdkError: any) {
-      // Se o erro for relacionado à API key não ser utilizável para o SDK, apenas logar
+      // Se o erro for relacionado à API key não ser utilizável para o SDK
       if (sdkError?.code === 400100 || sdkError?.message?.includes('API Key is not usable')) {
-        console.warn(`Amity SDK: API Key não é utilizável para o SDK (código: ${sdkError?.code}). Use Server Key para gerar tokens.`);
+        console.warn(`[Amity] API Key não é utilizável para o SDK (código: ${sdkError?.code}). Configure SOCIAL_PLUS_SERVER_KEY para usar o método correto.`);
         return null;
       }
       // Se for outro erro do SDK, logar e retornar null
-      console.warn(`Erro ao gerar token via SDK (${sdkError?.code || sdkError?.message}):`, sdkError);
+      console.warn(`[Amity] Erro ao gerar token via SDK (${sdkError?.code || sdkError?.message}):`, sdkError);
       return null;
     }
   } catch (error) {
-    console.error(`Erro ao gerar access token para usuário ${userId}:`, error);
+    console.error(`[Amity] Erro ao gerar access token para usuário ${userId}:`, error);
     return null;
   }
 };
@@ -221,6 +224,9 @@ export const createUserAccessToken = async (userId: string): Promise<string | nu
 /**
  * Gera access token usando a API REST do Social.plus/Amity com Server Key
  * Este é o método recomendado e seguro para gerar tokens de usuário
+ * 
+ * O endpoint /v4/authentication/token pode gerar tanto token de servidor (sem userId)
+ * quanto token de usuário (com userId), usando a server key diretamente no header x-server-key
  */
 const createUserAccessTokenViaREST = async (userId: string): Promise<string | null> => {
   try {
@@ -229,27 +235,18 @@ const createUserAccessTokenViaREST = async (userId: string): Promise<string | nu
       return null;
     }
 
-    // Obter token de servidor usando server key
-    const { socialPlusClient } = await import('@/utils/socialPlus');
-    const serverToken = await socialPlusClient.getServerTokenPublic();
-
-    if (!serverToken) {
-      console.warn('[Amity REST] Não foi possível obter token de servidor. Verifique se SOCIAL_PLUS_SERVER_KEY está correta.');
-      return null;
-    }
-
-    // Gerar token de usuário usando o token de servidor
-    // O endpoint correto é /v4/authentication/token com userId no body
+    // Gerar token de usuário usando a server key diretamente
+    // O endpoint /v4/authentication/token aceita userId no body para gerar token de usuário
     const baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     const url = `${baseUrl}/v4/authentication/token`;
 
-    console.log(`[Amity REST] Gerando token de usuário para ${userId} usando server token`);
+    console.log(`[Amity REST] Gerando token de usuário para ${userId} usando Server Key diretamente`);
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${serverToken}`,
+        'x-server-key': config.socialPlus.serverKey, // Usar server key diretamente
         'X-API-Key': config.socialPlus.apiKey, // Manter API key também (modo seguro)
         'X-Region': config.socialPlus.region,
       },
@@ -259,13 +256,19 @@ const createUserAccessTokenViaREST = async (userId: string): Promise<string | nu
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[Amity REST] Erro ao gerar token de usuário: ${response.status} - ${errorText}`);
+      console.error(`[Amity REST] URL: ${url}, hasServerKey: ${!!config.socialPlus.serverKey}, hasApiKey: ${!!config.socialPlus.apiKey}`);
       return null;
     }
 
     const tokenText = await response.text();
     const accessToken = tokenText.replace(/(^"|"$)/g, '').trim();
 
-    console.log(`[Amity REST] Token de usuário gerado com sucesso para ${userId}`);
+    if (!accessToken) {
+      console.warn(`[Amity REST] Token de usuário vazio retornado para ${userId}`);
+      return null;
+    }
+
+    console.log(`[Amity REST] Token de usuário gerado com sucesso para ${userId} (${accessToken.length} caracteres)`);
     return accessToken;
   } catch (error) {
     console.error('[Amity REST] Erro ao gerar token de usuário via REST:', error);
