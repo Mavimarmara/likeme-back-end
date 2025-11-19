@@ -37,7 +37,6 @@ interface SocialPlusResponse<T> {
 
 class SocialPlusClient {
   private apiKey: string;
-  private botUserId: string;
   private baseUrl: string;
   private region: string;
   private tokenTtlMs: number;
@@ -45,7 +44,6 @@ class SocialPlusClient {
 
   constructor() {
     this.apiKey = config.socialPlus.apiKey;
-    this.botUserId = config.socialPlus.botUserId;
     this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
     this.tokenTtlMs = config.socialPlus.tokenTtlMs || 300000;
@@ -143,10 +141,11 @@ class SocialPlusClient {
       return this.tokenCache.token;
     }
 
-    const targetUserId = userId || this.botUserId;
-
-    if (!targetUserId) {
-      throw new Error('Social.plus bot user id not configured. Configure SOCIAL_PLUS_BOT_USER_ID nas variáveis de ambiente.');
+    // Se userId não for fornecido, usar um valor padrão ou deixar vazio
+    // A API pode aceitar sem userId ou com um valor padrão
+    const requestBody: { userId?: string } = {};
+    if (userId) {
+      requestBody.userId = userId;
     }
 
     const response = await fetch(this.buildUrl('/v4/authentication/token'), {
@@ -155,7 +154,7 @@ class SocialPlusClient {
         'Content-Type': 'application/json',
         'x-server-key': this.apiKey,
       },
-      body: JSON.stringify({ userId: targetUserId }),
+      body: Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : '{}',
     });
 
     const text = await response.text();
@@ -177,11 +176,6 @@ class SocialPlusClient {
     try {
       if (!this.apiKey) {
         console.warn('Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.');
-        return null;
-      }
-
-      if (!this.botUserId) {
-        console.warn('Social.plus bot user id não configurado. Configure SOCIAL_PLUS_BOT_USER_ID nas variáveis de ambiente.');
         return null;
       }
 
@@ -351,7 +345,7 @@ class SocialPlusClient {
     if (!token) {
       return {
         success: false,
-        error: 'Social.plus API key ou bot user id não configurado. Configure SOCIAL_PLUS_API_KEY e SOCIAL_PLUS_BOT_USER_ID nas variáveis de ambiente.',
+        error: 'Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.',
       };
     }
 
