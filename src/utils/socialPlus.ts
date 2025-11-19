@@ -37,16 +37,21 @@ interface SocialPlusResponse<T> {
 
 class SocialPlusClient {
   private apiKey: string;
+  private serverKey: string;
   private baseUrl: string;
   private region: string;
+  private tokenTtlMs: number;
+  private tokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor() {
     this.apiKey = config.socialPlus.apiKey;
+    this.serverKey = config.socialPlus.serverKey;
     this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
+    this.tokenTtlMs = config.socialPlus.tokenTtlMs || 300000;
     
     // Log para debug (remover em produção se necessário)
-    console.log('SocialPlusClient initialized with baseUrl:', this.baseUrl);
+    console.log('SocialPlusClient initialized with baseUrl:', this.baseUrl, 'hasServerKey:', !!this.serverKey);
   }
 
   private buildUrl(endpoint: string): string {
@@ -162,8 +167,64 @@ class SocialPlusClient {
     }
   }
 
-  // Métodos de server token removidos - não são mais necessários
-  // A API key é usada diretamente via header X-API-Key
+  private async generateServerToken(userId?: string, forceRefresh = false): Promise<string> {
+    if (!this.serverKey) {
+      throw new Error('Social.plus server key not configured');
+    }
+
+    const cacheValid = this.tokenCache && this.tokenCache.expiresAt > Date.now();
+
+    if (!forceRefresh && cacheValid && this.tokenCache) {
+      return this.tokenCache.token;
+    }
+
+    // Se userId não for fornecido, usar um valor padrão ou deixar vazio
+    const requestBody: { userId?: string } = {};
+    if (userId) {
+      requestBody.userId = userId;
+    }
+
+    const url = this.buildUrl('/v4/authentication/token');
+    console.log('[SocialPlus] Generating server token, URL:', url, 'has userId:', !!userId);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-server-key': this.serverKey,
+      },
+      body: Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : '{}',
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+
+    const token = text.replace(/(^"|"$)/g, '').trim();
+    this.tokenCache = {
+      token,
+      expiresAt: Date.now() + this.tokenTtlMs,
+    };
+
+    console.log('[SocialPlus] Server token generated and cached');
+    return token;
+  }
+
+  private async getServerToken(forceRefresh = false): Promise<string | null> {
+    try {
+      if (!this.serverKey) {
+        console.warn('Social.plus server key não configurado. Configure SOCIAL_PLUS_SERVER_KEY nas variáveis de ambiente.');
+        return null;
+      }
+
+      return await this.generateServerToken(undefined, forceRefresh);
+    } catch (error) {
+      console.error('Erro ao obter token da social.plus:', error);
+      return null;
+    }
+  }
 
   // User Management
   async createUser(userData: SocialPlusUser): Promise<SocialPlusResponse<{ id: string }>> {
@@ -328,7 +389,23 @@ class SocialPlusClient {
 
     const query = queryParams.toString();
 
-    // Usar API key diretamente
+    // Tentar usar token de servidor se disponível, caso contrário usar API key diretamente
+    const token = await this.getServerToken();
+    
+    if (token) {
+      // Usar token de servidor
+      return this.makeRequest<any>(
+        'GET',
+        `/v3/global-feeds${query ? `?${query}` : ''}`,
+        undefined,
+        {
+          useApiKey: false,
+          bearerToken: token,
+        }
+      );
+    }
+
+    // Fallback: usar API key diretamente
     return this.makeRequest<any>(
       'GET',
       `/v3/global-feeds${query ? `?${query}` : ''}`,
