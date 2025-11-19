@@ -416,7 +416,7 @@ class SocialPlusClient {
   }
 
   async getGlobalFeed(
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; userAccessToken?: string }
   ): Promise<SocialPlusResponse<any>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -431,7 +431,21 @@ class SocialPlusClient {
 
     const query = queryParams.toString();
 
-    // Tentar usar token de servidor se disponível, caso contrário usar API key diretamente
+    // Prioridade 1: Usar token de usuário se fornecido (autenticação do usuário)
+    if (params?.userAccessToken) {
+      console.log('[SocialPlus] Usando token de usuário para getGlobalFeed');
+      return this.makeRequest<any>(
+        'GET',
+        `/v3/global-feeds${query ? `?${query}` : ''}`,
+        undefined,
+        {
+          useApiKey: true, // Manter API key (modo seguro)
+          bearerToken: params.userAccessToken,
+        }
+      );
+    }
+
+    // Prioridade 2: Tentar usar token de servidor se disponível
     let token: string | null = null;
     try {
       token = await this.getServerToken();
@@ -443,6 +457,7 @@ class SocialPlusClient {
     
     if (token) {
       // Usar token de servidor (modo seguro requer AMBOS: API key + Bearer token)
+      console.log('[SocialPlus] Usando token de servidor para getGlobalFeed');
       return this.makeRequest<any>(
         'GET',
         `/v3/global-feeds${query ? `?${query}` : ''}`,

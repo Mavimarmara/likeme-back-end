@@ -457,11 +457,29 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
   try {
     const { page, limit } = buildPaginationParams(req.query);
 
-    // Tentar usar API key diretamente primeiro
-    // Se não funcionar, podemos tentar com token de usuário depois
+    // Tentar obter token de autenticação do usuário se estiver autenticado
+    let userAccessToken: string | null = null;
+    const currentUserId = req.user?.id;
+
+    if (currentUserId) {
+      try {
+        const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
+        if (socialPlusUserId) {
+          userAccessToken = await createUserAccessToken(socialPlusUserId);
+          if (userAccessToken) {
+            console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para getPublicCommunityPosts`);
+          }
+        }
+      } catch (error) {
+        console.warn('Erro ao obter token de autenticação do usuário, usando autenticação padrão:', error);
+      }
+    }
+
+    // Usar token de usuário se disponível, caso contrário usar autenticação padrão (server token ou API key)
     const response = await socialPlusClient.getGlobalFeed({
       page,
       limit,
+      userAccessToken: userAccessToken || undefined,
     });
 
     if (!response.success) {
