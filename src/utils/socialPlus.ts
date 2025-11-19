@@ -379,11 +379,23 @@ class SocialPlusClient {
   }
 
   // Community Members
+  /**
+   * Adiciona o usuário atual (autenticado via token) a uma comunidade
+   * Usa o endpoint v4 que requer Bearer token de autenticação
+   */
   async addMemberToCommunity(
     communityId: string,
-    userId: string
+    userAccessToken: string
   ): Promise<SocialPlusResponse<{ success: boolean }>> {
-    return this.makeRequest<{ success: boolean }>('POST', `/v1/communities/${communityId}/members`, { userId });
+    return this.makeRequest<{ success: boolean }>(
+      'POST',
+      `/v4/communities/${communityId}/join`,
+      undefined,
+      {
+        useApiKey: true,
+        bearerToken: userAccessToken,
+      }
+    );
   }
 
   /**
@@ -442,6 +454,10 @@ class SocialPlusClient {
         return result;
       }
 
+      if (!userAccessToken) {
+        throw new Error('Token de acesso do usuário é obrigatório para adicionar membros às comunidades');
+      }
+
       console.log(`[SocialPlus] Encontradas ${allCommunities.length} comunidades. Adicionando usuário ${userId} a todas...`);
 
       // Adicionar usuário a cada comunidade (processar em paralelo com limite)
@@ -456,7 +472,7 @@ class SocialPlusClient {
           }
 
           try {
-            const addResponse = await this.addMemberToCommunity(communityId, userId);
+            const addResponse = await this.addMemberToCommunity(communityId, userAccessToken);
             if (addResponse.success) {
               console.log(`[SocialPlus] Usuário ${userId} adicionado à comunidade ${communityId}`);
               return { success: true, communityId, error: null };
