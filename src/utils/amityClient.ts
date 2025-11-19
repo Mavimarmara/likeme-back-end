@@ -257,7 +257,7 @@ const createUserAccessTokenViaREST = async (userId: string): Promise<string | nu
     if (!authResponse.ok) {
       const errorText = await authResponse.text();
       console.error(`[Amity REST] Erro ao obter token de autenticação: ${authResponse.status} - ${errorText}`);
-      console.error(`[Amity REST] URL: ${authTokenUrl}, hasServerKey: ${!!config.socialPlus.serverKey}`);
+      console.error(`[Amity REST] URL: ${authTokenUrl}, hasServerKey: ${!!config.socialPlus.serverKey}, serverKey: ${config.socialPlus.serverKey}`);
       return null;
     }
 
