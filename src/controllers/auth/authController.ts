@@ -90,26 +90,35 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Criar usuário na social.plus e adicionar a todas as comunidades
+    // Criar usuário na social.plus (se não existir) e adicionar a todas as comunidades
     try {
-      const emailContact = user.person.contacts.find((c) => c.type === 'email');
-      const socialPlusResponse = await socialPlusClient.createUser({
-        username: user.username || undefined,
-        email: emailContact?.value || userData.email,
-        firstName: user.person.firstName,
-        lastName: user.person.lastName,
-        avatar: user.avatar || undefined,
-      });
+      let socialPlusUserId = user.socialPlusUserId;
 
-      if (socialPlusResponse.success && socialPlusResponse.data?.id) {
-        const socialPlusUserId = socialPlusResponse.data.id;
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { socialPlusUserId },
+      // Se o usuário ainda não existe no social.plus, criar
+      if (!socialPlusUserId) {
+        const emailContact = user.person.contacts.find((c) => c.type === 'email');
+        const socialPlusResponse = await socialPlusClient.createUser({
+          username: user.username || undefined,
+          email: emailContact?.value || userData.email,
+          firstName: user.person.firstName,
+          lastName: user.person.lastName,
+          avatar: user.avatar || undefined,
         });
-        user.socialPlusUserId = socialPlusUserId;
 
-        // Adicionar usuário a todas as comunidades disponíveis
+        if (socialPlusResponse.success && socialPlusResponse.data?.id) {
+          socialPlusUserId = socialPlusResponse.data.id;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { socialPlusUserId },
+          });
+          user.socialPlusUserId = socialPlusUserId;
+        } else {
+          console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
+        }
+      }
+
+      // Adicionar usuário a todas as comunidades disponíveis (mesmo que já exista)
+      if (socialPlusUserId) {
         try {
           console.log(`[Auth] Adicionando usuário ${socialPlusUserId} a todas as comunidades...`);
           const addResult = await socialPlusClient.addUserToAllCommunities(socialPlusUserId);
@@ -121,8 +130,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
           // Não falha o registro se não conseguir adicionar às comunidades
         }
-      } else {
-        console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
       }
     } catch (error) {
       console.error('Erro ao criar usuário na social.plus:', error);
@@ -219,8 +226,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         user.avatar = userInfo.picture;
       }
 
-      // Se o usuário já existe, verificar se precisa criar na social.plus
-      if (!user.socialPlusUserId) {
+      // Criar usuário na social.plus (se não existir) e adicionar a todas as comunidades
+      let socialPlusUserId = user.socialPlusUserId;
+
+      if (!socialPlusUserId) {
         try {
           const emailContact = user.person?.contacts?.find((c: any) => c.type === 'email');
           const socialPlusResponse = await socialPlusClient.createUser({
@@ -232,28 +241,30 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           });
 
           if (socialPlusResponse.success && socialPlusResponse.data?.id) {
-            const socialPlusUserId = socialPlusResponse.data.id;
+            socialPlusUserId = socialPlusResponse.data.id;
             await prisma.user.update({
               where: { id: user.id },
               data: { socialPlusUserId },
             });
             user.socialPlusUserId = socialPlusUserId;
-
-            // Adicionar usuário a todas as comunidades disponíveis
-            try {
-              console.log(`[Auth] Adicionando usuário ${socialPlusUserId} a todas as comunidades...`);
-              const addResult = await socialPlusClient.addUserToAllCommunities(socialPlusUserId);
-              console.log(`[Auth] Usuário adicionado a ${addResult.added} comunidades, ${addResult.failed} falhas`);
-              if (addResult.errors.length > 0) {
-                console.warn('[Auth] Erros ao adicionar usuário a algumas comunidades:', addResult.errors);
-              }
-            } catch (addError) {
-              console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
-              // Não falha o login se não conseguir adicionar às comunidades
-            }
           }
         } catch (error) {
           console.error('Erro ao criar usuário na social.plus:', error);
+        }
+      }
+
+      // Adicionar usuário a todas as comunidades disponíveis (mesmo que já exista)
+      if (socialPlusUserId) {
+        try {
+          console.log(`[Auth] Adicionando usuário ${socialPlusUserId} a todas as comunidades...`);
+          const addResult = await socialPlusClient.addUserToAllCommunities(socialPlusUserId);
+          console.log(`[Auth] Usuário adicionado a ${addResult.added} comunidades, ${addResult.failed} falhas`);
+          if (addResult.errors.length > 0) {
+            console.warn('[Auth] Erros ao adicionar usuário a algumas comunidades:', addResult.errors);
+          }
+        } catch (addError) {
+          console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
+          // Não falha o login se não conseguir adicionar às comunidades
         }
       }
     } else {
