@@ -221,6 +221,11 @@ class SocialPlusClient {
 
       return await this.generateServerToken(undefined, forceRefresh);
     } catch (error) {
+      // Se o erro for "Invalid server key", logar e retornar null para usar fallback
+      if (error instanceof Error && error.message.includes('Invalid server key')) {
+        console.warn('Server key inválido ou não autorizado. Usando API key diretamente como fallback.');
+        return null;
+      }
       console.error('Erro ao obter token da social.plus:', error);
       return null;
     }
@@ -390,7 +395,14 @@ class SocialPlusClient {
     const query = queryParams.toString();
 
     // Tentar usar token de servidor se disponível, caso contrário usar API key diretamente
-    const token = await this.getServerToken();
+    let token: string | null = null;
+    try {
+      token = await this.getServerToken();
+    } catch (error) {
+      // Se houver erro ao obter token de servidor (ex: server key inválido), usar API key diretamente
+      console.warn('Erro ao obter token de servidor, usando API key diretamente:', error);
+      token = null;
+    }
     
     if (token) {
       // Usar token de servidor
@@ -406,6 +418,7 @@ class SocialPlusClient {
     }
 
     // Fallback: usar API key diretamente
+    console.log('[SocialPlus] Usando API key diretamente para getGlobalFeed');
     return this.makeRequest<any>(
       'GET',
       `/v3/global-feeds${query ? `?${query}` : ''}`,
