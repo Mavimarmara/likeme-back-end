@@ -6,6 +6,7 @@ import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, AuthResponse, AuthenticatedRequest } from '@/types';
 import { socialPlusClient } from '@/utils/socialPlus';
+import { loginToAmity } from '@/utils/amityClient';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -358,6 +359,72 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const sessionToken = generateToken(fullUser.id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, personalObjectives: __, ...userWithoutPassword } = fullUser;
+
+    // Sempre fazer login no Amity (social.plus)
+    // Usar o userId do Auth0 (sub) como identificador no Amity
+    // Se o login retornar um userId diferente, salvar no banco
+    // Gerar access token para o usuário
+    try {
+      const displayName = userPerson
+        ? `${userPerson.firstName} ${userPerson.lastName}`.trim() || userPerson.firstName || 'Usuário'
+        : 'Usuário';
+
+      // Usar o userId do Auth0 (sub) como identificador no Amity
+      const amityUserId = auth0User.sub;
+
+      if (!amityUserId) {
+        console.warn('Auth0 sub não encontrado. Não será possível fazer login no Amity.');
+      } else {
+        const loginResult = await loginToAmity(amityUserId, displayName);
+
+        if (loginResult) {
+          const { userId: returnedUserId, accessToken } = loginResult;
+
+          // Salvar o userId do Auth0 como socialPlusUserId se ainda não tiver
+          // O userId retornado deve ser o mesmo que passamos (auth0User.sub)
+          if (returnedUserId && returnedUserId !== fullUser.socialPlusUserId) {
+            try {
+              await prisma.user.update({
+                where: { id: fullUser.id },
+                data: { socialPlusUserId: returnedUserId },
+              });
+
+              // Atualizar o objeto fullUser para refletir a mudança
+              fullUser.socialPlusUserId = returnedUserId;
+              userWithoutPassword.socialPlusUserId = returnedUserId;
+
+              console.log(`socialPlusUserId ${returnedUserId} (Auth0 sub) salvo para o usuário ${fullUser.id}`);
+            } catch (dbError) {
+              console.error('Erro ao salvar socialPlusUserId no banco:', dbError);
+              // Não falha o login se não conseguir salvar
+            }
+          } else if (!fullUser.socialPlusUserId && returnedUserId) {
+            // Se não tinha socialPlusUserId e agora temos, salvar
+            try {
+              await prisma.user.update({
+                where: { id: fullUser.id },
+                data: { socialPlusUserId: returnedUserId },
+              });
+
+              fullUser.socialPlusUserId = returnedUserId;
+              userWithoutPassword.socialPlusUserId = returnedUserId;
+
+              console.log(`socialPlusUserId ${returnedUserId} (Auth0 sub) salvo para o usuário ${fullUser.id}`);
+            } catch (dbError) {
+              console.error('Erro ao salvar socialPlusUserId no banco:', dbError);
+            }
+          }
+
+          // Log do access token gerado (não salvar no banco por segurança)
+          if (accessToken) {
+            console.log(`Access token gerado para o usuário ${returnedUserId} (primeiros 20 chars: ${accessToken.substring(0, 20)}...)`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao fazer login no Amity (não bloqueia o login):', error);
+      // Não falha o login se a integração com Amity falhar
+    }
 
     const response: AuthResponse = {
       user: userWithoutPassword,

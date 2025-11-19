@@ -1,298 +1,20 @@
 import { Response } from 'express';
 import prisma from '@/config/database';
 import { AuthenticatedRequest } from '@/types';
-import { sendSuccess, sendError } from '@/utils/response';
+import { sendError, sendSuccess } from '@/utils/response';
 import { socialPlusClient } from '@/utils/socialPlus';
-
-// ============================================
-// CONSTANTS
-// ============================================
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
 const DEFAULT_MEMBER_ROLE = 'member';
-const ADMIN_ROLES = ['admin', 'moderator'] as const;
-
-const CREATOR_SELECT = {
-  id: true,
-  username: true,
-  avatar: true,
-  person: {
-    select: {
-      firstName: true,
-      lastName: true,
-    },
-  },
-};
-
-const USER_SELECT = {
-  id: true,
-  username: true,
-  avatar: true,
-  person: {
-    select: {
-      firstName: true,
-      lastName: true,
-    },
-  },
-};
-
-// ============================================
-// QUERY HELPERS
-// ============================================
-
-const buildCommunityWhereClause = (type?: string) => ({
-  deletedAt: null,
-  ...(type && { type }),
-});
+const DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT = 100;
 
 const buildPaginationParams = (query: any) => {
-  const page = parseInt(query.page as string) || DEFAULT_PAGE;
-  const limit = parseInt(query.limit as string) || DEFAULT_LIMIT;
+  const page = parseInt(query.page as string, 10) || DEFAULT_PAGE;
+  const limit = parseInt(query.limit as string, 10) || DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
   return { page, limit, skip };
 };
-
-const findCommunityById = async (id: string) => {
-  return prisma.community.findUnique({
-    where: { id },
-    include: {
-      creator: { select: CREATOR_SELECT },
-      members: {
-        where: { deletedAt: null },
-        include: { user: { select: USER_SELECT } },
-      },
-    },
-  });
-};
-
-const findCommunityWithCurrentUserMembership = async (communityId: string, userId: string) => {
-  return prisma.community.findUnique({
-    where: { id: communityId },
-    include: {
-      members: {
-        where: {
-          userId,
-          deletedAt: null,
-        },
-      },
-    },
-  });
-};
-
-const findUserById = async (userId: string) => {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, socialPlusUserId: true },
-  });
-};
-
-const findExistingMember = async (userId: string, communityId: string) => {
-  return prisma.communityMember.findFirst({
-    where: {
-      userId,
-      communityId,
-      deletedAt: null,
-    },
-  });
-};
-
-const findMemberWithUser = async (userId: string, communityId: string) => {
-  return prisma.communityMember.findFirst({
-    where: {
-      userId,
-      communityId,
-      deletedAt: null,
-    },
-    include: {
-      user: {
-        select: { socialPlusUserId: true },
-      },
-    },
-  });
-};
-
-const listCommunitiesQuery = async (where: any, skip: number, limit: number) => {
-  return prisma.community.findMany({
-    where,
-    skip,
-    take: limit,
-    include: {
-      creator: { select: CREATOR_SELECT },
-      members: {
-        where: { deletedAt: null },
-        select: { id: true, role: true },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-};
-
-const listMembersQuery = async (communityId: string, skip: number, limit: number) => {
-  const where = {
-    communityId,
-    deletedAt: null,
-  };
-
-  return Promise.all([
-    prisma.communityMember.findMany({
-      where,
-      skip,
-      take: limit,
-      include: {
-        user: { select: USER_SELECT },
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.communityMember.count({ where }),
-  ]);
-};
-
-const listUserCommunitiesQuery = async (userId: string, skip: number, limit: number) => {
-  const where = {
-    userId,
-    deletedAt: null,
-    community: {
-      deletedAt: null,
-    },
-  };
-
-  return Promise.all([
-    prisma.communityMember.findMany({
-      where,
-      skip,
-      take: limit,
-      include: {
-        community: {
-          include: {
-            creator: { select: CREATOR_SELECT },
-            members: {
-              where: { deletedAt: null },
-              select: {
-                id: true,
-                role: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.communityMember.count({ where }),
-  ]);
-};
-
-const listPublicCommunitiesWithSocialId = async () => {
-  return prisma.community.findMany({
-    where: {
-      deletedAt: null,
-      type: 'public',
-      socialPlusCommunityId: {
-        not: null,
-      },
-    },
-    select: {
-      socialPlusCommunityId: true,
-    },
-  });
-};
-
-const createMember = async (userId: string, communityId: string, role: string) => {
-  return prisma.communityMember.create({
-    data: {
-      userId,
-      communityId,
-      role,
-    },
-    include: {
-      user: { select: USER_SELECT },
-    },
-  });
-};
-
-const softDeleteMember = async (memberId: string) => {
-  return prisma.communityMember.update({
-    where: { id: memberId },
-    data: { deletedAt: new Date() },
-  });
-};
-
-// ============================================
-// VALIDATION HELPERS
-// ============================================
-
-const validateAuthenticatedUser = (userId: string | undefined): boolean => {
-  return userId !== undefined;
-};
-
-const validateCommunityExists = (community: any): boolean => {
-  return community !== null && community.deletedAt === null;
-};
-
-const validateUserExists = (user: any): boolean => {
-  return user !== null;
-};
-
-const validateMemberNotExists = (member: any): boolean => {
-  return member === null;
-};
-
-// ============================================
-// PERMISSION HELPERS
-// ============================================
-
-const hasAdminRole = (members: any[], userId: string): boolean => {
-  return members.some(
-    (member) => member.userId === userId && ADMIN_ROLES.includes(member.role as any)
-  );
-};
-
-const isCommunityCreator = (community: any, userId: string): boolean => {
-  return community.createdBy === userId;
-};
-
-const canAddMembers = (community: any, userId: string): boolean => {
-  const isAdmin = hasAdminRole(community.members, userId);
-  const isCreator = isCommunityCreator(community, userId);
-  return isAdmin || isCreator;
-};
-
-const canRemoveMembers = (community: any, currentUserId: string, targetUserId: string): boolean => {
-  const isAdmin = hasAdminRole(community.members, currentUserId);
-  const isCreator = isCommunityCreator(community, currentUserId);
-  const isSelf = currentUserId === targetUserId;
-  return isAdmin || isCreator || isSelf;
-};
-
-// ============================================
-// SOCIAL.PLUS SYNC HELPERS
-// ============================================
-
-const syncMemberToSocialPlus = async (
-  socialPlusCommunityId: string | null,
-  socialPlusUserId: string | null
-): Promise<void> => {
-  if (!socialPlusCommunityId || !socialPlusUserId) {
-    return;
-  }
-
-  await socialPlusClient.addMemberToCommunity(socialPlusCommunityId, socialPlusUserId);
-};
-
-const removeMemberFromSocialPlus = async (
-  socialPlusCommunityId: string | null,
-  socialPlusUserId: string | null
-): Promise<void> => {
-  if (!socialPlusCommunityId || !socialPlusUserId) {
-    return;
-  }
-
-  await socialPlusClient.removeMemberFromCommunity(socialPlusCommunityId, socialPlusUserId);
-};
-
-// ============================================
-// RESPONSE HELPERS
-// ============================================
 
 const buildPaginationResponse = (page: number, limit: number, total: number) => ({
   page,
@@ -301,211 +23,54 @@ const buildPaginationResponse = (page: number, limit: number, total: number) => 
   totalPages: Math.ceil(total / limit),
 });
 
-const handleError = (res: Response, error: any, operation: string): void => {
+const handleError = (res: Response, error: unknown, operation: string): void => {
   console.error(`${operation} error:`, error);
   sendError(res, `Erro ao ${operation}`);
 };
 
-// ============================================
-// CONTROLLERS
-// ============================================
+const getSocialPlusUserIdFromDb = async (userId: string): Promise<string | null> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { socialPlusUserId: true },
+  });
 
-export const listCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { page, limit, skip } = buildPaginationParams(req.query);
-    const where = buildCommunityWhereClause(req.query.type as string | undefined);
-
-    const [communities, total] = await Promise.all([
-      listCommunitiesQuery(where, skip, limit),
-      prisma.community.count({ where }),
-    ]);
-
-    sendSuccess(
-      res,
-      {
-        communities,
-        pagination: buildPaginationResponse(page, limit, total),
-      },
-      'Comunidades obtidas com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'listar comunidades');
-  }
+  return user?.socialPlusUserId ?? null;
 };
 
-export const getCommunityById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const community = await findCommunityById(id);
-
-    if (!validateCommunityExists(community)) {
-      sendError(res, 'Comunidade não encontrada', 404);
-      return;
-    }
-
-    sendSuccess(res, community, 'Comunidade obtida com sucesso');
-  } catch (error) {
-    handleError(res, error, 'obter comunidade');
+const extractCommunitiesFromResponse = (data: any): any[] => {
+  if (!data) {
+    return [];
   }
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data.communities)) {
+    return data.communities;
+  }
+
+  if (Array.isArray(data.items)) {
+    return data.items;
+  }
+
+  return [];
 };
 
-export const addMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id: communityId } = req.params;
-    const { userId, role = DEFAULT_MEMBER_ROLE } = req.body;
-    const currentUserId = req.user?.id;
-
-    if (!validateAuthenticatedUser(currentUserId)) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const community = await findCommunityWithCurrentUserMembership(communityId, currentUserId!);
-
-    if (!validateCommunityExists(community)) {
-      sendError(res, 'Comunidade não encontrada', 404);
-      return;
-    }
-
-    if (!canAddMembers(community, currentUserId!)) {
-      sendError(res, 'Sem permissão para adicionar membros', 403);
-      return;
-    }
-
-    const user = await findUserById(userId);
-
-    if (!validateUserExists(user)) {
-      sendError(res, 'Usuário não encontrado', 404);
-      return;
-    }
-
-    const existingMember = await findExistingMember(userId, communityId);
-
-    if (!validateMemberNotExists(existingMember)) {
-      sendError(res, 'Usuário já é membro desta comunidade', 409);
-      return;
-    }
-
-    if (!community || !user) {
-      sendError(res, 'Erro interno', 500);
-      return;
-    }
-
-    await syncMemberToSocialPlus(community.socialPlusCommunityId, user.socialPlusUserId);
-
-    const member = await createMember(userId, communityId, role);
-
-    sendSuccess(res, member, 'Membro adicionado com sucesso', 201);
-  } catch (error) {
-    handleError(res, error, 'adicionar membro');
+const extractMembersFromResponse = (data: any): any[] => {
+  if (!data) {
+    return [];
   }
-};
 
-export const removeMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id: communityId, userId } = req.params;
-    const currentUserId = req.user?.id;
-
-    if (!validateAuthenticatedUser(currentUserId)) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const community = await findCommunityWithCurrentUserMembership(communityId, currentUserId!);
-
-    if (!validateCommunityExists(community)) {
-      sendError(res, 'Comunidade não encontrada', 404);
-      return;
-    }
-
-    if (!canRemoveMembers(community, currentUserId!, userId)) {
-      sendError(res, 'Sem permissão para remover membros', 403);
-      return;
-    }
-
-    const member = await findMemberWithUser(userId, communityId);
-
-    if (!validateUserExists(member)) {
-      sendError(res, 'Membro não encontrado', 404);
-      return;
-    }
-
-    if (!community || !member) {
-      sendError(res, 'Erro interno', 500);
-      return;
-    }
-
-    await removeMemberFromSocialPlus(
-      community.socialPlusCommunityId,
-      member.user.socialPlusUserId
-    );
-
-    await softDeleteMember(member.id);
-
-    sendSuccess(res, null, 'Membro removido com sucesso');
-  } catch (error) {
-    handleError(res, error, 'remover membro');
+  if (Array.isArray(data.members)) {
+    return data.members;
   }
-};
 
-export const listMembers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id: communityId } = req.params;
-    const { page, limit, skip } = buildPaginationParams(req.query);
-
-    const community = await prisma.community.findUnique({
-      where: { id: communityId },
-    });
-
-    if (!validateCommunityExists(community)) {
-      sendError(res, 'Comunidade não encontrada', 404);
-      return;
-    }
-
-    const [members, total] = await listMembersQuery(communityId, skip, limit);
-
-    sendSuccess(
-      res,
-      {
-        members,
-        pagination: buildPaginationResponse(page, limit, total),
-      },
-      'Membros obtidos com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'listar membros');
+  if (Array.isArray(data.items)) {
+    return data.items;
   }
-};
 
-export const getUserCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const currentUserId = req.user?.id;
-
-    if (!validateAuthenticatedUser(currentUserId)) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const { page, limit, skip } = buildPaginationParams(req.query);
-    const [memberships, total] = await listUserCommunitiesQuery(currentUserId!, skip, limit);
-
-    const communities = memberships.map((membership) => ({
-      ...membership.community,
-      role: membership.role,
-      joinedAt: membership.createdAt,
-    }));
-
-    sendSuccess(
-      res,
-      {
-        communities,
-        pagination: buildPaginationResponse(page, limit, total),
-      },
-      'Comunidades do usuário obtidas com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'listar comunidades do usuário');
-  }
+  return [];
 };
 
 interface FetchCommunityPostsOptions {
@@ -518,7 +83,7 @@ const fetchPostsFromCommunities = async (
   options?: FetchCommunityPostsOptions
 ): Promise<any[]> => {
   const perCommunityPage = options?.perCommunityPage ?? DEFAULT_PAGE;
-  const perCommunityLimit = options?.perCommunityLimit ?? 100;
+  const perCommunityLimit = options?.perCommunityLimit ?? DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT;
 
   const postsPromises = communityIds.map(async (communityId) => {
     try {
@@ -561,40 +126,301 @@ const sortPostsByDate = (posts: any[]): any[] => {
   });
 };
 
+const getUserCommunitiesFromSocialPlus = async (
+  socialPlusUserId: string,
+  page = DEFAULT_PAGE,
+  limit = DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT
+) => {
+  return socialPlusClient.getUserCommunities(socialPlusUserId, {
+    page,
+    limit,
+  });
+};
+
+const mapUserCommunities = (communities: any[]) => {
+  return communities.map((item) => {
+    if (item?.community) {
+      return {
+        ...item.community,
+        role: item.role || item.communityRole || item.membershipRole || item.membership?.role,
+        joinedAt: item.joinedAt || item.createdAt || item.membership?.createdAt,
+      };
+    }
+
+    return {
+      ...item,
+      role: item.role,
+      joinedAt: item.joinedAt || item.createdAt,
+    };
+  });
+};
+
+const buildSocialPlusErrorMessage = (fallbackMessage: string, socialPlusError?: string) => {
+  if (socialPlusError) {
+    return `${fallbackMessage}: ${socialPlusError}`;
+  }
+  return fallbackMessage;
+};
+
+export const listCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { page, limit } = buildPaginationParams(req.query);
+    const type = req.query.type as string | undefined;
+
+    const response = await socialPlusClient.listCommunities({
+      page,
+      limit,
+      type,
+    });
+
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao listar comunidades', response.error));
+      return;
+    }
+
+    const communities = extractCommunitiesFromResponse(response.data);
+    const total = response.data?.total ?? communities.length;
+
+    sendSuccess(
+      res,
+      {
+        communities,
+        pagination: buildPaginationResponse(page, limit, total),
+      },
+      'Comunidades obtidas com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar comunidades');
+  }
+};
+
+export const getCommunityById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const response = await socialPlusClient.getCommunity(id);
+
+    if (!response.success || !response.data) {
+      sendError(res, buildSocialPlusErrorMessage('Comunidade não encontrada', response.error), 404);
+      return;
+    }
+
+    sendSuccess(res, response.data, 'Comunidade obtida com sucesso');
+  } catch (error) {
+    handleError(res, error, 'obter comunidade');
+  }
+};
+
+export const addMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: communityId } = req.params;
+    const { userId, socialPlusUserId, role = DEFAULT_MEMBER_ROLE } = req.body;
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    const currentUserSocialId = await getSocialPlusUserIdFromDb(currentUserId);
+
+    if (!currentUserSocialId) {
+      sendError(res, 'Usuário autenticado não está sincronizado com a social.plus', 400);
+      return;
+    }
+
+    let targetSocialPlusUserId = socialPlusUserId;
+
+    if (!targetSocialPlusUserId) {
+      if (!userId) {
+        sendError(res, 'Informe o userId interno ou o socialPlusUserId a ser adicionado', 400);
+      return;
+    }
+
+      targetSocialPlusUserId = await getSocialPlusUserIdFromDb(userId);
+    }
+
+    if (!targetSocialPlusUserId) {
+      sendError(res, 'Usuário não encontrado ou não sincronizado com a social.plus', 404);
+      return;
+    }
+
+    const response = await socialPlusClient.addMemberToCommunity(communityId, targetSocialPlusUserId);
+
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao adicionar membro', response.error));
+      return;
+    }
+
+    sendSuccess(
+      res,
+      {
+        communityId,
+        userSocialPlusId: targetSocialPlusUserId,
+        addedBy: currentUserSocialId,
+        role,
+      },
+      'Membro adicionado com sucesso',
+      201
+    );
+  } catch (error) {
+    handleError(res, error, 'adicionar membro');
+  }
+};
+
+export const removeMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: communityId, userId } = req.params;
+    const { socialPlusUserId } = req.query;
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    const currentUserSocialId = await getSocialPlusUserIdFromDb(currentUserId);
+
+    if (!currentUserSocialId) {
+      sendError(res, 'Usuário autenticado não está sincronizado com a social.plus', 400);
+      return;
+    }
+
+    let targetSocialPlusUserId: string | null = typeof socialPlusUserId === 'string' ? socialPlusUserId : null;
+
+    if (!targetSocialPlusUserId) {
+      targetSocialPlusUserId = userId ? await getSocialPlusUserIdFromDb(userId) : null;
+    }
+
+    if (!targetSocialPlusUserId) {
+      sendError(res, 'Usuário não encontrado ou não sincronizado com a social.plus', 404);
+      return;
+    }
+
+    const response = await socialPlusClient.removeMemberFromCommunity(communityId, targetSocialPlusUserId);
+
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao remover membro', response.error));
+      return;
+    }
+
+    sendSuccess(
+      res,
+      {
+        communityId,
+        userSocialPlusId: targetSocialPlusUserId,
+        removedBy: currentUserSocialId,
+      },
+      'Membro removido com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'remover membro');
+  }
+};
+
+export const listMembers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: communityId } = req.params;
+    const { page, limit } = buildPaginationParams(req.query);
+
+    const response = await socialPlusClient.getCommunityMembers(communityId, {
+      page,
+      limit,
+    });
+
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao listar membros', response.error));
+      return;
+    }
+
+    const members = extractMembersFromResponse(response.data);
+    const total = response.data?.total ?? members.length;
+
+    sendSuccess(
+      res,
+      {
+        members,
+        pagination: buildPaginationResponse(page, limit, total),
+      },
+      'Membros obtidos com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar membros');
+  }
+};
+
+export const getUserCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
+
+    if (!socialPlusUserId) {
+      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
+      return;
+    }
+
+    const { page, limit } = buildPaginationParams(req.query);
+    const response = await getUserCommunitiesFromSocialPlus(socialPlusUserId, page, limit);
+
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao listar comunidades do usuário', response.error));
+      return;
+    }
+
+    const memberships = mapUserCommunities(extractCommunitiesFromResponse(response.data));
+    const total = response.data?.total ?? memberships.length;
+
+    sendSuccess(
+      res,
+      {
+        communities: memberships,
+        pagination: buildPaginationResponse(page, limit, total),
+      },
+      'Comunidades do usuário obtidas com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar comunidades do usuário');
+  }
+};
+
 export const getUserCommunityPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const currentUserId = req.user?.id;
 
-    if (!validateAuthenticatedUser(currentUserId)) {
+    if (!currentUserId) {
       sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
+
+    if (!socialPlusUserId) {
+      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
       return;
     }
 
     const { page, limit, skip } = buildPaginationParams(req.query);
 
-    const memberships = await prisma.communityMember.findMany({
-      where: {
-        userId: currentUserId,
-        deletedAt: null,
-        community: {
-          deletedAt: null,
-          socialPlusCommunityId: {
-            not: null,
-          },
-        },
-      },
-      select: {
-        community: {
-          select: {
-            socialPlusCommunityId: true,
-          },
-        },
-      },
-    });
+    const response = await getUserCommunitiesFromSocialPlus(
+      socialPlusUserId,
+      DEFAULT_PAGE,
+      DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT
+    );
 
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao listar comunidades do usuário', response.error));
+      return;
+    }
+
+    const memberships = extractCommunitiesFromResponse(response.data);
     const communityIds = memberships
-      .map((m) => m.community.socialPlusCommunityId)
-      .filter((id): id is string => id !== null);
+      .map((membership: any) => membership?.community?.id || membership?.id)
+      .filter((value): value is string => Boolean(value));
 
     if (communityIds.length === 0) {
       sendSuccess(
@@ -628,39 +454,32 @@ export const getUserCommunityPosts = async (req: AuthenticatedRequest, res: Resp
 
 export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { page, limit, skip } = buildPaginationParams(req.query);
+    const { page, limit } = buildPaginationParams(req.query);
 
-    const publicCommunities = await listPublicCommunitiesWithSocialId();
-    const communityIds = publicCommunities
-      .map((community) => community.socialPlusCommunityId)
-      .filter((id): id is string => id !== null);
+    const response = await socialPlusClient.getGlobalFeed({
+      page,
+      limit,
+    });
 
-    if (communityIds.length === 0) {
-      sendSuccess(
-        res,
-        {
-          posts: [],
-          pagination: buildPaginationResponse(page, limit, 0),
-        },
-        'Nenhum post encontrado para comunidades públicas'
-      );
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao listar posts públicos', response.error));
       return;
     }
 
-    const allPosts = await fetchPostsFromCommunities(communityIds);
-    const sortedPosts = sortPostsByDate(allPosts);
-    const total = sortedPosts.length;
-    const paginatedPosts = sortedPosts.slice(skip, skip + limit);
+    const feedData = response.data ?? {};
+    const posts = feedData.posts ?? [];
+    const total = feedData.paging?.total ?? posts.length ?? 0;
 
     sendSuccess(
       res,
       {
-        posts: paginatedPosts,
+        ...feedData,
+        posts,
         pagination: buildPaginationResponse(page, limit, total),
       },
-      'Posts das comunidades públicas obtidos com sucesso'
+      'Posts globais obtidos com sucesso'
     );
   } catch (error) {
-    handleError(res, error, 'listar posts das comunidades públicas');
+    handleError(res, error, 'listar posts globais');
   }
 };

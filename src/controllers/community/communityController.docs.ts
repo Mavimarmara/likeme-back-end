@@ -382,6 +382,34 @@
  *                             type: string
  *                             format: date-time
  *                             description: Data de criação do post
+ *                     postChildren:
+ *                       type: array
+ *                       description: Subposts retornados pela social.plus
+ *                       items:
+ *                         type: object
+ *                     comments:
+ *                       type: array
+ *                       description: Comentários retornados pela social.plus
+ *                       items:
+ *                         type: object
+ *                     users:
+ *                       type: array
+ *                       description: Usuários relacionados ao feed
+ *                       items:
+ *                         type: object
+ *                     communities:
+ *                       type: array
+ *                       description: Comunidades relacionadas ao feed
+ *                       items:
+ *                         type: object
+ *                     paging:
+ *                       type: object
+ *                       description: Cursor de paginação retornado pela social.plus
+ *                       properties:
+ *                         next:
+ *                           type: string
+ *                         previous:
+ *                           type: string
  *                     pagination:
  *                       $ref: '#/components/schemas/Pagination'
  *                 message:
@@ -394,8 +422,8 @@
  * @swagger
  * /api/communities/public/posts:
  *   get:
- *     summary: Listar posts de comunidades públicas
- *     description: Retorna posts de todas as comunidades públicas disponíveis, ordenados por data (mais recente primeiro) com paginação
+ *     summary: Listar posts públicos (global feed)
+ *     description: Retorna o feed público/global diretamente da social.plus (Amity), incluindo posts, comentários, usuários e metadados
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
@@ -414,7 +442,7 @@
  *         description: Número de itens por página
  *     responses:
  *       200:
- *         description: Posts das comunidades públicas obtidos com sucesso
+ *         description: Feed público obtido com sucesso
  *         content:
  *           application/json:
  *             schema:

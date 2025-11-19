@@ -37,51 +37,87 @@ interface SocialPlusResponse<T> {
 
 class SocialPlusClient {
   private apiKey: string;
+  private serverKey: string;
+  private botUserId: string;
   private baseUrl: string;
   private region: string;
+  private tokenTtlMs: number;
+  private tokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor() {
     this.apiKey = config.socialPlus.apiKey;
-    this.baseUrl = config.socialPlus.baseUrl;
+    this.serverKey = config.socialPlus.serverKey;
+    this.botUserId = config.socialPlus.botUserId;
+    this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
+    this.tokenTtlMs = config.socialPlus.tokenTtlMs || 300000;
+  }
+
+  private buildUrl(endpoint: string): string {
+    if (endpoint.startsWith('http')) {
+      return endpoint;
+    }
+
+    return `${this.baseUrl}${endpoint}`;
   }
 
   private async makeRequest<T>(
     method: string,
     endpoint: string,
     body?: any,
-    headers?: Record<string, string>
+    options?: {
+      headers?: Record<string, string>;
+      useApiKey?: boolean;
+      bearerToken?: string;
+    }
   ): Promise<SocialPlusResponse<T>> {
     try {
-      if (!this.apiKey) {
+      const url = this.buildUrl(endpoint);
+      const useApiKey = options?.useApiKey !== false;
+
+      if (useApiKey && !this.apiKey) {
         throw new Error('Social.plus API key not configured');
       }
 
-      const url = `${this.baseUrl}/v1${endpoint}`;
       const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
-        'X-API-Key': this.apiKey,
         'X-Region': this.region,
-        ...headers,
+        ...(options?.headers || {}),
       };
 
-      const options: RequestInit = {
+      if (useApiKey) {
+        defaultHeaders['X-API-Key'] = this.apiKey;
+      }
+
+      if (options?.bearerToken) {
+        defaultHeaders.Authorization = `Bearer ${options.bearerToken}`;
+      }
+
+      const fetchOptions: RequestInit = {
         method,
         headers: defaultHeaders,
       };
 
       if (body && method !== 'GET') {
-        options.body = JSON.stringify(body);
+        fetchOptions.body = JSON.stringify(body);
       }
 
-      const response = await fetch(url, options);
-      const data = (await response.json()) as any;
+      const response = await fetch(url, fetchOptions);
+      const contentType = response.headers.get('content-type');
+      const data = contentType?.includes('application/json') ? ((await response.json()) as any) : await response.text();
 
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || data.error || `HTTP ${response.status}`,
-          message: data.message,
+          error: (data && (data.message || data.error)) || `HTTP ${response.status}`,
+          message: data?.message,
+        };
+      }
+
+      if (typeof data === 'string') {
+        return {
+          success: true,
+          data: data as unknown as T,
         };
       }
 
@@ -98,30 +134,80 @@ class SocialPlusClient {
     }
   }
 
+  private async generateServerToken(userId?: string, forceRefresh = false): Promise<string> {
+    if (!this.serverKey) {
+      throw new Error('Social.plus server key not configured');
+    }
+
+    const cacheValid = this.tokenCache && this.tokenCache.expiresAt > Date.now();
+
+    if (!forceRefresh && cacheValid && this.tokenCache) {
+      return this.tokenCache.token;
+    }
+
+    const targetUserId = userId || this.botUserId;
+
+    if (!targetUserId) {
+      throw new Error('Social.plus bot user id not configured');
+    }
+
+    const response = await fetch(this.buildUrl('/v4/authentication/token'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-server-key': this.serverKey,
+      },
+      body: JSON.stringify({ userId: targetUserId }),
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+
+    const token = text.replace(/(^"|"$)/g, '').trim();
+    this.tokenCache = {
+      token,
+      expiresAt: Date.now() + this.tokenTtlMs,
+    };
+
+    return token;
+  }
+
+  private async getServerToken(forceRefresh = false): Promise<string> {
+    try {
+      return await this.generateServerToken(undefined, forceRefresh);
+    } catch (error) {
+      console.error('Erro ao obter token da social.plus:', error);
+      throw error;
+    }
+  }
+
   // User Management
   async createUser(userData: SocialPlusUser): Promise<SocialPlusResponse<{ id: string }>> {
-    return this.makeRequest<{ id: string }>('POST', '/users', userData);
+    return this.makeRequest<{ id: string }>('POST', '/v1/users', userData);
   }
 
   async getUser(userId: string): Promise<SocialPlusResponse<SocialPlusUser>> {
-    return this.makeRequest<SocialPlusUser>('GET', `/users/${userId}`);
+    return this.makeRequest<SocialPlusUser>('GET', `/v1/users/${userId}`);
   }
 
   async updateUser(userId: string, userData: Partial<SocialPlusUser>): Promise<SocialPlusResponse<SocialPlusUser>> {
-    return this.makeRequest<SocialPlusUser>('PUT', `/users/${userId}`, userData);
+    return this.makeRequest<SocialPlusUser>('PUT', `/v1/users/${userId}`, userData);
   }
 
   async deleteUser(userId: string): Promise<SocialPlusResponse<void>> {
-    return this.makeRequest<void>('DELETE', `/users/${userId}`);
+    return this.makeRequest<void>('DELETE', `/v1/users/${userId}`);
   }
 
   // Community Management
   async createCommunity(communityData: SocialPlusCommunity): Promise<SocialPlusResponse<{ id: string }>> {
-    return this.makeRequest<{ id: string }>('POST', '/communities', communityData);
+    return this.makeRequest<{ id: string }>('POST', '/v1/communities', communityData);
   }
 
   async getCommunity(communityId: string): Promise<SocialPlusResponse<SocialPlusCommunity>> {
-    return this.makeRequest<SocialPlusCommunity>('GET', `/communities/${communityId}`);
+    return this.makeRequest<SocialPlusCommunity>('GET', `/v1/communities/${communityId}`);
   }
 
   async listCommunities(params?: {
@@ -137,7 +223,7 @@ class SocialPlusClient {
     const query = queryParams.toString();
     return this.makeRequest<{ communities: SocialPlusCommunity[]; total: number }>(
       'GET',
-      `/communities${query ? `?${query}` : ''}`
+      `/v1/communities${query ? `?${query}` : ''}`
     );
   }
 
@@ -145,11 +231,11 @@ class SocialPlusClient {
     communityId: string,
     communityData: Partial<SocialPlusCommunity>
   ): Promise<SocialPlusResponse<SocialPlusCommunity>> {
-    return this.makeRequest<SocialPlusCommunity>('PUT', `/communities/${communityId}`, communityData);
+    return this.makeRequest<SocialPlusCommunity>('PUT', `/v1/communities/${communityId}`, communityData);
   }
 
   async deleteCommunity(communityId: string): Promise<SocialPlusResponse<void>> {
-    return this.makeRequest<void>('DELETE', `/communities/${communityId}`);
+    return this.makeRequest<void>('DELETE', `/v1/communities/${communityId}`);
   }
 
   // Community Members
@@ -157,14 +243,14 @@ class SocialPlusClient {
     communityId: string,
     userId: string
   ): Promise<SocialPlusResponse<{ success: boolean }>> {
-    return this.makeRequest<{ success: boolean }>('POST', `/communities/${communityId}/members`, { userId });
+    return this.makeRequest<{ success: boolean }>('POST', `/v1/communities/${communityId}/members`, { userId });
   }
 
   async removeMemberFromCommunity(
     communityId: string,
     userId: string
   ): Promise<SocialPlusResponse<{ success: boolean }>> {
-    return this.makeRequest<{ success: boolean }>('DELETE', `/communities/${communityId}/members/${userId}`);
+    return this.makeRequest<{ success: boolean }>('DELETE', `/v1/communities/${communityId}/members/${userId}`);
   }
 
   async getCommunityMembers(
@@ -178,17 +264,32 @@ class SocialPlusClient {
     const query = queryParams.toString();
     return this.makeRequest<{ members: SocialPlusUser[]; total: number }>(
       'GET',
-      `/communities/${communityId}/members${query ? `?${query}` : ''}`
+      `/v1/communities/${communityId}/members${query ? `?${query}` : ''}`
+    );
+  }
+
+  async getUserCommunities(
+    userId: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<SocialPlusResponse<{ communities: SocialPlusCommunity[] | any[]; total: number }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const query = queryParams.toString();
+    return this.makeRequest<{ communities: SocialPlusCommunity[] | any[]; total: number }>(
+      'GET',
+      `/v1/users/${userId}/communities${query ? `?${query}` : ''}`
     );
   }
 
   // Posts
   async createPost(postData: SocialPlusPost): Promise<SocialPlusResponse<{ id: string }>> {
-    return this.makeRequest<{ id: string }>('POST', '/posts', postData);
+    return this.makeRequest<{ id: string }>('POST', '/v1/posts', postData);
   }
 
   async getPost(postId: string): Promise<SocialPlusResponse<SocialPlusPost>> {
-    return this.makeRequest<SocialPlusPost>('GET', `/posts/${postId}`);
+    return this.makeRequest<SocialPlusPost>('GET', `/v1/posts/${postId}`);
   }
 
   async getCommunityPosts(
@@ -202,16 +303,16 @@ class SocialPlusClient {
     const query = queryParams.toString();
     return this.makeRequest<{ posts: SocialPlusPost[]; total: number }>(
       'GET',
-      `/communities/${communityId}/posts${query ? `?${query}` : ''}`
+      `/v1/communities/${communityId}/posts${query ? `?${query}` : ''}`
     );
   }
 
   async updatePost(postId: string, postData: Partial<SocialPlusPost>): Promise<SocialPlusResponse<SocialPlusPost>> {
-    return this.makeRequest<SocialPlusPost>('PUT', `/posts/${postId}`, postData);
+    return this.makeRequest<SocialPlusPost>('PUT', `/v1/posts/${postId}`, postData);
   }
 
   async deletePost(postId: string): Promise<SocialPlusResponse<void>> {
-    return this.makeRequest<void>('DELETE', `/posts/${postId}`);
+    return this.makeRequest<void>('DELETE', `/v1/posts/${postId}`);
   }
 
   // Feed
@@ -226,7 +327,28 @@ class SocialPlusClient {
     const query = queryParams.toString();
     return this.makeRequest<{ posts: SocialPlusPost[]; total: number }>(
       'GET',
-      `/users/${userId}/feed${query ? `?${query}` : ''}`
+      `/v1/users/${userId}/feed${query ? `?${query}` : ''}`
+    );
+  }
+
+  async getGlobalFeed(
+    params?: { page?: number; limit?: number }
+  ): Promise<SocialPlusResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const token = await this.getServerToken();
+    const query = queryParams.toString();
+
+    return this.makeRequest<any>(
+      'GET',
+      `/v3/global-feeds${query ? `?${query}` : ''}`,
+      undefined,
+      {
+        useApiKey: false,
+        bearerToken: token,
+      }
     );
   }
 }
