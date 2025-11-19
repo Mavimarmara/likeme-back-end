@@ -661,7 +661,7 @@ class SocialPlusClient {
       console.log('[SocialPlus] Usando token de usuário para getGlobalFeed');
       return this.makeRequest<any>(
         'GET',
-        `/v3/global-feeds${query ? `?${query}` : ''}`,
+        `/v4/me/global-feeds${query ? `?${query}` : ''}`,
         undefined,
         {
           useApiKey: true, // Manter API key (modo seguro)
@@ -685,7 +685,7 @@ class SocialPlusClient {
       console.log('[SocialPlus] Usando token de servidor para getGlobalFeed');
       return this.makeRequest<any>(
         'GET',
-        `/v3/global-feeds${query ? `?${query}` : ''}`,
+        `/v4/me/global-feeds${query ? `?${query}` : ''}`,
         undefined,
         {
           useApiKey: true, // Manter API key mesmo com Bearer token (modo seguro)
@@ -698,7 +698,7 @@ class SocialPlusClient {
     console.log('[SocialPlus] Usando API key diretamente para getGlobalFeed');
     return this.makeRequest<any>(
       'GET',
-      `/v3/global-feeds${query ? `?${query}` : ''}`,
+      `/v4/me/global-feeds${query ? `?${query}` : ''}`,
       undefined,
       {
         useApiKey: true, // Usa X-API-Key header diretamente

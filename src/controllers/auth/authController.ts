@@ -94,24 +94,24 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     let socialPlusUserId = user.socialPlusUserId;
     try {
       if (!socialPlusUserId) {
-        const emailContact = user.person.contacts.find((c) => c.type === 'email');
-        const socialPlusResponse = await socialPlusClient.createUser({
-          username: user.username || undefined,
-          email: emailContact?.value || userData.email,
-          firstName: user.person.firstName,
-          lastName: user.person.lastName,
-          avatar: user.avatar || undefined,
-        });
+      const emailContact = user.person.contacts.find((c) => c.type === 'email');
+      const socialPlusResponse = await socialPlusClient.createUser({
+        username: user.username || undefined,
+        email: emailContact?.value || userData.email,
+        firstName: user.person.firstName,
+        lastName: user.person.lastName,
+        avatar: user.avatar || undefined,
+      });
 
-        if (socialPlusResponse.success && socialPlusResponse.data?.id) {
+      if (socialPlusResponse.success && socialPlusResponse.data?.id) {
           socialPlusUserId = socialPlusResponse.data.id;
-          await prisma.user.update({
-            where: { id: user.id },
+        await prisma.user.update({
+          where: { id: user.id },
             data: { socialPlusUserId },
-          });
+        });
           user.socialPlusUserId = socialPlusUserId;
-        } else {
-          console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
+      } else {
+        console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
         }
       }
     } catch (error) {
