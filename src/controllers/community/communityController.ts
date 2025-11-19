@@ -74,87 +74,6 @@ const extractMembersFromResponse = (data: any): any[] => {
   return [];
 };
 
-interface FetchCommunityPostsOptions {
-  perCommunityPage?: number;
-  perCommunityLimit?: number;
-}
-
-const fetchPostsFromCommunities = async (
-  communityIds: string[],
-  options?: FetchCommunityPostsOptions
-): Promise<any[]> => {
-  const perCommunityPage = options?.perCommunityPage ?? DEFAULT_PAGE;
-  const perCommunityLimit = options?.perCommunityLimit ?? DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT;
-
-  const postsPromises = communityIds.map(async (communityId) => {
-    try {
-      const response = await socialPlusClient.getCommunityPosts(communityId, {
-        page: perCommunityPage,
-        limit: perCommunityLimit,
-      });
-
-      if (response.success && response.data?.posts) {
-        return response.data.posts.map((post: any) => ({
-          ...post,
-          communityId,
-        }));
-      }
-
-      return [];
-    } catch (error) {
-      console.error(`Erro ao buscar posts da comunidade ${communityId}:`, error);
-      return [];
-    }
-  });
-
-  const postsArrays = await Promise.all(postsPromises);
-  return postsArrays.flat();
-};
-
-const sortPostsByDate = (posts: any[]): any[] => {
-  return posts.sort((a, b) => {
-    const getPostDate = (post: any): number => {
-      const dateStr = post.createdAt || post.created_at || post.date || post.timestamp;
-      if (!dateStr) return 0;
-      const date = new Date(dateStr);
-      return date.getTime() || 0;
-    };
-
-    const dateA = getPostDate(a);
-    const dateB = getPostDate(b);
-
-    return dateB - dateA;
-  });
-};
-
-const getUserCommunitiesFromSocialPlus = async (
-  socialPlusUserId: string,
-  page = DEFAULT_PAGE,
-  limit = DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT
-) => {
-  return socialPlusClient.getUserCommunities(socialPlusUserId, {
-    page,
-    limit,
-  });
-};
-
-const mapUserCommunities = (communities: any[]) => {
-  return communities.map((item) => {
-    if (item?.community) {
-      return {
-        ...item.community,
-        role: item.role || item.communityRole || item.membershipRole || item.membership?.role,
-        joinedAt: item.joinedAt || item.createdAt || item.membership?.createdAt,
-      };
-    }
-
-    return {
-      ...item,
-      role: item.role,
-      joinedAt: item.joinedAt || item.createdAt,
-    };
-  });
-};
 
 const buildSocialPlusErrorMessage = (fallbackMessage: string, socialPlusError?: string) => {
   if (socialPlusError) {
@@ -163,15 +82,37 @@ const buildSocialPlusErrorMessage = (fallbackMessage: string, socialPlusError?: 
   return fallbackMessage;
 };
 
+
+
+
 export const listCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { page, limit } = buildPaginationParams(req.query);
-    const type = req.query.type as string | undefined;
+    const { page, limit, sortBy, includeDeleted } = req.query;
+
+    // Tentar obter token de autenticação do usuário se estiver autenticado
+    let userAccessToken: string | null = null;
+    const currentUserId = req.user?.id;
+
+    if (currentUserId) {
+      try {
+        const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
+        if (socialPlusUserId) {
+          userAccessToken = await createUserAccessToken(socialPlusUserId);
+          if (userAccessToken) {
+            console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para listCommunities`);
+          }
+        }
+      } catch (error) {
+        console.warn('Erro ao obter token de autenticação do usuário, usando autenticação padrão:', error);
+      }
+    }
 
     const response = await socialPlusClient.listCommunities({
-      page,
-      limit,
-      type,
+      userAccessToken: userAccessToken || undefined,
+      page: page ? parseInt(page as string, 10) : undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+      sortBy: sortBy as string | undefined,
+      includeDeleted: includeDeleted === 'true' ? true : undefined,
     });
 
     if (!response.success) {
@@ -179,277 +120,28 @@ export const listCommunities = async (req: AuthenticatedRequest, res: Response):
       return;
     }
 
-    const communities = extractCommunitiesFromResponse(response.data);
-    const total = response.data?.total ?? communities.length;
+    // A resposta v3 tem uma estrutura diferente com communities, communityUsers, files, users, etc.
+    const data = response.data ?? {};
+    const communities = data.communities ?? [];
+    const paging = data.paging ?? {};
 
     sendSuccess(
       res,
       {
+        ...data,
         communities,
-        pagination: buildPaginationResponse(page, limit, total),
+        pagination: {
+          page: page ? parseInt(page as string, 10) : DEFAULT_PAGE,
+          limit: limit ? parseInt(limit as string, 10) : DEFAULT_LIMIT,
+          total: communities.length,
+          next: paging.next,
+          previous: paging.previous,
+        },
       },
       'Comunidades obtidas com sucesso'
     );
   } catch (error) {
-    handleError(res, error, 'listar comunidades');
-  }
-};
-
-export const getCommunityById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const response = await socialPlusClient.getCommunity(id);
-
-    if (!response.success || !response.data) {
-      sendError(res, buildSocialPlusErrorMessage('Comunidade não encontrada', response.error), 404);
-      return;
-    }
-
-    sendSuccess(res, response.data, 'Comunidade obtida com sucesso');
-  } catch (error) {
-    handleError(res, error, 'obter comunidade');
-  }
-};
-
-export const addMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id: communityId } = req.params;
-    const { userId, socialPlusUserId, role = DEFAULT_MEMBER_ROLE } = req.body;
-    const currentUserId = req.user?.id;
-
-    if (!currentUserId) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const currentUserSocialId = await getSocialPlusUserIdFromDb(currentUserId);
-
-    if (!currentUserSocialId) {
-      sendError(res, 'Usuário autenticado não está sincronizado com a social.plus', 400);
-      return;
-    }
-
-    let targetSocialPlusUserId = socialPlusUserId;
-
-    if (!targetSocialPlusUserId) {
-      if (!userId) {
-        sendError(res, 'Informe o userId interno ou o socialPlusUserId a ser adicionado', 400);
-      return;
-    }
-
-      targetSocialPlusUserId = await getSocialPlusUserIdFromDb(userId);
-    }
-
-    if (!targetSocialPlusUserId) {
-      sendError(res, 'Usuário não encontrado ou não sincronizado com a social.plus', 404);
-      return;
-    }
-
-    const response = await socialPlusClient.addMemberToCommunity(communityId, targetSocialPlusUserId);
-
-    if (!response.success) {
-      sendError(res, buildSocialPlusErrorMessage('Erro ao adicionar membro', response.error));
-      return;
-    }
-
-    sendSuccess(
-      res,
-      {
-        communityId,
-        userSocialPlusId: targetSocialPlusUserId,
-        addedBy: currentUserSocialId,
-        role,
-      },
-      'Membro adicionado com sucesso',
-      201
-    );
-  } catch (error) {
-    handleError(res, error, 'adicionar membro');
-  }
-};
-
-export const removeMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id: communityId, userId } = req.params;
-    const { socialPlusUserId } = req.query;
-    const currentUserId = req.user?.id;
-
-    if (!currentUserId) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const currentUserSocialId = await getSocialPlusUserIdFromDb(currentUserId);
-
-    if (!currentUserSocialId) {
-      sendError(res, 'Usuário autenticado não está sincronizado com a social.plus', 400);
-      return;
-    }
-
-    let targetSocialPlusUserId: string | null = typeof socialPlusUserId === 'string' ? socialPlusUserId : null;
-
-    if (!targetSocialPlusUserId) {
-      targetSocialPlusUserId = userId ? await getSocialPlusUserIdFromDb(userId) : null;
-    }
-
-    if (!targetSocialPlusUserId) {
-      sendError(res, 'Usuário não encontrado ou não sincronizado com a social.plus', 404);
-      return;
-    }
-
-    const response = await socialPlusClient.removeMemberFromCommunity(communityId, targetSocialPlusUserId);
-
-    if (!response.success) {
-      sendError(res, buildSocialPlusErrorMessage('Erro ao remover membro', response.error));
-      return;
-    }
-
-    sendSuccess(
-      res,
-      {
-        communityId,
-        userSocialPlusId: targetSocialPlusUserId,
-        removedBy: currentUserSocialId,
-      },
-      'Membro removido com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'remover membro');
-  }
-};
-
-export const listMembers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { id: communityId } = req.params;
-    const { page, limit } = buildPaginationParams(req.query);
-
-    const response = await socialPlusClient.getCommunityMembers(communityId, {
-      page,
-      limit,
-    });
-
-    if (!response.success) {
-      sendError(res, buildSocialPlusErrorMessage('Erro ao listar membros', response.error));
-      return;
-    }
-
-    const members = extractMembersFromResponse(response.data);
-    const total = response.data?.total ?? members.length;
-
-    sendSuccess(
-      res,
-      {
-        members,
-        pagination: buildPaginationResponse(page, limit, total),
-      },
-      'Membros obtidos com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'listar membros');
-  }
-};
-
-export const getUserCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const currentUserId = req.user?.id;
-
-    if (!currentUserId) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
-
-    if (!socialPlusUserId) {
-      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
-      return;
-    }
-
-    const { page, limit } = buildPaginationParams(req.query);
-    const response = await getUserCommunitiesFromSocialPlus(socialPlusUserId, page, limit);
-
-    if (!response.success) {
-      sendError(res, buildSocialPlusErrorMessage('Erro ao listar comunidades do usuário', response.error));
-      return;
-    }
-
-    const memberships = mapUserCommunities(extractCommunitiesFromResponse(response.data));
-    const total = response.data?.total ?? memberships.length;
-
-    sendSuccess(
-      res,
-      {
-        communities: memberships,
-        pagination: buildPaginationResponse(page, limit, total),
-      },
-      'Comunidades do usuário obtidas com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'listar comunidades do usuário');
-  }
-};
-
-export const getUserCommunityPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const currentUserId = req.user?.id;
-
-    if (!currentUserId) {
-      sendError(res, 'Usuário não autenticado', 401);
-      return;
-    }
-
-    const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
-
-    if (!socialPlusUserId) {
-      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
-      return;
-    }
-
-    const { page, limit, skip } = buildPaginationParams(req.query);
-
-    const response = await getUserCommunitiesFromSocialPlus(
-      socialPlusUserId,
-      DEFAULT_PAGE,
-      DEFAULT_SOCIAL_COMMUNITY_PAGE_LIMIT
-    );
-
-    if (!response.success) {
-      sendError(res, buildSocialPlusErrorMessage('Erro ao listar comunidades do usuário', response.error));
-      return;
-    }
-
-    const memberships = extractCommunitiesFromResponse(response.data);
-    const communityIds = memberships
-      .map((membership: any) => membership?.community?.id || membership?.id)
-      .filter((value): value is string => Boolean(value));
-
-    if (communityIds.length === 0) {
-      sendSuccess(
-        res,
-        {
-          posts: [],
-          pagination: buildPaginationResponse(page, limit, 0),
-        },
-        'Nenhum post encontrado'
-      );
-      return;
-    }
-
-    const allPosts = await fetchPostsFromCommunities(communityIds);
-    const sortedPosts = sortPostsByDate(allPosts);
-    const total = sortedPosts.length;
-    const paginatedPosts = sortedPosts.slice(skip, skip + limit);
-
-    sendSuccess(
-      res,
-      {
-        posts: paginatedPosts,
-        pagination: buildPaginationResponse(page, limit, total),
-      },
-      'Posts das comunidades obtidos com sucesso'
-    );
-  } catch (error) {
-    handleError(res, error, 'listar posts das comunidades');
+    handleError(res, error, 'listar comunidades v3');
   }
 };
 
@@ -487,16 +179,33 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
       return;
     }
 
-    const feedData = response.data ?? {};
-    const posts = feedData.posts ?? [];
-    const total = feedData.paging?.total ?? posts.length ?? 0;
+    // A resposta v3 tem estrutura: { status, data: { posts, postChildren, comments, users, files, communities, communityUsers, categories, paging } }
+    // O makeRequest já extrai o data interno, então response.data já contém o objeto data da API
+    const data = response.data ?? {};
+    const posts = data.posts ?? [];
+    const paging = data.paging ?? {};
 
+    // Retornar estrutura completa conforme documentação da API v3
     sendSuccess(
       res,
       {
-        ...feedData,
-        posts,
-        pagination: buildPaginationResponse(page, limit, total),
+        status: 'ok',
+        data: {
+          posts: data.posts ?? [],
+          postChildren: data.postChildren ?? [],
+          comments: data.comments ?? [],
+          users: data.users ?? [],
+          files: data.files ?? [],
+          communities: data.communities ?? [],
+          communityUsers: data.communityUsers ?? [],
+          categories: data.categories ?? [],
+          paging: {
+            next: paging.next,
+            previous: paging.previous,
+          },
+        },
+        // Manter compatibilidade com formato anterior
+        pagination: buildPaginationResponse(page, limit, posts.length),
       },
       'Posts globais obtidos com sucesso'
     );

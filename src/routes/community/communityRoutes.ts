@@ -1,12 +1,6 @@
 import { Router } from 'express';
 import {
   listCommunities,
-  getCommunityById,
-  addMember,
-  removeMember,
-  listMembers,
-  getUserCommunities,
-  getUserCommunityPosts,
   getPublicCommunityPosts,
 } from '@/controllers/community/communityController';
 import { authenticateToken } from '@/middleware/auth';
@@ -16,17 +10,9 @@ const router = Router();
 // Todas as rotas requerem autenticação
 router.use(authenticateToken);
 
-// Rotas de comunidades (apenas leitura - criação via dashboard)
-router.get('/', listCommunities);
-router.get('/user/me', getUserCommunities);
-router.get('/user/me/posts', getUserCommunityPosts);
-router.get('/public/posts', getPublicCommunityPosts);
-router.get('/:id', getCommunityById);
-
-// Rotas de membros
-router.post('/:id/members', addMember);
-router.get('/:id/members', listMembers);
-router.delete('/:id/members/:userId', removeMember);
+// Rotas de comunidades (v3 API com autenticação Bearer)
+router.get('/', listCommunities); // Lista comunidades v3
+router.get('/posts', getPublicCommunityPosts); // Posts globais (feed público v3)
 
 export default router;
 

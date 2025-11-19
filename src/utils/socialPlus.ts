@@ -294,20 +294,67 @@ class SocialPlusClient {
     return this.makeRequest<SocialPlusCommunity>('GET', `/v1/communities/${communityId}`);
   }
 
+  /**
+   * Lista comunidades usando a API v3 do Amity
+   * Requer autenticação Bearer token
+   */
   async listCommunities(params?: {
+    userAccessToken?: string;
     page?: number;
     limit?: number;
-    type?: string;
-  }): Promise<SocialPlusResponse<{ communities: SocialPlusCommunity[]; total: number }>> {
+    sortBy?: string;
+    includeDeleted?: boolean;
+  }): Promise<SocialPlusResponse<any>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.type) queryParams.append('type', params.type);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.includeDeleted !== undefined) queryParams.append('includeDeleted', params.includeDeleted.toString());
 
     const query = queryParams.toString();
-    return this.makeRequest<{ communities: SocialPlusCommunity[]; total: number }>(
+    const endpoint = `/v3/communities${query ? `?${query}` : ''}`;
+
+    // Se token de usuário fornecido, usar ele; caso contrário tentar token de servidor
+    if (params?.userAccessToken) {
+      return this.makeRequest<any>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: params.userAccessToken,
+        }
+      );
+    }
+
+    // Tentar usar token de servidor
+    let token: string | null = null;
+    try {
+      token = await this.getServerToken();
+    } catch (error) {
+      console.warn('Erro ao obter token de servidor para listCommunities:', error);
+    }
+
+    if (token) {
+      return this.makeRequest<any>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: token,
+        }
+      );
+    }
+
+    // Fallback: usar apenas API key (pode não funcionar para v3)
+    return this.makeRequest<any>(
       'GET',
-      `/v1/communities${query ? `?${query}` : ''}`
+      endpoint,
+      undefined,
+      {
+        useApiKey: true,
+      }
     );
   }
 
