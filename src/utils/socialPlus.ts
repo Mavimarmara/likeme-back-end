@@ -201,14 +201,12 @@ class SocialPlusClient {
       return this.tokenCache.token;
     }
 
-    // Se userId não for fornecido, usar um valor padrão ou deixar vazio
-    const requestBody: { userId?: string } = {};
-    if (userId) {
-      requestBody.userId = userId;
-    }
+    // O endpoint exige userId, então usar um valor padrão se não fornecido
+    const serverUserId = userId || 'server';
+    const requestBody = { userId: serverUserId };
 
     const url = this.buildUrl('/v4/authentication/token');
-    console.log('[SocialPlus] Generating server token, URL:', url, 'has userId:', !!userId);
+    console.log('[SocialPlus] Generating server token, URL:', url, 'userId:', serverUserId);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -216,7 +214,7 @@ class SocialPlusClient {
         'Content-Type': 'application/json',
         'x-server-key': this.serverKey,
       },
-      body: Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : '{}',
+      body: JSON.stringify(requestBody),
     });
 
     const text = await response.text();
