@@ -388,19 +388,22 @@ class SocialPlusClient {
 
   /**
    * Adiciona um usuário a todas as comunidades disponíveis
-   * Usa token de servidor para listar comunidades e adicionar membros
+   * Requer token de acesso do usuário para listar comunidades
    */
-  async addUserToAllCommunities(userId: string): Promise<{ added: number; failed: number; errors: string[] }> {
+  async addUserToAllCommunities(
+    userId: string,
+    userAccessToken?: string
+  ): Promise<{ added: number; failed: number; errors: string[] }> {
     const result = { added: 0, failed: 0, errors: [] as string[] };
 
     try {
-      // Obter token de servidor para listar comunidades
-      const serverToken = await this.getServerToken();
-      if (!serverToken) {
-        throw new Error('Não foi possível obter token de servidor para listar comunidades');
+      // Se não tiver token de acesso do usuário, tentar usar apenas API key
+      // (pode não funcionar para v3, mas tentamos)
+      if (!userAccessToken) {
+        console.warn('[SocialPlus] Token de acesso do usuário não fornecido. Tentando usar apenas API key...');
       }
 
-      // Listar todas as comunidades (usando token de servidor)
+      // Listar todas as comunidades (usando token de usuário se disponível)
       let allCommunities: any[] = [];
       let page = 1;
       const limit = 100;
@@ -409,6 +412,7 @@ class SocialPlusClient {
 
       while (hasMore && page <= maxPages) {
         const response = await this.listCommunities({
+          userAccessToken,
           page,
           limit,
           includeDeleted: false,

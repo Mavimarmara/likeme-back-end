@@ -122,6 +122,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const token = generateToken(user.id);
 
     // Adicionar usuário a todas as comunidades disponíveis (após gerar token)
+    // Nota: No registro, não temos token de acesso do usuário ainda, então tentamos sem ele
     if (socialPlusUserId) {
       try {
         console.log(`[Auth] Adicionando usuário ${socialPlusUserId} a todas as comunidades...`);
@@ -381,25 +382,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, personalObjectives: __, ...userWithoutPassword } = fullUser;
 
-    // Adicionar usuário a todas as comunidades disponíveis (após gerar token)
-    if (fullUser.socialPlusUserId) {
-      try {
-        console.log(`[Auth] Adicionando usuário ${fullUser.socialPlusUserId} a todas as comunidades...`);
-        const addResult = await socialPlusClient.addUserToAllCommunities(fullUser.socialPlusUserId);
-        console.log(`[Auth] Usuário adicionado a ${addResult.added} comunidades, ${addResult.failed} falhas`);
-        if (addResult.errors.length > 0) {
-          console.warn('[Auth] Erros ao adicionar usuário a algumas comunidades:', addResult.errors);
-        }
-      } catch (addError) {
-        console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
-        // Não falha o login se não conseguir adicionar às comunidades
-      }
-    }
-
     // Sempre fazer login no Amity (social.plus)
     // Usar o userId do Auth0 (sub) como identificador no Amity
     // Se o login retornar um userId diferente, salvar no banco
     // Gerar access token para o usuário
+    let userAccessToken: string | undefined;
     try {
       const displayName = userPerson
         ? `${userPerson.firstName} ${userPerson.lastName}`.trim() || userPerson.firstName || 'Usuário'
@@ -415,6 +402,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         if (loginResult) {
           const { userId: returnedUserId, accessToken } = loginResult;
+          userAccessToken = accessToken || undefined;
 
           // Salvar o userId do Auth0 como socialPlusUserId se ainda não tiver
           // O userId retornado deve ser o mesmo que passamos (auth0User.sub)
@@ -460,6 +448,24 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     } catch (error) {
       console.error('Erro ao fazer login no Amity (não bloqueia o login):', error);
       // Não falha o login se a integração com Amity falhar
+    }
+
+    // Adicionar usuário a todas as comunidades disponíveis (após gerar token e obter accessToken)
+    if (fullUser.socialPlusUserId) {
+      try {
+        console.log(`[Auth] Adicionando usuário ${fullUser.socialPlusUserId} a todas as comunidades...`);
+        const addResult = await socialPlusClient.addUserToAllCommunities(
+          fullUser.socialPlusUserId,
+          userAccessToken
+        );
+        console.log(`[Auth] Usuário adicionado a ${addResult.added} comunidades, ${addResult.failed} falhas`);
+        if (addResult.errors.length > 0) {
+          console.warn('[Auth] Erros ao adicionar usuário a algumas comunidades:', addResult.errors);
+        }
+      } catch (addError) {
+        console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
+        // Não falha o login se não conseguir adicionar às comunidades
+      }
     }
 
     const response: AuthResponse = {
