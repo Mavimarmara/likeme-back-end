@@ -182,6 +182,21 @@ const listUserCommunitiesQuery = async (userId: string, skip: number, limit: num
   ]);
 };
 
+const listPublicCommunitiesWithSocialId = async () => {
+  return prisma.community.findMany({
+    where: {
+      deletedAt: null,
+      type: 'public',
+      socialPlusCommunityId: {
+        not: null,
+      },
+    },
+    select: {
+      socialPlusCommunityId: true,
+    },
+  });
+};
+
 const createMember = async (userId: string, communityId: string, role: string) => {
   return prisma.communityMember.create({
     data: {
@@ -493,12 +508,23 @@ export const getUserCommunities = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
-const fetchPostsFromCommunities = async (communityIds: string[]): Promise<any[]> => {
+interface FetchCommunityPostsOptions {
+  perCommunityPage?: number;
+  perCommunityLimit?: number;
+}
+
+const fetchPostsFromCommunities = async (
+  communityIds: string[],
+  options?: FetchCommunityPostsOptions
+): Promise<any[]> => {
+  const perCommunityPage = options?.perCommunityPage ?? DEFAULT_PAGE;
+  const perCommunityLimit = options?.perCommunityLimit ?? 100;
+
   const postsPromises = communityIds.map(async (communityId) => {
     try {
       const response = await socialPlusClient.getCommunityPosts(communityId, {
-        page: 1,
-        limit: 100,
+        page: perCommunityPage,
+        limit: perCommunityLimit,
       });
 
       if (response.success && response.data?.posts) {
@@ -597,5 +623,44 @@ export const getUserCommunityPosts = async (req: AuthenticatedRequest, res: Resp
     );
   } catch (error) {
     handleError(res, error, 'listar posts das comunidades');
+  }
+};
+
+export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { page, limit, skip } = buildPaginationParams(req.query);
+
+    const publicCommunities = await listPublicCommunitiesWithSocialId();
+    const communityIds = publicCommunities
+      .map((community) => community.socialPlusCommunityId)
+      .filter((id): id is string => id !== null);
+
+    if (communityIds.length === 0) {
+      sendSuccess(
+        res,
+        {
+          posts: [],
+          pagination: buildPaginationResponse(page, limit, 0),
+        },
+        'Nenhum post encontrado para comunidades públicas'
+      );
+      return;
+    }
+
+    const allPosts = await fetchPostsFromCommunities(communityIds);
+    const sortedPosts = sortPostsByDate(allPosts);
+    const total = sortedPosts.length;
+    const paginatedPosts = sortedPosts.slice(skip, skip + limit);
+
+    sendSuccess(
+      res,
+      {
+        posts: paginatedPosts,
+        pagination: buildPaginationResponse(page, limit, total),
+      },
+      'Posts das comunidades públicas obtidos com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar posts das comunidades públicas');
   }
 };

@@ -7,6 +7,7 @@ import {
   listMembers,
   getUserCommunities,
   getUserCommunityPosts,
+  getPublicCommunityPosts,
 } from '@/controllers/community/communityController';
 import { authenticateToken } from '@/middleware/auth';
 
@@ -19,6 +20,7 @@ router.use(authenticateToken);
 router.get('/', listCommunities);
 router.get('/user/me', getUserCommunities);
 router.get('/user/me/posts', getUserCommunityPosts);
+router.get('/public/posts', getPublicCommunityPosts);
 router.get('/:id', getCommunityById);
 
 // Rotas de membros
