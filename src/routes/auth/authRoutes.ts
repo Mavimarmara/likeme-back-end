@@ -7,6 +7,7 @@ import {
   exchangeCodeForToken,
   verifyToken,
   getCurrentToken,
+  getAmityAuthToken,
   logout,
   getProfile, 
   updateProfile, 
@@ -35,6 +36,7 @@ router.get('/callback', handleAuthCallback);
 router.post('/exchange-code', authRateLimiter, validate(exchangeCodeSchema), exchangeCodeForToken);
 
 router.get('/token', authenticateToken, requireAuth, getCurrentToken);
+router.get('/amity-token', authenticateToken, requireAuth, getAmityAuthToken);
 router.post('/logout', authenticateToken, requireAuth, logout);
 router.get('/profile', authenticateToken, requireAuth, getProfile);
 router.put('/profile', authenticateToken, requireAuth, validate(updateUserSchema), updateProfile);

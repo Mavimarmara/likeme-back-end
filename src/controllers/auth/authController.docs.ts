@@ -443,6 +443,78 @@
  *                       description: Tempo de expiração do token (ex: "7d")
  *                     message:
  *                       type: string
+ *       401:
+ *         description: Não autenticado
+ */
+
+/**
+ * @swagger
+ * /api/auth/amity-token:
+ *   get:
+ *     summary: Obter token de autenticação do Amity (social.plus)
+ *     description: Retorna o access token do Amity para o usuário autenticado. Este token é necessário para usar o Amity SDK no frontend. O token pode ser usado na função `getAuthToken` do `UiKitProvider`.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token do Amity obtido com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       description: Access token do Amity - use na função getAuthToken do UiKitProvider
+ *                     userId:
+ *                       type: string
+ *                       description: ID do usuário no Amity (socialPlusUserId)
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Usuário não está sincronizado com a social.plus
+ *       401:
+ *         description: Não autenticado
+ *       500:
+ *         description: Erro ao gerar token do Amity
+ */
+
+/**
+ * @swagger
+ * /api/auth/token:
+ *   get:
+ *     summary: Obter token JWT atual do usuário autenticado
+ *     description: Retorna o token JWT do backend para o usuário autenticado. Útil para copiar e usar no Swagger Authorize sem precisar fazer login novamente. O token retornado pode ser usado no header Authorization: Bearer <token>.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token obtido com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: Token JWT do backend - use no Swagger Authorize
+ *                     expiresIn:
+ *                       type: string
+ *                       description: Tempo de expiração do token (ex: "7d")
+ *                     message:
+ *                       type: string
  *                       description: Instruções de uso
  *                 message:
  *                   type: string

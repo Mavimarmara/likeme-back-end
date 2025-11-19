@@ -65,11 +65,20 @@ export const config = {
     clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
     issuer: process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}/` : '',
   },
-  socialPlus: {
-    apiKey: process.env.SOCIAL_PLUS_API_KEY || '',
-    serverKey: process.env.SOCIAL_PLUS_SERVER_KEY || '',
-    region: process.env.SOCIAL_PLUS_REGION || 'US', // US, EU, SG
-    baseUrl: process.env.SOCIAL_PLUS_BASE_URL || 'https://apix.us.amity.co/api',
-    tokenTtlMs: parseInt(process.env.SOCIAL_PLUS_TOKEN_TTL_MS || '300000', 10), // default 5 min
-  },
+  socialPlus: (() => {
+    const region = process.env.SOCIAL_PLUS_REGION || 'EU'; // US, EU, SG - padrão EU conforme exemplo
+    // URLs base por região
+    const baseUrls: Record<string, string> = {
+      US: 'https://apix.us.amity.co/api',
+      EU: 'https://apix.eu.amity.co/api',
+      SG: 'https://apix.sg.amity.co/api',
+    };
+    return {
+      apiKey: process.env.SOCIAL_PLUS_API_KEY || '',
+      serverKey: process.env.SOCIAL_PLUS_SERVER_KEY || '',
+      region,
+      baseUrl: process.env.SOCIAL_PLUS_BASE_URL || baseUrls[region.toUpperCase()] || baseUrls.EU,
+      tokenTtlMs: parseInt(process.env.SOCIAL_PLUS_TOKEN_TTL_MS || '300000', 10), // default 5 min
+    };
+  })(),
 };

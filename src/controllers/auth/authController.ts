@@ -855,6 +855,49 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getAmityAuthToken = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado', 401);
+      return;
+    }
+
+    // Buscar socialPlusUserId do banco
+    const user = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { socialPlusUserId: true },
+    });
+
+    if (!user?.socialPlusUserId) {
+      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
+      return;
+    }
+
+    // Gerar access token para o usuário
+    const { createUserAccessToken } = await import('@/utils/amityClient');
+    const accessToken = await createUserAccessToken(user.socialPlusUserId);
+
+    if (!accessToken) {
+      sendError(res, 'Não foi possível gerar token de autenticação do Amity', 500);
+      return;
+    }
+
+    sendSuccess(
+      res,
+      {
+        accessToken,
+        userId: user.socialPlusUserId,
+      },
+      'Token de autenticação do Amity obtido com sucesso'
+    );
+  } catch (error) {
+    console.error('Erro ao obter token do Amity:', error);
+    sendError(res, 'Erro ao obter token de autenticação do Amity');
+  }
+};
+
 export const getCurrentToken = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const currentUserId = req.user?.id;

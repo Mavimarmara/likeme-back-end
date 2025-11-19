@@ -35,13 +35,25 @@ export const initializeAmityClient = async (): Promise<void> => {
       return;
     }
 
-    amityClient = Client.createClient(config.socialPlus.apiKey, config.socialPlus.region);
-    isInitialized = true;
-
-    console.log('Amity client inicializado com sucesso');
+    try {
+      amityClient = Client.createClient(config.socialPlus.apiKey, config.socialPlus.region);
+      isInitialized = true;
+      console.log('Amity client inicializado com sucesso');
+    } catch (createError: any) {
+      // Se a API key não for válida para o SDK, apenas logar e não inicializar
+      if (createError?.code === 400100 || createError?.message?.includes('API Key is not usable')) {
+        console.warn('Amity SDK: API Key não é utilizável para o SDK. O cliente não será inicializado, mas a API REST continuará funcionando.');
+        isInitialized = false;
+        amityClient = null;
+        return;
+      }
+      throw createError;
+    }
   } catch (error) {
     console.error('Erro ao inicializar Amity client:', error);
     // Não lança erro para não bloquear a aplicação
+    isInitialized = false;
+    amityClient = null;
   }
 };
 
@@ -57,8 +69,18 @@ export const loginToAmity = async (
       console.warn('Não foi possível gerar access token. Tentando login sem token.');
     }
 
+    // Tentar inicializar o cliente, mas não falhar se a API key não for válida para o SDK
     if (!isInitialized || !amityClient) {
-      await initializeAmityClient();
+      try {
+        await initializeAmityClient();
+      } catch (initError: any) {
+        // Se a API key não for válida para o SDK, apenas logar e continuar
+        if (initError?.code === 400100 || initError?.message?.includes('API Key is not usable')) {
+          console.warn('Amity SDK: API Key não é utilizável para o SDK. Continuando sem login no SDK.');
+          return accessToken ? { userId, accessToken } : null;
+        }
+        throw initError;
+      }
     }
 
     if (!amityClient) {
@@ -77,23 +99,36 @@ export const loginToAmity = async (
 
     const { Client } = amityModule;
 
-    const loginResult: any = await Client.login({ userId, displayName }, sessionHandler);
+    try {
+      const loginResult: any = await Client.login({ userId, displayName }, sessionHandler);
 
-    // Verificar se o login retornou um userId (pode ser diferente do que passamos)
-    const returnedUserId = loginResult?.userId || loginResult?.user?.userId || userId;
+      // Verificar se o login retornou um userId (pode ser diferente do que passamos)
+      const returnedUserId = loginResult?.userId || loginResult?.user?.userId || userId;
 
-    console.log(`Usuário ${userId} (${displayName}) logado no Amity com sucesso. UserId retornado: ${returnedUserId}`);
+      console.log(`Usuário ${userId} (${displayName}) logado no Amity com sucesso. UserId retornado: ${returnedUserId}`);
 
-    // Retornar o userId retornado pelo Amity e o access token
-    return {
-      userId: returnedUserId || userId,
-      accessToken,
-    };
+      // Retornar o userId retornado pelo Amity e o access token
+      return {
+        userId: returnedUserId || userId,
+        accessToken,
+      };
+    } catch (loginError: any) {
+      // Se o erro for relacionado à API key não ser utilizável, apenas logar e retornar o access token
+      if (loginError?.code === 400100 || loginError?.message?.includes('API Key is not usable')) {
+        console.warn(`Amity SDK: API Key não é utilizável para login do usuário ${userId}. Retornando apenas access token.`);
+        return accessToken ? { userId, accessToken } : null;
+      }
+      throw loginError;
+    }
   } catch (error) {
     console.error(`Erro ao fazer login no Amity para usuário ${userId}:`, error);
     // Tenta retornar pelo menos o access token se foi gerado
-    const accessToken = await createUserAccessToken(userId).catch(() => null);
-    return accessToken ? { userId, accessToken } : null;
+    try {
+      const accessToken = await createUserAccessToken(userId).catch(() => null);
+      return accessToken ? { userId, accessToken } : null;
+    } catch {
+      return null;
+    }
   }
 };
 
