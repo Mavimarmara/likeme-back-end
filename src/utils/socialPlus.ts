@@ -37,7 +37,6 @@ interface SocialPlusResponse<T> {
 
 class SocialPlusClient {
   private apiKey: string;
-  private serverKey: string;
   private botUserId: string;
   private baseUrl: string;
   private region: string;
@@ -46,7 +45,6 @@ class SocialPlusClient {
 
   constructor() {
     this.apiKey = config.socialPlus.apiKey;
-    this.serverKey = config.socialPlus.serverKey;
     this.botUserId = config.socialPlus.botUserId;
     this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
@@ -135,8 +133,8 @@ class SocialPlusClient {
   }
 
   private async generateServerToken(userId?: string, forceRefresh = false): Promise<string> {
-    if (!this.serverKey) {
-      throw new Error('Social.plus server key not configured');
+    if (!this.apiKey) {
+      throw new Error('Social.plus API key not configured');
     }
 
     const cacheValid = this.tokenCache && this.tokenCache.expiresAt > Date.now();
@@ -148,14 +146,14 @@ class SocialPlusClient {
     const targetUserId = userId || this.botUserId;
 
     if (!targetUserId) {
-      throw new Error('Social.plus bot user id not configured');
+      throw new Error('Social.plus bot user id not configured. Configure SOCIAL_PLUS_BOT_USER_ID nas variáveis de ambiente.');
     }
 
     const response = await fetch(this.buildUrl('/v4/authentication/token'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-server-key': this.serverKey,
+        'x-server-key': this.apiKey,
       },
       body: JSON.stringify({ userId: targetUserId }),
     });
@@ -175,12 +173,22 @@ class SocialPlusClient {
     return token;
   }
 
-  private async getServerToken(forceRefresh = false): Promise<string> {
+  private async getServerToken(forceRefresh = false): Promise<string | null> {
     try {
+      if (!this.apiKey) {
+        console.warn('Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.');
+        return null;
+      }
+
+      if (!this.botUserId) {
+        console.warn('Social.plus bot user id não configurado. Configure SOCIAL_PLUS_BOT_USER_ID nas variáveis de ambiente.');
+        return null;
+      }
+
       return await this.generateServerToken(undefined, forceRefresh);
     } catch (error) {
       console.error('Erro ao obter token da social.plus:', error);
-      throw error;
+      return null;
     }
   }
 
@@ -339,6 +347,14 @@ class SocialPlusClient {
     if (params?.limit) queryParams.append('limit', params.limit.toString());
 
     const token = await this.getServerToken();
+    
+    if (!token) {
+      return {
+        success: false,
+        error: 'Social.plus API key ou bot user id não configurado. Configure SOCIAL_PLUS_API_KEY e SOCIAL_PLUS_BOT_USER_ID nas variáveis de ambiente.',
+      };
+    }
+
     const query = queryParams.toString();
 
     return this.makeRequest<any>(

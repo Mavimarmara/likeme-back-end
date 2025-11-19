@@ -67,7 +67,6 @@ export const config = {
   },
   socialPlus: {
     apiKey: process.env.SOCIAL_PLUS_API_KEY || '',
-    serverKey: process.env.SOCIAL_PLUS_SERVER_KEY || '',
     botUserId: process.env.SOCIAL_PLUS_BOT_USER_ID || '',
     region: process.env.SOCIAL_PLUS_REGION || 'US', // US, EU, SG
     baseUrl: process.env.SOCIAL_PLUS_BASE_URL || 'https://apix.us.amity.co/api',
