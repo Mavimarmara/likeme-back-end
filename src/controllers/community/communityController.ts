@@ -145,6 +145,79 @@ export const listCommunities = async (req: AuthenticatedRequest, res: Response):
   }
 };
 
+export const getMyPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { page, limit, sortBy, includeDeleted, targetType, targetId } = req.query;
+
+    // O endpoint v3/posts/list requer token de usuário autenticado (obrigatório)
+    const currentUserId = req.user?.id;
+
+    if (!currentUserId) {
+      sendError(res, 'Usuário não autenticado. Este endpoint requer autenticação do usuário.', 401);
+      return;
+    }
+
+    let userAccessToken: string | null = null;
+    try {
+      const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
+      if (!socialPlusUserId) {
+        sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
+        return;
+      }
+
+      userAccessToken = await createUserAccessToken(socialPlusUserId);
+      if (!userAccessToken) {
+        sendError(res, 'Não foi possível gerar token de autenticação do usuário', 500);
+        return;
+      }
+
+      console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para obter feed (v3/posts/list)`);
+    } catch (error) {
+      console.error('Erro ao obter token de autenticação do usuário:', error);
+      sendError(res, 'Erro ao obter token de autenticação do usuário', 500);
+      return;
+    }
+
+    // O endpoint v3/posts/list requer token de usuário
+    const response = await socialPlusClient.listPosts({
+      userAccessToken: userAccessToken,
+      page: page ? parseInt(page as string, 10) : undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+      sortBy: sortBy as string | undefined,
+      includeDeleted: includeDeleted === 'true',
+      targetType: targetType as string | undefined,
+      targetId: targetId as string | undefined,
+    });
+
+    if (!response.success) {
+      sendError(res, buildSocialPlusErrorMessage('Erro ao listar posts', response.error));
+      return;
+    }
+
+    // A resposta v3 tem estrutura completa
+    const data = response.data ?? {};
+    const posts = data.posts ?? [];
+
+    // Retornar estrutura completa conforme documentação da API v3
+    sendSuccess(
+      res,
+      {
+        status: 'ok',
+        ...data,
+        posts,
+        pagination: buildPaginationResponse(
+          page ? parseInt(page as string, 10) : DEFAULT_PAGE,
+          limit ? parseInt(limit as string, 10) : DEFAULT_LIMIT,
+          posts.length
+        ),
+      },
+      'Posts obtidos com sucesso'
+    );
+  } catch (error) {
+    handleError(res, error, 'listar posts do usuário');
+  }
+};
+
 export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit } = buildPaginationParams(req.query);

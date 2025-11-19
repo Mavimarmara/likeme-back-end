@@ -59,7 +59,8 @@
  * @swagger
  * /api/communities:
  *   get:
- *     summary: Listar todas as comunidades
+ *     summary: Listar todas as comunidades (API v3)
+ *     description: Retorna todas as comunidades usando a API v3 do Amity com autenticação Bearer token. Retorna estrutura completa incluindo communities, users, files, categories, etc.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
@@ -75,10 +76,16 @@
  *           type: integer
  *           default: 10
  *       - in: query
- *         name: type
+ *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [public, private, official, unofficial]
+ *         description: Campo para ordenação (ex: displayName, createdAt)
+ *       - in: query
+ *         name: includeDeleted
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Incluir comunidades deletadas
  *     responses:
  *       200:
  *         description: Lista de comunidades obtida com sucesso
@@ -95,316 +102,29 @@
  *                     communities:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/Community'
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
- *                 message:
- *                   type: string
- *       401:
- *         description: Usuário não autenticado
- */
-
-/**
- * @swagger
- * /api/communities/user/me:
- *   get:
- *     summary: Listar comunidades do usuário autenticado
- *     description: Retorna todas as comunidades que o usuário autenticado está participando, incluindo seu papel (role) e data de entrada
- *     tags: [Communities]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *     responses:
- *       200:
- *         description: Lista de comunidades do usuário obtida com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     communities:
- *                       type: array
- *                       items:
- *                         allOf:
- *                           - $ref: '#/components/schemas/Community'
- *                           - type: object
- *                             properties:
- *                               role:
- *                                 type: string
- *                                 enum: [member, admin, moderator]
- *                                 description: Papel do usuário na comunidade
- *                               joinedAt:
- *                                 type: string
- *                                 format: date-time
- *                                 description: Data em que o usuário entrou na comunidade
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
- *                 message:
- *                   type: string
- *       401:
- *         description: Usuário não autenticado
- */
-
-/**
- * @swagger
- * /api/communities/{id}:
- *   get:
- *     summary: Obter comunidade por ID
- *     tags: [Communities]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Comunidade obtida com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Community'
- *                 message:
- *                   type: string
- *       404:
- *         description: Comunidade não encontrada
- */
-
-/**
- * @swagger
- * /api/communities/{id}/members:
- *   post:
- *     summary: Adicionar membro à comunidade
- *     tags: [Communities]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [member, admin, moderator]
- *                 default: member
- *     responses:
- *       201:
- *         description: Membro adicionado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/CommunityMember'
- *                 message:
- *                   type: string
- *       404:
- *         description: Comunidade ou usuário não encontrado
- *       403:
- *         description: Sem permissão para adicionar membros
- *       409:
- *         description: Usuário já é membro desta comunidade
- */
-
-/**
- * @swagger
- * /api/communities/{id}/members/{userId}:
- *   delete:
- *     summary: Remover membro da comunidade
- *     tags: [Communities]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Membro removido com sucesso
- *       404:
- *         description: Comunidade ou membro não encontrado
- *       403:
- *         description: Sem permissão para remover membros
- */
-
-/**
- * @swagger
- * /api/communities/{id}/members:
- *   get:
- *     summary: Listar membros da comunidade
- *     tags: [Communities]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *     responses:
- *       200:
- *         description: Lista de membros obtida com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     members:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/CommunityMember'
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
- *                 message:
- *                   type: string
- */
-
-/**
- * @swagger
- * /api/communities/user/me/posts:
- *   get:
- *     summary: Listar posts das comunidades do usuário autenticado
- *     description: Retorna todos os posts das comunidades que o usuário autenticado está participando, ordenados por data (mais recente primeiro) com paginação
- *     tags: [Communities]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Número da página
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Número de itens por página
- *     responses:
- *       200:
- *         description: Posts das comunidades obtidos com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
+ *                         type: object
+ *                     communityUsers:
  *                       type: array
  *                       items:
  *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             description: ID do post no social.plus
- *                           communityId:
- *                             type: string
- *                             description: ID da comunidade no social.plus
- *                           userId:
- *                             type: string
- *                             description: ID do usuário que criou o post
- *                           content:
- *                             type: string
- *                             description: Conteúdo do post
- *                           media:
- *                             type: array
- *                             items:
- *                               type: string
- *                             description: URLs de mídia do post
- *                           metadata:
- *                             type: object
- *                             description: Metadados adicionais do post
- *                           createdAt:
- *                             type: string
- *                             format: date-time
- *                             description: Data de criação do post
- *                     postChildren:
+ *                     files:
  *                       type: array
- *                       description: Subposts retornados pela social.plus
- *                       items:
- *                         type: object
- *                     comments:
- *                       type: array
- *                       description: Comentários retornados pela social.plus
  *                       items:
  *                         type: object
  *                     users:
  *                       type: array
- *                       description: Usuários relacionados ao feed
  *                       items:
  *                         type: object
- *                     communities:
+ *                     categories:
  *                       type: array
- *                       description: Comunidades relacionadas ao feed
+ *                       items:
+ *                         type: object
+ *                     feeds:
+ *                       type: array
  *                       items:
  *                         type: object
  *                     paging:
  *                       type: object
- *                       description: Cursor de paginação retornado pela social.plus
  *                       properties:
  *                         next:
  *                           type: string
@@ -420,10 +140,125 @@
 
 /**
  * @swagger
- * /api/communities/public/posts:
+ * /api/communities/feed:
  *   get:
- *     summary: Listar posts públicos (global feed)
- *     description: Retorna o feed público/global diretamente da social.plus (Amity), incluindo posts, comentários, usuários e metadados
+ *     summary: Obter feed do usuário - posts aos quais tem acesso (API v3)
+ *     description: Retorna posts aos quais o usuário autenticado tem acesso (incluindo posts públicos e de comunidades que participa) usando a API v3 do Amity (/v3/posts/list). Requer token de autenticação do usuário. Retorna estrutura completa incluindo posts, postChildren, comments, users, files, communities, categories, videoStreamings, polls, etc.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número da página
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Número de itens por página
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         description: Campo para ordenação
+ *       - in: query
+ *         name: includeDeleted
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Incluir posts deletados
+ *       - in: query
+ *         name: targetType
+ *         schema:
+ *           type: string
+ *         description: Filtrar por tipo de target (ex: user, community)
+ *       - in: query
+ *         name: targetId
+ *         schema:
+ *           type: string
+ *         description: Filtrar por ID do target
+ *     responses:
+ *       200:
+ *         description: Posts do usuário obtidos com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 postChildren:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 files:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 communities:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 communityUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 categories:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 feeds:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 videoStreamings:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 videoStreamingChildren:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 polls:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       400:
+ *         description: Usuário não está sincronizado com a social.plus
+ *       500:
+ *         description: Erro ao gerar token de autenticação do usuário
+ */
+
+/**
+ * @swagger
+ * /api/communities/posts:
+ *   get:
+ *     summary: Listar feed global do usuário (API v5)
+ *     description: Retorna o feed personalizado do usuário autenticado usando a API v5 do Amity (/v5/me/global-feeds). Requer token de autenticação do usuário. Retorna estrutura completa incluindo posts, postChildren, comments, users, files, communities, categories, etc.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
@@ -442,7 +277,7 @@
  *         description: Número de itens por página
  *     responses:
  *       200:
- *         description: Feed público obtido com sucesso
+ *         description: Feed do usuário obtido com sucesso
  *         content:
  *           application/json:
  *             schema:
@@ -450,6 +285,8 @@
  *               properties:
  *                 success:
  *                   type: boolean
+ *                 status:
+ *                   type: string
  *                 data:
  *                   type: object
  *                   properties:
@@ -457,34 +294,50 @@
  *                       type: array
  *                       items:
  *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             description: ID do post no social.plus
- *                           communityId:
- *                             type: string
- *                             description: ID da comunidade no social.plus
- *                           userId:
- *                             type: string
- *                             description: ID do usuário que criou o post
- *                           content:
- *                             type: string
- *                             description: Conteúdo do post
- *                           media:
- *                             type: array
- *                             items:
- *                               type: string
- *                             description: URLs de mídia do post
- *                           metadata:
- *                             type: object
- *                             description: Metadados adicionais do post
- *                           createdAt:
- *                             type: string
- *                             format: date-time
- *                             description: Data de criação do post
+ *                     postChildren:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     comments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     files:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     communities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     communityUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     categories:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     paging:
+ *                       type: object
+ *                       properties:
+ *                         next:
+ *                           type: string
+ *                         previous:
+ *                           type: string
  *                     pagination:
  *                       $ref: '#/components/schemas/Pagination'
  *                 message:
  *                   type: string
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       400:
+ *         description: Usuário não está sincronizado com a social.plus
+ *       500:
+ *         description: Erro ao gerar token de autenticação do usuário
  */
 

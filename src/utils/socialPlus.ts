@@ -462,6 +462,52 @@ class SocialPlusClient {
     );
   }
 
+  /**
+   * Lista posts usando a API v3 do Amity
+   * Requer autenticação Bearer token do usuário
+   */
+  async listPosts(
+    params?: {
+      userAccessToken?: string;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      includeDeleted?: boolean;
+      targetType?: string;
+      targetId?: string;
+    }
+  ): Promise<SocialPlusResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.includeDeleted !== undefined) queryParams.append('includeDeleted', params.includeDeleted.toString());
+    if (params?.targetType) queryParams.append('targetType', params.targetType);
+    if (params?.targetId) queryParams.append('targetId', params.targetId);
+
+    const query = queryParams.toString();
+    const endpoint = `/v3/posts/list${query ? `?${query}` : ''}`;
+
+    // O endpoint v3/posts/list requer token de usuário
+    if (!params?.userAccessToken) {
+      return {
+        success: false,
+        error: 'Token de usuário é obrigatório para o endpoint v3/posts/list. O usuário deve estar autenticado.',
+      };
+    }
+
+    console.log('[SocialPlus] Listando posts usando token de usuário (v3/posts/list)');
+    return this.makeRequest<any>(
+      'GET',
+      endpoint,
+      undefined,
+      {
+        useApiKey: true,
+        bearerToken: params.userAccessToken,
+      }
+    );
+  }
+
   async getGlobalFeed(
     params?: { page?: number; limit?: number; userAccessToken?: string }
   ): Promise<SocialPlusResponse<any>> {
