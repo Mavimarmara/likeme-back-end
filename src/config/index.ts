@@ -73,11 +73,25 @@ export const config = {
       EU: 'https://apix.eu.amity.co/api',
       SG: 'https://apix.sg.amity.co/api',
     };
+    
+    const apiKey = process.env.SOCIAL_PLUS_API_KEY || '';
+    const serverKey = process.env.SOCIAL_PLUS_SERVER_KEY || '';
+    
+      console.log('[Config] Social.plus config:', {
+        hasApiKey: !!apiKey,
+        apiKeyLength: apiKey.length,
+        hasServerKey: !!serverKey,
+        serverKeyLength: serverKey.length,
+        region,
+        baseUrl: process.env.SOCIAL_PLUS_BASE_URL || baseUrls[region.toUpperCase()] || baseUrls.EU,
+      });
+    
     return {
-      apiKey: process.env.SOCIAL_PLUS_API_KEY || '',
-      serverKey: process.env.SOCIAL_PLUS_SERVER_KEY || '',
+      apiKey,
+      serverKey,
       region,
       baseUrl: process.env.SOCIAL_PLUS_BASE_URL || baseUrls[region.toUpperCase()] || baseUrls.EU,
+      tokenTtlMs: parseInt(process.env.SOCIAL_PLUS_TOKEN_TTL_MS || '300000', 10), // default 5 min
     };
   })(),
 };

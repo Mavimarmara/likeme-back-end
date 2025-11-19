@@ -40,6 +40,7 @@ class SocialPlusClient {
   private serverKey: string;
   private baseUrl: string;
   private region: string;
+  private tokenTtlMs: number;
   private tokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor() {
@@ -47,9 +48,22 @@ class SocialPlusClient {
     this.serverKey = config.socialPlus.serverKey;
     this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
+    this.tokenTtlMs = config.socialPlus.tokenTtlMs || 300000;
     
-    // Log para debug (remover em produção se necessário)
-    console.log('SocialPlusClient initialized with baseUrl:', this.baseUrl, 'hasServerKey:', !!this.serverKey);
+    // Log para debug
+    console.log('[SocialPlus] Client initialized:', {
+      baseUrl: this.baseUrl,
+      region: this.region,
+      hasApiKey: !!this.apiKey,
+      apiKeyLength: this.apiKey?.length || 0,
+      hasServerKey: !!this.serverKey,
+      serverKeyLength: this.serverKey?.length || 0,
+      tokenTtlMs: this.tokenTtlMs,
+    });
+    
+    if (!this.serverKey) {
+      console.warn('[SocialPlus] ⚠️  Server key não configurada. Configure SOCIAL_PLUS_SERVER_KEY no arquivo .env');
+    }
   }
 
   private buildUrl(endpoint: string): string {
