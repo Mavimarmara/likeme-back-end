@@ -47,6 +47,9 @@ class SocialPlusClient {
     this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
     this.tokenTtlMs = config.socialPlus.tokenTtlMs || 300000;
+    
+    // Log para debug (remover em produção se necessário)
+    console.log('SocialPlusClient initialized with baseUrl:', this.baseUrl);
   }
 
   private buildUrl(endpoint: string): string {
@@ -54,7 +57,20 @@ class SocialPlusClient {
       return endpoint;
     }
 
-    return `${this.baseUrl}${endpoint}`;
+    // Garantir que baseUrl termina sem barra e endpoint começa com barra
+    const cleanBaseUrl = this.baseUrl.replace(/\/$/, '');
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = `${cleanBaseUrl}${cleanEndpoint}`;
+    
+    console.log('[SocialPlus] Building URL:', {
+      baseUrl: this.baseUrl,
+      cleanBaseUrl,
+      endpoint,
+      cleanEndpoint,
+      fullUrl,
+    });
+    
+    return fullUrl;
   }
 
   private async makeRequest<T>(
@@ -148,7 +164,10 @@ class SocialPlusClient {
       requestBody.userId = userId;
     }
 
-    const response = await fetch(this.buildUrl('/v4/authentication/token'), {
+    const url = this.buildUrl('/v4/authentication/token');
+    console.log('Generating server token, URL:', url, 'has userId:', !!userId);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -340,9 +359,7 @@ class SocialPlusClient {
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
 
-    const token = await this.getServerToken();
-    
-    if (!token) {
+    if (!this.apiKey) {
       return {
         success: false,
         error: 'Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.',
@@ -351,13 +368,13 @@ class SocialPlusClient {
 
     const query = queryParams.toString();
 
+    // Usar API key diretamente ao invés de token de servidor
     return this.makeRequest<any>(
       'GET',
       `/v3/global-feeds${query ? `?${query}` : ''}`,
       undefined,
       {
-        useApiKey: false,
-        bearerToken: token,
+        useApiKey: true, // Usa X-API-Key header diretamente
       }
     );
   }
