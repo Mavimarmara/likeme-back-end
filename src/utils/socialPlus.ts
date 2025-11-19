@@ -388,6 +388,108 @@ class SocialPlusClient {
     return this.makeRequest<{ success: boolean }>('POST', `/v1/communities/${communityId}/members`, { userId });
   }
 
+  /**
+   * Adiciona um usuário a todas as comunidades disponíveis
+   * Usa token de servidor para listar comunidades e adicionar membros
+   */
+  async addUserToAllCommunities(userId: string): Promise<{ added: number; failed: number; errors: string[] }> {
+    const result = { added: 0, failed: 0, errors: [] as string[] };
+
+    try {
+      // Obter token de servidor para listar comunidades
+      const serverToken = await this.getServerToken();
+      if (!serverToken) {
+        throw new Error('Não foi possível obter token de servidor para listar comunidades');
+      }
+
+      // Listar todas as comunidades (usando token de servidor)
+      let allCommunities: any[] = [];
+      let page = 1;
+      const limit = 100;
+      let hasMore = true;
+      const maxPages = 50; // Limite de segurança para evitar loop infinito
+
+      while (hasMore && page <= maxPages) {
+        const response = await this.listCommunities({
+          page,
+          limit,
+          includeDeleted: false,
+        });
+
+        if (!response.success) {
+          console.warn(`[SocialPlus] Erro ao listar comunidades na página ${page}:`, response.error);
+          break;
+        }
+
+        const communities = response.data?.communities ?? [];
+        if (communities.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        allCommunities = allCommunities.concat(communities);
+
+        // Verificar se há mais páginas
+        const paging = response.data?.paging;
+        hasMore = !!paging?.next && communities.length === limit;
+        page++;
+      }
+
+      if (allCommunities.length === 0) {
+        console.log('[SocialPlus] Nenhuma comunidade encontrada para adicionar o usuário');
+        return result;
+      }
+
+      console.log(`[SocialPlus] Encontradas ${allCommunities.length} comunidades. Adicionando usuário ${userId} a todas...`);
+
+      // Adicionar usuário a cada comunidade (processar em paralelo com limite)
+      const batchSize = 10; // Processar 10 comunidades por vez
+      for (let i = 0; i < allCommunities.length; i += batchSize) {
+        const batch = allCommunities.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (community) => {
+          const communityId = community.communityId || community.id || community._id;
+          if (!communityId) {
+            console.warn('[SocialPlus] Comunidade sem ID válido, pulando:', community);
+            return { success: false, communityId: null, error: 'ID inválido' };
+          }
+
+          try {
+            const addResponse = await this.addMemberToCommunity(communityId, userId);
+            if (addResponse.success) {
+              console.log(`[SocialPlus] Usuário ${userId} adicionado à comunidade ${communityId}`);
+              return { success: true, communityId, error: null };
+            } else {
+              const errorMsg = addResponse.error || 'Erro desconhecido';
+              console.warn(`[SocialPlus] Falha ao adicionar usuário à comunidade ${communityId}:`, errorMsg);
+              return { success: false, communityId, error: errorMsg };
+            }
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+            console.error(`[SocialPlus] Erro ao adicionar usuário à comunidade ${communityId}:`, error);
+            return { success: false, communityId, error: errorMsg };
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        
+        for (const batchResult of batchResults) {
+          if (batchResult.success) {
+            result.added++;
+          } else if (batchResult.communityId) {
+            result.failed++;
+            result.errors.push(`Comunidade ${batchResult.communityId}: ${batchResult.error}`);
+          }
+        }
+      }
+
+      console.log(`[SocialPlus] Processo concluído: ${result.added} comunidades adicionadas, ${result.failed} falhas`);
+      return result;
+    } catch (error) {
+      console.error('[SocialPlus] Erro ao adicionar usuário a todas as comunidades:', error);
+      throw error;
+    }
+  }
+
   async removeMemberFromCommunity(
     communityId: string,
     userId: string

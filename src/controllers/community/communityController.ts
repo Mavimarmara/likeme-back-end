@@ -159,20 +159,20 @@ export const getMyPosts = async (req: AuthenticatedRequest, res: Response): Prom
 
     let userAccessToken: string | null = null;
     try {
-      const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
-      if (!socialPlusUserId) {
-        sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
-        return;
-      }
+    const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
+    if (!socialPlusUserId) {
+      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
+      return;
+    }
 
       userAccessToken = await createUserAccessToken(socialPlusUserId);
       if (!userAccessToken) {
         sendError(res, 'Não foi possível gerar token de autenticação do usuário', 500);
-        return;
-      }
+      return;
+    }
 
       console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para obter feed (v3/content-feeds)`);
-    } catch (error) {
+  } catch (error) {
       console.error('Erro ao obter token de autenticação do usuário:', error);
       sendError(res, 'Erro ao obter token de autenticação do usuário', 500);
       return;
