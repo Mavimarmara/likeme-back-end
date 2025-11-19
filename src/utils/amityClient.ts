@@ -225,8 +225,9 @@ export const createUserAccessToken = async (userId: string): Promise<string | nu
  * Gera access token usando a API REST do Social.plus/Amity com Server Key
  * Este é o método recomendado e seguro para gerar tokens de usuário
  * 
- * O endpoint /v4/authentication/token pode gerar tanto token de servidor (sem userId)
- * quanto token de usuário (com userId), usando a server key diretamente no header x-server-key
+ * Fluxo correto:
+ * 1. Gerar token de servidor usando server key (sem userId)
+ * 2. Usar esse token de servidor como Bearer para gerar token de usuário (com userId)
  */
 const createUserAccessTokenViaREST = async (userId: string): Promise<string | null> => {
   try {
@@ -235,18 +236,26 @@ const createUserAccessTokenViaREST = async (userId: string): Promise<string | nu
       return null;
     }
 
-    // Gerar token de usuário usando a server key diretamente
-    // O endpoint /v4/authentication/token aceita userId no body para gerar token de usuário
+    // Passo 1: Obter token de servidor usando server key
+    const { socialPlusClient } = await import('@/utils/socialPlus');
+    const serverToken = await socialPlusClient.getServerTokenPublic();
+
+    if (!serverToken) {
+      console.warn('[Amity REST] Não foi possível obter token de servidor. Verifique se SOCIAL_PLUS_SERVER_KEY está correta.');
+      return null;
+    }
+
+    // Passo 2: Gerar token de usuário usando o token de servidor como Bearer
     const baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     const url = `${baseUrl}/v4/authentication/token`;
 
-    console.log(`[Amity REST] Gerando token de usuário para ${userId} usando Server Key diretamente`);
+    console.log(`[Amity REST] Gerando token de usuário para ${userId} usando token de servidor`);
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-server-key': config.socialPlus.serverKey, // Usar server key diretamente
+        'Authorization': `Bearer ${serverToken}`, // Usar token de servidor como Bearer
         'X-API-Key': config.socialPlus.apiKey, // Manter API key também (modo seguro)
         'X-Region': config.socialPlus.region,
       },
@@ -256,7 +265,35 @@ const createUserAccessTokenViaREST = async (userId: string): Promise<string | nu
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[Amity REST] Erro ao gerar token de usuário: ${response.status} - ${errorText}`);
-      console.error(`[Amity REST] URL: ${url}, hasServerKey: ${!!config.socialPlus.serverKey}, hasApiKey: ${!!config.socialPlus.apiKey}`);
+      console.error(`[Amity REST] URL: ${url}, hasServerToken: ${!!serverToken}, hasApiKey: ${!!config.socialPlus.apiKey}`);
+      
+      // Se o erro for 401, pode ser que o token de servidor expirou, tentar renovar
+      if (response.status === 401) {
+        console.log('[Amity REST] Token de servidor pode ter expirado, tentando renovar...');
+        const newServerToken = await socialPlusClient.getServerTokenPublic(true); // forceRefresh
+        
+        if (newServerToken && newServerToken !== serverToken) {
+          // Tentar novamente com o novo token
+          const retryResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${newServerToken}`,
+              'X-API-Key': config.socialPlus.apiKey,
+              'X-Region': config.socialPlus.region,
+            },
+            body: JSON.stringify({ userId }),
+          });
+
+          if (retryResponse.ok) {
+            const tokenText = await retryResponse.text();
+            const accessToken = tokenText.replace(/(^"|"$)/g, '').trim();
+            console.log(`[Amity REST] Token de usuário gerado com sucesso após renovar token de servidor para ${userId}`);
+            return accessToken;
+          }
+        }
+      }
+      
       return null;
     }
 

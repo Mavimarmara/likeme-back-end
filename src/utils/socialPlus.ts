@@ -235,7 +235,7 @@ class SocialPlusClient {
   private async getServerToken(forceRefresh = false): Promise<string | null> {
     try {
       if (!this.serverKey) {
-        console.warn('Social.plus server key não configurado. Configure SOCIAL_PLUS_SERVER_KEY nas variáveis de ambiente.');
+        console.warn('Social.plus server key não configurado. Configure SOCIAL_PLUS_SERVER_KEY nas variáveis de ambiente:', this.serverKey);
         return null;
       }
 
