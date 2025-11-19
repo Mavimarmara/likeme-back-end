@@ -3,6 +3,7 @@ import prisma from '@/config/database';
 import { AuthenticatedRequest } from '@/types';
 import { sendError, sendSuccess } from '@/utils/response';
 import { socialPlusClient } from '@/utils/socialPlus';
+import { createUserAccessToken } from '@/utils/amityClient';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -456,6 +457,8 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
   try {
     const { page, limit } = buildPaginationParams(req.query);
 
+    // Tentar usar API key diretamente primeiro
+    // Se não funcionar, podemos tentar com token de usuário depois
     const response = await socialPlusClient.getGlobalFeed({
       page,
       limit,

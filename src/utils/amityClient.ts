@@ -121,6 +121,11 @@ export const createUserAccessToken = async (userId: string): Promise<string | nu
       return null;
     }
 
+    // Inicializar cliente antes de gerar token (necessário para o SDK)
+    if (!isInitialized || !amityClient) {
+      await initializeAmityClient();
+    }
+
     // Dynamic import para evitar erro se o pacote não estiver instalado
     // @ts-ignore - Pacote pode não estar instalado ainda
     const amityModule = await import('@amityco/ts-sdk').catch(() => null);
