@@ -142,8 +142,8 @@
  * @swagger
  * /api/communities/feed:
  *   get:
- *     summary: Obter feed do usuário - posts aos quais tem acesso (API v3)
- *     description: Retorna posts aos quais o usuário autenticado tem acesso (incluindo posts públicos e de comunidades que participa) usando a API v3 do Amity (/v3/posts/list). Requer token de autenticação do usuário. Retorna estrutura completa incluindo posts, postChildren, comments, users, files, communities, categories, videoStreamings, polls, etc.
+ *     summary: Obter feed de conteúdo do usuário - posts aos quais tem acesso (API v3)
+ *     description: Retorna posts aos quais o usuário autenticado tem acesso (incluindo posts públicos e de comunidades que participa) usando a API v3 do Amity (/v3/content-feeds). Requer token de autenticação do usuário. Retorna estrutura completa incluindo posts, postChildren, comments, users, files, communities, categories, videoStreamings, polls, etc.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []

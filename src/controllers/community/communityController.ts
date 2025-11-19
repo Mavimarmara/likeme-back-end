@@ -171,15 +171,15 @@ export const getMyPosts = async (req: AuthenticatedRequest, res: Response): Prom
         return;
       }
 
-      console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para obter feed (v3/posts/list)`);
+      console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para obter feed (v3/content-feeds)`);
     } catch (error) {
       console.error('Erro ao obter token de autenticação do usuário:', error);
       sendError(res, 'Erro ao obter token de autenticação do usuário', 500);
       return;
     }
 
-    // O endpoint v3/posts/list requer token de usuário
-    const response = await socialPlusClient.listPosts({
+    // O endpoint v3/content-feeds requer token de usuário
+    const response = await socialPlusClient.getContentFeed({
       userAccessToken: userAccessToken,
       page: page ? parseInt(page as string, 10) : undefined,
       limit: limit ? parseInt(limit as string, 10) : undefined,
@@ -190,28 +190,47 @@ export const getMyPosts = async (req: AuthenticatedRequest, res: Response): Prom
     });
 
     if (!response.success) {
-      sendError(res, buildSocialPlusErrorMessage('Erro ao listar posts', response.error));
+      sendError(res, buildSocialPlusErrorMessage('Erro ao obter feed de conteúdo', response.error));
       return;
     }
 
-    // A resposta v3 tem estrutura completa
+    // A resposta v3/content-feeds tem estrutura: { status, data: { posts, postChildren, comments, users, files, communities, categories, videoStreamings, polls, paging } }
+    // O makeRequest preserva o status e mescla com o data interno
     const data = response.data ?? {};
     const posts = data.posts ?? [];
+    const paging = data.paging ?? {};
 
     // Retornar estrutura completa conforme documentação da API v3
     sendSuccess(
       res,
       {
-        status: 'ok',
-        ...data,
-        posts,
+        status: data.status || 'ok',
+        data: {
+          posts: data.posts ?? [],
+          postChildren: data.postChildren ?? [],
+          comments: data.comments ?? [],
+          users: data.users ?? [],
+          files: data.files ?? [],
+          communities: data.communities ?? [],
+          communityUsers: data.communityUsers ?? [],
+          categories: data.categories ?? [],
+          feeds: data.feeds ?? [],
+          videoStreamings: data.videoStreamings ?? [],
+          videoStreamingChildren: data.videoStreamingChildren ?? [],
+          polls: data.polls ?? [],
+          paging: {
+            next: paging.next,
+            previous: paging.previous,
+          },
+        },
+        // Manter compatibilidade com formato anterior
         pagination: buildPaginationResponse(
           page ? parseInt(page as string, 10) : DEFAULT_PAGE,
           limit ? parseInt(limit as string, 10) : DEFAULT_LIMIT,
           posts.length
         ),
       },
-      'Posts obtidos com sucesso'
+      'Feed de conteúdo obtido com sucesso'
     );
   } catch (error) {
     handleError(res, error, 'listar posts do usuário');

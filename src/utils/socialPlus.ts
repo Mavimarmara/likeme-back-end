@@ -166,6 +166,17 @@ class SocialPlusClient {
         };
       }
 
+      // Se a resposta tiver estrutura { status, data: {...} }, preservar ambos
+      if (data && typeof data === 'object' && 'data' in data && 'status' in data) {
+        return {
+          success: true,
+          data: {
+            status: (data as any).status,
+            ...((data as any).data || {}),
+          } as T,
+        };
+      }
+
       return {
         success: true,
         data: (data.data || data) as T,
@@ -463,10 +474,11 @@ class SocialPlusClient {
   }
 
   /**
-   * Lista posts usando a API v3 do Amity
+   * Obtém feed de conteúdo usando a API v3 do Amity
    * Requer autenticação Bearer token do usuário
+   * Retorna posts aos quais o usuário tem acesso (incluindo públicos)
    */
-  async listPosts(
+  async getContentFeed(
     params?: {
       userAccessToken?: string;
       page?: number;
@@ -486,17 +498,17 @@ class SocialPlusClient {
     if (params?.targetId) queryParams.append('targetId', params.targetId);
 
     const query = queryParams.toString();
-    const endpoint = `/v3/posts/list${query ? `?${query}` : ''}`;
+    const endpoint = `/v3/content-feeds${query ? `?${query}` : ''}`;
 
-    // O endpoint v3/posts/list requer token de usuário
+    // O endpoint v3/content-feeds requer token de usuário
     if (!params?.userAccessToken) {
       return {
         success: false,
-        error: 'Token de usuário é obrigatório para o endpoint v3/posts/list. O usuário deve estar autenticado.',
+        error: 'Token de usuário é obrigatório para o endpoint v3/content-feeds. O usuário deve estar autenticado.',
       };
     }
 
-    console.log('[SocialPlus] Listando posts usando token de usuário (v3/posts/list)');
+    console.log('[SocialPlus] Obtendo feed de conteúdo usando token de usuário (v3/content-feeds)');
     return this.makeRequest<any>(
       'GET',
       endpoint,
