@@ -40,7 +40,6 @@ class SocialPlusClient {
   private serverKey: string;
   private baseUrl: string;
   private region: string;
-  private tokenTtlMs: number;
   private tokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor() {
@@ -48,7 +47,6 @@ class SocialPlusClient {
     this.serverKey = config.socialPlus.serverKey;
     this.baseUrl = config.socialPlus.baseUrl.replace(/\/$/, '');
     this.region = config.socialPlus.region;
-    this.tokenTtlMs = config.socialPlus.tokenTtlMs || 300000;
     
     // Log para debug (remover em produção se necessário)
     console.log('SocialPlusClient initialized with baseUrl:', this.baseUrl, 'hasServerKey:', !!this.serverKey);
@@ -199,13 +197,21 @@ class SocialPlusClient {
     const text = await response.text();
 
     if (!response.ok) {
+      console.error('[SocialPlus] Erro ao gerar token de servidor:', {
+        status: response.status,
+        statusText: response.statusText,
+        responseBody: text,
+        hasServerKey: !!this.serverKey,
+        serverKeyLength: this.serverKey?.length || 0,
+      });
       throw new Error(text || `HTTP ${response.status}`);
     }
 
     const token = text.replace(/(^"|"$)/g, '').trim();
+    // Cache do token sem TTL fixo - usar até expirar naturalmente ou forçar refresh
     this.tokenCache = {
       token,
-      expiresAt: Date.now() + this.tokenTtlMs,
+      expiresAt: Date.now() + (5 * 60 * 1000), // 5 minutos padrão
     };
 
     console.log('[SocialPlus] Server token generated and cached');
@@ -221,9 +227,18 @@ class SocialPlusClient {
 
       return await this.generateServerToken(undefined, forceRefresh);
     } catch (error) {
-      // Se o erro for "Invalid server key", logar e retornar null para usar fallback
-      if (error instanceof Error && error.message.includes('Invalid server key')) {
+      // Verificar diferentes variações de erro relacionadas a server key inválida
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      const isInvalidServerKey = 
+        errorMessage.includes('invalid server key') ||
+        errorMessage.includes('server key') && (errorMessage.includes('invalid') || errorMessage.includes('unauthorized') || errorMessage.includes('forbidden')) ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('403');
+      
+      if (isInvalidServerKey) {
         console.warn('Server key inválido ou não autorizado. Usando API key diretamente como fallback.');
+        console.warn('Detalhes do erro:', error instanceof Error ? error.message : String(error));
+        console.warn('Verifique se SOCIAL_PLUS_SERVER_KEY está configurada corretamente no arquivo .env');
         return null;
       }
       console.error('Erro ao obter token da social.plus:', error);
@@ -405,13 +420,13 @@ class SocialPlusClient {
     }
     
     if (token) {
-      // Usar token de servidor
+      // Usar token de servidor (modo seguro requer AMBOS: API key + Bearer token)
       return this.makeRequest<any>(
         'GET',
         `/v3/global-feeds${query ? `?${query}` : ''}`,
         undefined,
         {
-          useApiKey: false,
+          useApiKey: true, // Manter API key mesmo com Bearer token (modo seguro)
           bearerToken: token,
         }
       );

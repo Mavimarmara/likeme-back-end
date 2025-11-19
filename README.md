@@ -96,9 +96,8 @@ AUTH0_AUDIENCE="your-auth0-audience"
 # Social.plus
 SOCIAL_PLUS_API_KEY="your-social-plus-api-key"
 SOCIAL_PLUS_SERVER_KEY="your-social-plus-server-key"
-SOCIAL_PLUS_REGION="US"
-SOCIAL_PLUS_BASE_URL="https://apix.us.amity.co/api"
-SOCIAL_PLUS_TOKEN_TTL_MS=300000
+SOCIAL_PLUS_REGION="EU"
+SOCIAL_PLUS_BASE_URL="https://apix.eu.amity.co/api"
 
 # Email (Nodemailer) - Opcional
 EMAIL_HOST="smtp.gmail.com"

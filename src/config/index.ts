@@ -78,7 +78,6 @@ export const config = {
       serverKey: process.env.SOCIAL_PLUS_SERVER_KEY || '',
       region,
       baseUrl: process.env.SOCIAL_PLUS_BASE_URL || baseUrls[region.toUpperCase()] || baseUrls.EU,
-      tokenTtlMs: parseInt(process.env.SOCIAL_PLUS_TOKEN_TTL_MS || '300000', 10), // default 5 min
     };
   })(),
 };
