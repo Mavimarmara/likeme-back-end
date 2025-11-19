@@ -260,6 +260,14 @@ class SocialPlusClient {
     }
   }
 
+  /**
+   * Método público para obter token de servidor
+   * Usado para gerar tokens de usuário via API REST
+   */
+  async getServerTokenPublic(forceRefresh = false): Promise<string | null> {
+    return this.getServerToken(forceRefresh);
+  }
+
   // User Management
   async createUser(userData: SocialPlusUser): Promise<SocialPlusResponse<{ id: string }>> {
     return this.makeRequest<{ id: string }>('POST', '/v1/users', userData);
