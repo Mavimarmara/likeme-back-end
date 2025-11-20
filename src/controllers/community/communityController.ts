@@ -276,7 +276,7 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
     const data = response.data ?? {};
     const posts = data.posts ?? [];
     const paging = data.paging ?? {};
-
+    console.log(`[Community] Response: ${response}`);
     // Retornar estrutura completa conforme documentação da API v3
     sendSuccess(
       res,
