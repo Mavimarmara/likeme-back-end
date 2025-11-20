@@ -5,7 +5,8 @@ import { hashPassword, generateToken } from '@/utils/auth';
 import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, AuthResponse, AuthenticatedRequest } from '@/types';
-import { socialPlusClient } from '@/utils/socialPlus';
+import { userService } from '@/services/userService';
+import { communityService } from '@/services/communityService';
 import { loginToAmity } from '@/utils/amityClient';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -90,50 +91,36 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Criar usuário na social.plus (se não existir)
     let socialPlusUserId = user.socialPlusUserId;
     try {
       if (!socialPlusUserId) {
-      const emailContact = user.person.contacts.find((c) => c.type === 'email');
-      const socialPlusResponse = await socialPlusClient.createUser({
-        username: user.username || undefined,
-        email: emailContact?.value || userData.email,
-        firstName: user.person.firstName,
-        lastName: user.person.lastName,
-        avatar: user.avatar || undefined,
-      });
-
-      if (socialPlusResponse.success && socialPlusResponse.data?.id) {
-          socialPlusUserId = socialPlusResponse.data.id;
-        await prisma.user.update({
-          where: { id: user.id },
-            data: { socialPlusUserId },
+        const emailContact = user.person.contacts.find((c) => c.type === 'email');
+        const result = await userService.createUserAndSyncToDatabase(user.id, {
+          username: user.username || undefined,
+          email: emailContact?.value || userData.email,
+          firstName: user.person.firstName,
+          lastName: user.person.lastName,
+          avatar: user.avatar || undefined,
         });
-          user.socialPlusUserId = socialPlusUserId;
-      } else {
-        console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
-        }
+        socialPlusUserId = result.socialPlusUserId;
+        user.socialPlusUserId = socialPlusUserId;
       }
     } catch (error) {
       console.error('Erro ao criar usuário na social.plus:', error);
-      // Não falha o registro se a integração com social.plus falhar
     }
 
     const token = generateToken(user.id);
 
-    // Adicionar usuário a todas as comunidades disponíveis (após gerar token)
-    // Nota: No registro, não temos token de acesso do usuário ainda, então tentamos sem ele
     if (socialPlusUserId) {
       try {
         console.log(`[Auth] Adicionando usuário ${socialPlusUserId} a todas as comunidades...`);
-        const addResult = await socialPlusClient.addUserToAllCommunities(socialPlusUserId);
+        const addResult = await userService.addUserToAllCommunities(socialPlusUserId);
         console.log(`[Auth] Usuário adicionado a ${addResult.added} comunidades, ${addResult.failed} falhas`);
         if (addResult.errors.length > 0) {
           console.warn('[Auth] Erros ao adicionar usuário a algumas comunidades:', addResult.errors);
         }
       } catch (addError) {
         console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
-        // Não falha o registro se não conseguir adicionar às comunidades
       }
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -225,26 +212,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         user.avatar = userInfo.picture;
       }
 
-      // Criar usuário na social.plus (se não existir)
       if (!user.socialPlusUserId) {
         try {
-          const emailContact = user.person?.contacts?.find((c: any) => c.type === 'email');
-          const socialPlusResponse = await socialPlusClient.createUser({
+          const emailContact = user.person?.contacts?.find((c: { type: string }) => c.type === 'email');
+          const result = await userService.createUserAndSyncToDatabase(user.id, {
             username: user.username || undefined,
             email: emailContact?.value || email,
             firstName: existingPerson.firstName,
             lastName: existingPerson.lastName,
             avatar: user.avatar || undefined,
           });
-
-          if (socialPlusResponse.success && socialPlusResponse.data?.id) {
-            const socialPlusUserId = socialPlusResponse.data.id;
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { socialPlusUserId },
-            });
-            user.socialPlusUserId = socialPlusUserId;
-          }
+          user.socialPlusUserId = result.socialPlusUserId;
         } catch (error) {
           console.error('Erro ao criar usuário na social.plus:', error);
         }
@@ -289,28 +267,16 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         },
       });
 
-      // Criar usuário na social.plus
       try {
-        const socialPlusResponse = await socialPlusClient.createUser({
+        const result = await userService.createUserAndSyncToDatabase(user.id, {
           email: email,
           firstName: newPerson.firstName,
           lastName: newPerson.lastName,
           avatar: user.avatar || undefined,
         });
-
-        if (socialPlusResponse.success && socialPlusResponse.data?.id) {
-          const socialPlusUserId = socialPlusResponse.data.id;
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { socialPlusUserId },
-          });
-          user.socialPlusUserId = socialPlusUserId;
-        } else {
-          console.warn('Falha ao criar usuário na social.plus:', socialPlusResponse.error);
-        }
+        user.socialPlusUserId = result.socialPlusUserId;
       } catch (error) {
         console.error('Erro ao criar usuário na social.plus:', error);
-        // Não falha o login se a integração com social.plus falhar
       }
     }
 
@@ -450,11 +416,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       // Não falha o login se a integração com Amity falhar
     }
 
-    // Adicionar usuário a todas as comunidades disponíveis (após gerar token e obter accessToken)
     if (fullUser.socialPlusUserId) {
       try {
         console.log(`[Auth] Adicionando usuário ${fullUser.socialPlusUserId} a todas as comunidades...`);
-        const addResult = await socialPlusClient.addUserToAllCommunities(
+        const addResult = await userService.addUserToAllCommunities(
           fullUser.socialPlusUserId,
           userAccessToken
         );
@@ -464,7 +429,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         }
       } catch (addError) {
         console.error('[Auth] Erro ao adicionar usuário a todas as comunidades:', addError);
-        // Não falha o login se não conseguir adicionar às comunidades
       }
     }
 

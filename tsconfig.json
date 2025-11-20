@@ -30,7 +30,9 @@
       "@/middleware/*": ["src/middleware/*"],
       "@/utils/*": ["src/utils/*"],
       "@/config/*": ["src/config/*"],
-      "@/types/*": ["src/types/*"]
+      "@/types/*": ["src/types/*"],
+      "@/clients/*": ["src/clients/*"],
+      "@/services/*": ["src/services/*"]
     },
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
