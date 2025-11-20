@@ -1,9 +1,10 @@
 import { Response } from 'express';
-import prisma from '@/config/database';
-import { AuthenticatedRequest, AmityGlobalFeedResponse, AmityGlobalFeedData } from '@/types';
+import { AuthenticatedRequest } from '@/types';
+import { AmityGlobalFeedResponse, AmityGlobalFeedData } from '@/types/amity';
 import { sendError, sendSuccess } from '@/utils/response';
 import { socialPlusClient } from '@/utils/socialPlus';
-import { createUserAccessToken } from '@/utils/amityClient';
+import { getUserAccessToken } from '@/utils/userToken';
+import { normalizeAmityResponse, buildAmityFeedResponse } from '@/utils/amityResponseNormalizer';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -29,14 +30,6 @@ const handleError = (res: Response, error: unknown, operation: string): void => 
   sendError(res, `Erro ao ${operation}`);
 };
 
-const getSocialPlusUserIdFromDb = async (userId: string): Promise<string | null> => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { socialPlusUserId: true },
-  });
-
-  return user?.socialPlusUserId ?? null;
-};
 
 const extractCommunitiesFromResponse = (data: any): any[] => {
   if (!data) {
@@ -90,22 +83,7 @@ export const listCommunities = async (req: AuthenticatedRequest, res: Response):
     const { page, limit, sortBy, includeDeleted } = req.query;
 
     // Tentar obter token de autenticação do usuário se estiver autenticado
-    let userAccessToken: string | null = null;
-    const currentUserId = req.user?.id;
-
-    if (currentUserId) {
-      try {
-        const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
-        if (socialPlusUserId) {
-          userAccessToken = await createUserAccessToken(socialPlusUserId);
-          if (userAccessToken) {
-            console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para listCommunities`);
-          }
-        }
-      } catch (error) {
-        console.warn('Erro ao obter token de autenticação do usuário, usando autenticação padrão:', error);
-      }
-    }
+    const { token: userAccessToken } = await getUserAccessToken(req, false);
 
     const response = await socialPlusClient.listCommunities({
       userAccessToken: userAccessToken || undefined,
@@ -150,31 +128,11 @@ export const getMyPosts = async (req: AuthenticatedRequest, res: Response): Prom
     const { page, limit, sortBy, includeDeleted, targetType, targetId } = req.query;
 
     // O endpoint v3/posts/list requer token de usuário autenticado (obrigatório)
-    const currentUserId = req.user?.id;
+    const { token: userAccessToken, error: tokenError } = await getUserAccessToken(req, true);
 
-    if (!currentUserId) {
-      sendError(res, 'Usuário não autenticado. Este endpoint requer autenticação do usuário.', 401);
-      return;
-    }
-
-    let userAccessToken: string | null = null;
-    try {
-    const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
-    if (!socialPlusUserId) {
-      sendError(res, 'Usuário não está sincronizado com a social.plus', 400);
-      return;
-    }
-
-      userAccessToken = await createUserAccessToken(socialPlusUserId);
-      if (!userAccessToken) {
-        sendError(res, 'Não foi possível gerar token de autenticação do usuário', 500);
-      return;
-    }
-
-      console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para obter feed (v3/content-feeds)`);
-  } catch (error) {
-      console.error('Erro ao obter token de autenticação do usuário:', error);
-      sendError(res, 'Erro ao obter token de autenticação do usuário', 500);
+    if (tokenError || !userAccessToken) {
+      const statusCode = tokenError?.includes('não autenticado') ? 401 : tokenError?.includes('não está sincronizado') ? 400 : 500;
+      sendError(res, tokenError || 'Erro ao obter token de autenticação', statusCode);
       return;
     }
 
@@ -199,7 +157,10 @@ export const getMyPosts = async (req: AuthenticatedRequest, res: Response): Prom
     const data = response.data ?? {};
     const posts = data.posts ?? [];
     const paging = data.paging ?? {};
-    console.log(`[Community] Response: ${response}`);
+    
+    // Log do conteúdo dos posts
+    console.log('[Community] response.data.posts:', JSON.stringify(posts, null, 2));
+    console.log(`[Community] Total de posts: ${posts.length}`);
 
     // Retornar estrutura completa conforme documentação da API v3
     sendSuccess(
@@ -243,22 +204,7 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
     const { page, limit } = buildPaginationParams(req.query);
 
     // Tentar obter token de autenticação do usuário se estiver autenticado
-    let userAccessToken: string | null = null;
-    const currentUserId = req.user?.id;
-
-    if (currentUserId) {
-      try {
-        const socialPlusUserId = await getSocialPlusUserIdFromDb(currentUserId);
-        if (socialPlusUserId) {
-          userAccessToken = await createUserAccessToken(socialPlusUserId);
-          if (userAccessToken) {
-            console.log(`[Community] Usando token de autenticação do usuário ${currentUserId} para getPublicCommunityPosts`);
-          }
-        }
-      } catch (error) {
-        console.warn('Erro ao obter token de autenticação do usuário, usando autenticação padrão:', error);
-      }
-    }
+    const { token: userAccessToken } = await getUserAccessToken(req, false);
 
     // Usar token de usuário se disponível, caso contrário usar autenticação padrão (server token ou API key)
     const response = await socialPlusClient.getGlobalFeed({
@@ -276,44 +222,22 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
     // O makeRequest já extrai o data interno, então response.data já contém o objeto data da API
     const apiResponse = response.data as AmityGlobalFeedResponse | AmityGlobalFeedData | undefined;
     
-    // Normalizar a resposta - pode vir como { status, data: {...} } ou diretamente como { posts, ... }
-    let feedData: AmityGlobalFeedData;
-    let status: string = 'ok';
-    
-    if (apiResponse && 'data' in apiResponse && apiResponse.data) {
-      // Formato: { status, data: {...} }
-      feedData = apiResponse.data;
-      status = apiResponse.status || 'ok';
-    } else if (apiResponse && 'posts' in apiResponse) {
-      // Formato: { posts, postChildren, ... } diretamente
-      feedData = apiResponse as AmityGlobalFeedData;
-    } else {
-      feedData = {};
+    // Log do conteúdo dos posts antes da normalização
+    if (apiResponse) {
+      const postsBeforeNormalize = ('data' in apiResponse && apiResponse.data?.posts) || ('posts' in apiResponse ? apiResponse.posts : undefined);
+      console.log('[Community] response.data.posts (getPublicCommunityPosts):', JSON.stringify(postsBeforeNormalize, null, 2));
+      console.log(`[Community] Total de posts (getPublicCommunityPosts): ${postsBeforeNormalize?.length || 0}`);
     }
     
-    const posts = feedData.posts ?? [];
-    const paging = feedData.paging ?? {};
+    // Normalizar a resposta usando função utilitária
+    const { feedData, status } = normalizeAmityResponse(apiResponse);
     
-    // Retornar estrutura completa conforme documentação da API v5
-    const responseData: AmityGlobalFeedResponse & { pagination?: any } = {
-      status,
-      data: {
-        posts: feedData.posts ?? [],
-        postChildren: feedData.postChildren ?? [],
-        comments: feedData.comments ?? [],
-        users: feedData.users ?? [],
-        files: feedData.files ?? [],
-        communities: feedData.communities ?? [],
-        communityUsers: feedData.communityUsers ?? [],
-        categories: feedData.categories ?? [],
-        paging: {
-          next: paging.next,
-          previous: paging.previous,
-        },
-      },
-      // Manter compatibilidade com formato anterior
-      pagination: buildPaginationResponse(page, limit, posts.length),
-    };
+    // Log do conteúdo dos posts após normalização
+    console.log('[Community] feedData.posts (após normalização):', JSON.stringify(feedData.posts, null, 2));
+    console.log(`[Community] Total de posts (após normalização): ${feedData.posts?.length || 0}`);
+    
+    // Construir resposta completa usando função utilitária
+    const responseData = buildAmityFeedResponse(feedData, status, page, limit);
     
     sendSuccess(res, responseData, 'Posts globais obtidos com sucesso');
   } catch (error) {
