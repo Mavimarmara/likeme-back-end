@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
-import { AmityGlobalFeedResponse, AmityGlobalFeedData } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData } from '@/types/amity';
 import { sendError, sendSuccess } from '@/utils/response';
 import { socialPlusClient } from '@/utils/socialPlus';
 import { getUserAccessToken } from '@/utils/userToken';
@@ -33,7 +33,7 @@ export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Pro
 
     const { token: userAccessToken } = await getUserAccessToken(req, false);
 
-    const response = await socialPlusClient.getGlobalFeed({
+    const response = await socialPlusClient.getUserFeed({
       page,
       limit,
       userAccessToken: userAccessToken || undefined,
@@ -44,7 +44,7 @@ export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const apiResponse = response.data as AmityGlobalFeedResponse | AmityGlobalFeedData | undefined;
+    const apiResponse = response.data as AmityUserFeedResponse | AmityUserFeedData | undefined;
     
     if (apiResponse) {
       const postsBeforeNormalize = ('data' in apiResponse && apiResponse.data?.posts) || ('posts' in apiResponse ? apiResponse.posts : undefined);
@@ -59,8 +59,8 @@ export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Pro
     
     const responseData = buildAmityFeedResponse(feedData, status, page, limit);
     
-    sendSuccess(res, responseData, 'Posts globais obtidos com sucesso');
+    sendSuccess(res, responseData, 'Feed do usuário obtido com sucesso');
   } catch (error) {
-    handleError(res, error, 'listar posts globais');
+    handleError(res, error, 'obter feed do usuário');
   }
 };

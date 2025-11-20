@@ -1,13 +1,13 @@
-import { AmityGlobalFeedResponse, AmityGlobalFeedData } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData } from '@/types/amity';
 
 /**
  * Normaliza a resposta da API Amity que pode vir em diferentes formatos
- * @param apiResponse - Resposta da API que pode ser AmityGlobalFeedResponse ou AmityGlobalFeedData
+ * @param apiResponse - Resposta da API que pode ser AmityUserFeedResponse ou AmityUserFeedData
  * @returns Objeto normalizado com feedData e status
  */
 export const normalizeAmityResponse = (
-  apiResponse: AmityGlobalFeedResponse | AmityGlobalFeedData | undefined
-): { feedData: AmityGlobalFeedData; status: string } => {
+  apiResponse: AmityUserFeedResponse | AmityUserFeedData | undefined
+): { feedData: AmityUserFeedData; status: string } => {
   if (!apiResponse) {
     return { feedData: {}, status: 'ok' };
   }
@@ -23,7 +23,7 @@ export const normalizeAmityResponse = (
   // Formato: { posts, postChildren, ... } diretamente
   if ('posts' in apiResponse) {
     return {
-      feedData: apiResponse as AmityGlobalFeedData,
+      feedData: apiResponse as AmityUserFeedData,
       status: 'ok',
     };
   }
@@ -32,7 +32,7 @@ export const normalizeAmityResponse = (
 };
 
 /**
- * Constrói a resposta completa do feed global do Amity
+ * Constrói a resposta completa do feed do usuário do Amity
  * @param feedData - Dados do feed normalizados
  * @param status - Status da resposta
  * @param page - Página atual
@@ -40,11 +40,11 @@ export const normalizeAmityResponse = (
  * @returns Resposta completa formatada
  */
 export const buildAmityFeedResponse = (
-  feedData: AmityGlobalFeedData,
+  feedData: AmityUserFeedData,
   status: string,
   page: number,
   limit: number
-): AmityGlobalFeedResponse & { pagination?: { page: number; limit: number; total: number; totalPages: number } } => {
+): AmityUserFeedResponse & { pagination?: { page: number; limit: number; total: number; totalPages: number } } => {
   const posts = feedData.posts ?? [];
   const paging = feedData.paging ?? {};
 

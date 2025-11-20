@@ -640,7 +640,7 @@ class SocialPlusClient {
     );
   }
 
-  async getGlobalFeed(
+  async getUserFeed(
     params?: { page?: number; limit?: number; userAccessToken?: string }
   ): Promise<SocialPlusResponse<any>> {
     const queryParams = new URLSearchParams();
@@ -656,52 +656,47 @@ class SocialPlusClient {
 
     const query = queryParams.toString();
 
-    // Prioridade 1: Usar token de usuário se fornecido (autenticação do usuário)
     if (params?.userAccessToken) {
-      console.log('[SocialPlus] Usando token de usuário para getGlobalFeed');
+      console.log('[SocialPlus] Usando token de usuário para getUserFeed');
       return this.makeRequest<any>(
         'GET',
         `/v4/me/global-feeds${query ? `?${query}` : ''}`,
         undefined,
         {
-          useApiKey: true, // Manter API key (modo seguro)
+          useApiKey: true,
           bearerToken: params.userAccessToken,
         }
       );
     }
 
-    // Prioridade 2: Tentar usar token de servidor se disponível
     let token: string | null = null;
     try {
       token = await this.getServerToken();
     } catch (error) {
-      // Se houver erro ao obter token de servidor (ex: server key inválido), usar API key diretamente
       console.warn('Erro ao obter token de servidor, usando API key diretamente:', error);
       token = null;
     }
     
     if (token) {
-      // Usar token de servidor (modo seguro requer AMBOS: API key + Bearer token)
-      console.log('[SocialPlus] Usando token de servidor para getGlobalFeed');
+      console.log('[SocialPlus] Usando token de servidor para getUserFeed');
       return this.makeRequest<any>(
         'GET',
         `/v4/me/global-feeds${query ? `?${query}` : ''}`,
         undefined,
         {
-          useApiKey: true, // Manter API key mesmo com Bearer token (modo seguro)
+          useApiKey: true,
           bearerToken: token,
         }
       );
     }
 
-    // Fallback: usar API key diretamente
-    console.log('[SocialPlus] Usando API key diretamente para getGlobalFeed');
+    console.log('[SocialPlus] Usando API key diretamente para getUserFeed');
     return this.makeRequest<any>(
       'GET',
       `/v4/me/global-feeds${query ? `?${query}` : ''}`,
       undefined,
       {
-        useApiKey: true, // Usa X-API-Key header diretamente
+        useApiKey: true,
       }
     );
   }

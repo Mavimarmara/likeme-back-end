@@ -1,4 +1,4 @@
-// Interfaces para resposta do Amity Social API - Global Feed
+// Interfaces para resposta do Amity Social API - User Feed
 
 export interface AmityVideoFileId {
   original?: string;
@@ -228,7 +228,7 @@ export interface AmityPaging {
   previous?: string;
 }
 
-export interface AmityGlobalFeedData {
+export interface AmityUserFeedData {
   posts?: AmityPost[];
   postChildren?: AmityPost[];
   comments?: AmityComment[];
@@ -240,9 +240,9 @@ export interface AmityGlobalFeedData {
   paging?: AmityPaging;
 }
 
-export interface AmityGlobalFeedResponse {
+export interface AmityUserFeedResponse {
   status?: string;
-  data?: AmityGlobalFeedData;
+  data?: AmityUserFeedData;
 }
 
 

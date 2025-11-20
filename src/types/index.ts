@@ -194,6 +194,6 @@ export type {
   AmityCommunityUser,
   AmityCategory,
   AmityPaging,
-  AmityGlobalFeedData,
-  AmityGlobalFeedResponse,
+  AmityUserFeedData,
+  AmityUserFeedResponse,
 } from './amity';
