@@ -293,44 +293,39 @@
  *                     posts:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityPost'
  *                     postChildren:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityPost'
  *                     comments:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityComment'
  *                     users:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityUser'
  *                     files:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityFile'
  *                     communities:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityCommunity'
  *                     communityUsers:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityCommunityUser'
  *                     categories:
  *                       type: array
  *                       items:
- *                         type: object
+ *                         $ref: '#/components/schemas/AmityCategory'
  *                     paging:
- *                       type: object
- *                       properties:
- *                         next:
- *                           type: string
- *                         previous:
- *                           type: string
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
+ *                       $ref: '#/components/schemas/AmityPaging'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
  *                 message:
  *                   type: string
  *       401:

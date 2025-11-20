@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import prisma from '@/config/database';
-import { AuthenticatedRequest } from '@/types';
+import { AuthenticatedRequest, AmityGlobalFeedResponse, AmityGlobalFeedData } from '@/types';
 import { sendError, sendSuccess } from '@/utils/response';
 import { socialPlusClient } from '@/utils/socialPlus';
 import { createUserAccessToken } from '@/utils/amityClient';
@@ -272,36 +272,50 @@ export const getPublicCommunityPosts = async (req: AuthenticatedRequest, res: Re
       return;
     }
 
-    // A resposta v3 tem estrutura: { status, data: { posts, postChildren, comments, users, files, communities, communityUsers, categories, paging } }
+    // A resposta v5/me/global-feeds tem estrutura: { status, data: { posts, postChildren, comments, users, files, communities, communityUsers, categories, paging } }
     // O makeRequest já extrai o data interno, então response.data já contém o objeto data da API
-    const data = response.data ?? {};
-    const posts = data.posts ?? [];
-    const paging = data.paging ?? {};
-    console.log(`[Community] Response: ${response}`);
-    // Retornar estrutura completa conforme documentação da API v3
-    sendSuccess(
-      res,
-      {
-        status: 'ok',
-        data: {
-          posts: data.posts ?? [],
-          postChildren: data.postChildren ?? [],
-          comments: data.comments ?? [],
-          users: data.users ?? [],
-          files: data.files ?? [],
-          communities: data.communities ?? [],
-          communityUsers: data.communityUsers ?? [],
-          categories: data.categories ?? [],
-          paging: {
-            next: paging.next,
-            previous: paging.previous,
-          },
+    const apiResponse = response.data as AmityGlobalFeedResponse | AmityGlobalFeedData | undefined;
+    
+    // Normalizar a resposta - pode vir como { status, data: {...} } ou diretamente como { posts, ... }
+    let feedData: AmityGlobalFeedData;
+    let status: string = 'ok';
+    
+    if (apiResponse && 'data' in apiResponse && apiResponse.data) {
+      // Formato: { status, data: {...} }
+      feedData = apiResponse.data;
+      status = apiResponse.status || 'ok';
+    } else if (apiResponse && 'posts' in apiResponse) {
+      // Formato: { posts, postChildren, ... } diretamente
+      feedData = apiResponse as AmityGlobalFeedData;
+    } else {
+      feedData = {};
+    }
+    
+    const posts = feedData.posts ?? [];
+    const paging = feedData.paging ?? {};
+    
+    // Retornar estrutura completa conforme documentação da API v5
+    const responseData: AmityGlobalFeedResponse & { pagination?: any } = {
+      status,
+      data: {
+        posts: feedData.posts ?? [],
+        postChildren: feedData.postChildren ?? [],
+        comments: feedData.comments ?? [],
+        users: feedData.users ?? [],
+        files: feedData.files ?? [],
+        communities: feedData.communities ?? [],
+        communityUsers: feedData.communityUsers ?? [],
+        categories: feedData.categories ?? [],
+        paging: {
+          next: paging.next,
+          previous: paging.previous,
         },
-        // Manter compatibilidade com formato anterior
-        pagination: buildPaginationResponse(page, limit, posts.length),
       },
-      'Posts globais obtidos com sucesso'
-    );
+      // Manter compatibilidade com formato anterior
+      pagination: buildPaginationResponse(page, limit, posts.length),
+    };
+    
+    sendSuccess(res, responseData, 'Posts globais obtidos com sucesso');
   } catch (error) {
     handleError(res, error, 'listar posts globais');
   }
