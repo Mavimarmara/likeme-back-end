@@ -1,7 +1,7 @@
 import { AmityUserFeedResponse, AmityUserFeedData } from '@/types/amity';
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
 import { userTokenService } from './userTokenService';
-import { normalizeAmityResponse, buildAmityFeedResponse } from '@/utils/amityResponseNormalizer';
+import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
 
 export interface AddCommunitiesResult {
   added: number;
@@ -45,10 +45,24 @@ export class CommunityService {
     
     const { feedData, status } = normalizeAmityResponse(apiResponse);
     
-    console.log('[CommunityService] feedData.posts (após normalização):', JSON.stringify(feedData.posts, null, 2));
-    console.log(`[CommunityService] Total de posts (após normalização): ${feedData.posts?.length || 0}`);
+    // Aplica filtro de busca nos campos de texto e título se search for fornecido
+    let filteredPosts = feedData.posts;
+    if (search && search.trim() !== '') {
+      const postsBeforeFilter = feedData.posts || [];
+      filteredPosts = filterPostsBySearch(postsBeforeFilter, search);
+      console.log(`[CommunityService] Busca aplicada: "${search}" - ${postsBeforeFilter.length} posts antes, ${filteredPosts.length} posts após filtro`);
+    }
     
-    return buildAmityFeedResponse(feedData, status, page, limit);
+    // Atualiza feedData com posts filtrados
+    const filteredFeedData: AmityUserFeedData = {
+      ...feedData,
+      posts: filteredPosts,
+    };
+    
+    console.log('[CommunityService] feedData.posts (após normalização e filtro):', JSON.stringify(filteredFeedData.posts, null, 2));
+    console.log(`[CommunityService] Total de posts (após normalização e filtro): ${filteredFeedData.posts?.length || 0}`);
+    
+    return buildAmityFeedResponse(filteredFeedData, status, page, limit);
   }
 
   async addUserToAllCommunities(

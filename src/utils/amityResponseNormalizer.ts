@@ -1,4 +1,25 @@
-import { AmityUserFeedResponse, AmityUserFeedData } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData, AmityPost } from '@/types/amity';
+
+/**
+ * Filtra posts baseado em busca nos campos de texto e título
+ * @param posts - Array de posts para filtrar
+ * @param searchTerm - Termo de busca
+ * @returns Array de posts filtrados
+ */
+export const filterPostsBySearch = (posts: AmityPost[] | undefined, searchTerm?: string): AmityPost[] => {
+  if (!posts || !searchTerm || searchTerm.trim() === '') {
+    return posts || [];
+  }
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  return posts.filter((post) => {
+    const title = post.data?.title?.toLowerCase() || '';
+    const text = post.data?.text?.toLowerCase() || '';
+    
+    return title.includes(normalizedSearch) || text.includes(normalizedSearch);
+  });
+};
 
 /**
  * Normaliza a resposta da API Amity que pode vir em diferentes formatos

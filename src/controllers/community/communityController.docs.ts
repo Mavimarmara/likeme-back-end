@@ -166,7 +166,7 @@
  *         name: search
  *         schema:
  *           type: string
- *         description: Termo de busca para filtrar posts
+ *         description: Termo de busca para filtrar posts nos campos de texto (data.text) e título (data.title). A busca é case-insensitive.
  *     responses:
  *       200:
  *         description: Feed do usuário obtido com sucesso
