@@ -34,8 +34,12 @@
  *         targetType:
  *           type: string
  *           enum: [user, community]
+ *         structureType:
+ *           type: string
+ *           description: Tipo de estrutura do post (ex: "poll", "text")
  *         data:
  *           type: object
+ *           description: Dados do post (title, text, pollId, etc.)
  *         createdAt:
  *           type: string
  *         updatedAt:
@@ -44,6 +48,11 @@
  *           type: integer
  *         commentsCount:
  *           type: integer
+ *         pollOptions:
+ *           type: array
+ *           description: Opções de poll agrupadas (apenas para posts com structureType="poll")
+ *           items:
+ *             $ref: '#/components/schemas/AmityPost'
  *     AmityComment:
  *       type: object
  *       properties:

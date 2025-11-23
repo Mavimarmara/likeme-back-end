@@ -14,6 +14,7 @@ export interface AmityPostData {
   thumbnailFileId?: string;
   videoFileId?: AmityVideoFileId;
   streamId?: string;
+  pollId?: string;
 }
 
 export interface AmityHashFlag {
@@ -74,6 +75,8 @@ export interface AmityPost {
   impression?: number;
   reach?: number;
   structureType?: string;
+  sequenceNumber?: number;
+  pollOptions?: AmityPost[];
 }
 
 export interface AmityCommentAttachment {
