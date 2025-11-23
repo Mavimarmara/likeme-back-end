@@ -162,6 +162,11 @@
  *           type: integer
  *           default: 10
  *         description: Número de itens por página
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Termo de busca para filtrar posts
  *     responses:
  *       200:
  *         description: Feed do usuário obtido com sucesso

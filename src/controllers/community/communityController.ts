@@ -9,7 +9,8 @@ const DEFAULT_LIMIT = 10;
 const buildPaginationParams = (query: unknown) => {
   const page = parseInt((query as { page?: string }).page as string, 10) || DEFAULT_PAGE;
   const limit = parseInt((query as { limit?: string }).limit as string, 10) || DEFAULT_LIMIT;
-  return { page, limit };
+  const search = (query as { search?: string }).search;
+  return { page, limit, search };
 };
 
 const handleError = (res: Response, error: unknown, operation: string): void => {
@@ -20,10 +21,10 @@ const handleError = (res: Response, error: unknown, operation: string): void => 
 
 export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { page, limit } = buildPaginationParams(req.query);
+    const { page, limit, search } = buildPaginationParams(req.query);
     const userId = req.user?.id;
 
-    const feed = await communityService.getUserFeed(userId, page, limit);
+    const feed = await communityService.getUserFeed(userId, page, limit, undefined, search);
     
     sendSuccess(res, feed, 'Feed do usuário obtido com sucesso');
   } catch (error) {

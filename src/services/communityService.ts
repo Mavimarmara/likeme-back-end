@@ -14,7 +14,8 @@ export class CommunityService {
     userId: string | undefined,
     page: number,
     limit: number,
-    userToken?: string
+    userToken?: string,
+    search?: string
   ): Promise<AmityUserFeedResponse & { pagination?: { page: number; limit: number; total: number; totalPages: number } }> {
     let token = userToken;
 
@@ -27,6 +28,7 @@ export class CommunityService {
       page,
       limit,
       userAccessToken: token,
+      search,
     });
 
     if (!response.success) {

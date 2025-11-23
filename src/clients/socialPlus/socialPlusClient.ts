@@ -29,6 +29,7 @@ export interface GetUserFeedParams {
   page?: number;
   limit?: number;
   userAccessToken?: string;
+  search?: string;
 }
 
 class SocialPlusClient {
@@ -347,6 +348,9 @@ class SocialPlusClient {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search && params.search.trim() !== '') {
+      queryParams.append('search', params.search.trim());
+    }
 
     if (!this.apiKey) {
       return {
