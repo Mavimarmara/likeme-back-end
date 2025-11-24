@@ -92,3 +92,53 @@ export const getChannels = async (req: AuthenticatedRequest, res: Response): Pro
     handleError(res, error, 'obter channels');
   }
 };
+
+export const addCommentReaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { commentId } = req.params;
+    const { reactionName } = req.body;
+
+    if (!commentId) {
+      sendError(res, 'commentId é obrigatório', 400);
+      return;
+    }
+
+    const reaction = reactionName || 'like';
+    const result = await communityService.addCommentReaction(userId, commentId, reaction);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao adicionar reação ao comentário', 400);
+      return;
+    }
+
+    sendSuccess(res, result, result.message || 'Reação adicionada com sucesso');
+  } catch (error) {
+    handleError(res, error, 'adicionar reação ao comentário');
+  }
+};
+
+export const removeCommentReaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { commentId } = req.params;
+    const { reactionName } = req.body;
+
+    if (!commentId) {
+      sendError(res, 'commentId é obrigatório', 400);
+      return;
+    }
+
+    const reaction = reactionName || 'like';
+    const result = await communityService.removeCommentReaction(userId, commentId, reaction);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao remover reação do comentário', 400);
+      return;
+    }
+
+    sendSuccess(res, result, result.message || 'Reação removida com sucesso');
+  } catch (error) {
+    handleError(res, error, 'remover reação do comentário');
+  }
+};

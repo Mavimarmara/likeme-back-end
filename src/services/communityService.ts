@@ -1,4 +1,4 @@
-import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel, AmityReactionResponse } from '@/types/amity';
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
 import { userTokenService } from './userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
@@ -218,14 +218,18 @@ export class CommunityService {
           where: { id: userId },
           select: { 
             socialPlusUserId: true,
-            firstName: true,
-            lastName: true,
+            person: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         });
         
         if (user?.socialPlusUserId) {
-          const displayName = user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
+          const displayName = user.person?.firstName && user.person?.lastName 
+            ? `${user.person.firstName} ${user.person.lastName}` 
             : user.socialPlusUserId;
           await loginToAmity(user.socialPlusUserId, displayName);
         }
@@ -240,7 +244,7 @@ export class CommunityService {
       const { ChannelRepository } = amityModule;
 
       // Preparar parâmetros de filtro
-      const params: { types?: string[] } = {};
+      const params: { types?: ('conversation' | 'broadcast' | 'live' | 'community')[] } = {};
       if (types && types.length > 0) {
         params.types = types;
       }
@@ -319,6 +323,140 @@ export class CommunityService {
     } catch (error) {
       console.error('[CommunityService] Erro ao buscar channels:', error);
       throw error;
+    }
+  }
+
+  async addCommentReaction(
+    userId: string | undefined,
+    commentId: string,
+    reactionName: string = 'like'
+  ): Promise<AmityReactionResponse> {
+    try {
+      // Verificar se o SDK do Amity está disponível
+      if (!isAmityReady()) {
+        throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
+      }
+
+      // Garantir que o usuário está logado no SDK
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { 
+            socialPlusUserId: true,
+            person: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        });
+        
+        if (user?.socialPlusUserId) {
+          const displayName = user.person?.firstName && user.person?.lastName 
+            ? `${user.person.firstName} ${user.person.lastName}` 
+            : user.socialPlusUserId;
+          await loginToAmity(user.socialPlusUserId, displayName);
+        }
+      }
+
+      // Dynamic import do SDK do Amity
+      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
+      if (!amityModule) {
+        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
+      }
+
+      const { ReactionRepository } = amityModule;
+
+      // Adicionar reação ao comentário
+      // ReactionRepository.addReaction(referenceType, referenceId, reactionName)
+      const success = await ReactionRepository.addReaction('comment', commentId, reactionName);
+
+      if (success) {
+        return {
+          success: true,
+          message: 'Reação adicionada com sucesso',
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Não foi possível adicionar a reação',
+        };
+      }
+    } catch (error) {
+      console.error('[CommunityService] Erro ao adicionar reação ao comentário:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  async removeCommentReaction(
+    userId: string | undefined,
+    commentId: string,
+    reactionName: string = 'like'
+  ): Promise<AmityReactionResponse> {
+    try {
+      // Verificar se o SDK do Amity está disponível
+      if (!isAmityReady()) {
+        throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
+      }
+
+      // Garantir que o usuário está logado no SDK
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { 
+            socialPlusUserId: true,
+            person: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        });
+        
+        if (user?.socialPlusUserId) {
+          const displayName = user.person?.firstName && user.person?.lastName 
+            ? `${user.person.firstName} ${user.person.lastName}` 
+            : user.socialPlusUserId;
+          await loginToAmity(user.socialPlusUserId, displayName);
+        }
+      }
+
+      // Dynamic import do SDK do Amity
+      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
+      if (!amityModule) {
+        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
+      }
+
+      const { ReactionRepository } = amityModule;
+
+      // Remover reação do comentário
+      // ReactionRepository.removeReaction(referenceType, referenceId, reactionName)
+      const success = await ReactionRepository.removeReaction('comment', commentId, reactionName);
+
+      if (success) {
+        return {
+          success: true,
+          message: 'Reação removida com sucesso',
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Não foi possível remover a reação',
+        };
+      }
+    } catch (error) {
+      console.error('[CommunityService] Erro ao remover reação do comentário:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
   }
 }

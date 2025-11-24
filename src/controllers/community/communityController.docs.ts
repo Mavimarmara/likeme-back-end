@@ -378,5 +378,110 @@
  *         description: Usuário não autenticado ou token inválido
  *       500:
  *         description: Erro ao processar voto
+ * /api/communities/comments/{commentId}/reactions:
+ *   post:
+ *     summary: Adicionar reação a comentário (SDK)
+ *     description: Adiciona uma reação a um comentário usando o SDK do Amity (ReactionRepository.addReaction). Requer token de autenticação do usuário e que o SDK do Amity esteja inicializado.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do comentário
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reactionName:
+ *                 type: string
+ *                 default: like
+ *                 description: Nome da reação (padrão: "like")
+ *                 example: like
+ *     responses:
+ *       200:
+ *         description: Reação adicionada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     success:
+ *                       type: boolean
+ *                     message:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Erro na requisição (commentId inválido ou erro ao adicionar reação)
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       500:
+ *         description: SDK do Amity não está inicializado ou erro ao processar reação
+ *   delete:
+ *     summary: Remover reação de comentário (SDK)
+ *     description: Remove uma reação de um comentário usando o SDK do Amity (ReactionRepository.removeReaction). Requer token de autenticação do usuário e que o SDK do Amity esteja inicializado.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do comentário
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reactionName:
+ *                 type: string
+ *                 default: like
+ *                 description: Nome da reação a ser removida (padrão: "like")
+ *                 example: like
+ *     responses:
+ *       200:
+ *         description: Reação removida com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     success:
+ *                       type: boolean
+ *                     message:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Erro na requisição (commentId inválido ou erro ao remover reação)
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       500:
+ *         description: SDK do Amity não está inicializado ou erro ao processar reação
  */
 

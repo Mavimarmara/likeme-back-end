@@ -306,6 +306,23 @@ export interface AmityChannelsResponse {
   error?: Error | null;
 }
 
+export interface AmityReactor {
+  userId?: string;
+  userPublicId?: string;
+  userInternalId?: string;
+  displayName?: string;
+  avatarFileId?: string;
+  reactionName?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+export interface AmityReactionResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
 
 
 
