@@ -2,7 +2,7 @@ import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityC
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
 import { userTokenService } from './userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
-import { getAmityClient, isAmityReady, loginToAmity } from '@/utils/amityClient';
+import { getAmityClient, isAmityReady, loginToAmity, initializeAmityClient } from '@/utils/amityClient';
 import prisma from '@/config/database';
 
 export interface AddCommunitiesResult {
@@ -10,6 +10,20 @@ export interface AddCommunitiesResult {
   failed: number;
   errors: string[];
 }
+
+const ensureAmityClientReady = async (): Promise<void> => {
+  if (!isAmityReady()) {
+    try {
+      await initializeAmityClient();
+    } catch (error) {
+      console.error('[Amity] Erro ao inicializar cliente:', error);
+    }
+  }
+
+  if (!isAmityReady()) {
+    throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
+  }
+};
 
 export class CommunityService {
   async getUserFeed(
@@ -207,10 +221,7 @@ export class CommunityService {
     types?: ('conversation' | 'broadcast' | 'live' | 'community')[]
   ): Promise<AmityChannelsResponse> {
     try {
-      // Verificar se o SDK do Amity está disponível
-      if (!isAmityReady()) {
-        throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
-      }
+      await ensureAmityClientReady();
 
       // Garantir que o usuário está logado no SDK
       if (userId) {
@@ -332,10 +343,7 @@ export class CommunityService {
     reactionName: string = 'like'
   ): Promise<AmityReactionResponse> {
     try {
-      // Verificar se o SDK do Amity está disponível
-      if (!isAmityReady()) {
-        throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
-      }
+      await ensureAmityClientReady();
 
       // Garantir que o usuário está logado no SDK
       if (userId) {
@@ -399,10 +407,7 @@ export class CommunityService {
     reactionName: string = 'like'
   ): Promise<AmityReactionResponse> {
     try {
-      // Verificar se o SDK do Amity está disponível
-      if (!isAmityReady()) {
-        throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
-      }
+      await ensureAmityClientReady();
 
       // Garantir que o usuário está logado no SDK
       if (userId) {
