@@ -95,68 +95,67 @@ export const groupPollOptions = async (
             const pollResponse = await socialPlusClient.getPoll(firstOptionPollId, userToken);
             console.log('[groupPollOptions] Poll response:', JSON.stringify(pollResponse));
             if (pollResponse.success && pollResponse.data) {
-              const pollData = pollResponse.data as unknown;
-              let poll: AmityPoll | undefined;
+              const pollData = pollResponse.data as { polls?: AmityPoll[] };
               
-              if (pollData && typeof pollData === 'object') {
-                if ('polls' in pollData && Array.isArray((pollData as { polls?: unknown[] }).polls)) {
-                  const polls = (pollData as { polls: AmityPoll[] }).polls;
-                  if (polls && polls.length > 0) {
-                    poll = polls[0];
-                  }
-                } else if ('data' in pollData && pollData.data && typeof pollData.data === 'object') {
-                  poll = pollData.data as AmityPoll;
-                } else if ('poll' in pollData && pollData.poll && typeof pollData.poll === 'object') {
-                  poll = pollData.poll as AmityPoll;
-                } else {
-                  poll = pollData as AmityPoll;
-                }
-              }
-              
-              if (poll && poll.answers && poll.answers.length > 0) {
-                console.log('[groupPollOptions] Dados da poll buscados:', {
-                  pollId: firstOptionPollId,
-                  question: poll.question,
-                  answersCount: poll.answers.length,
-                  answers: poll.answers.map(ans => ({ id: ans.id, data: ans.data, voteCount: ans.voteCount })),
-                });
-
-                const enrichedOptions = sortedOptions.map((opt) => {
-                  const optId = opt.postId || opt._id;
-                  let pollAnswer = poll!.answers!.find(ans => ans.id === optId);
-                  
-                  if (!pollAnswer) {
-                    const optIndex = sortedOptions.indexOf(opt);
-                    pollAnswer = poll!.answers![optIndex];
-                  }
-                  
-                  if (pollAnswer && pollAnswer.data) {
-                    return {
-                      ...opt,
-                      data: {
-                        ...opt.data,
-                        text: pollAnswer.data,
-                      },
-                      reactionsCount: pollAnswer.voteCount || opt.reactionsCount || 0,
-                    };
-                  }
-                  return opt;
-                });
-                
-                console.log('[groupPollOptions] Poll options enriquecidas:', {
-                  postId: post.postId,
-                  enrichedOptions: enrichedOptions.map(opt => ({
-                    id: opt.postId || opt._id,
-                    text: opt.data?.text,
-                    sequenceNumber: opt.sequenceNumber,
-                  })),
-                });
-                
+              if (!pollData.polls || !Array.isArray(pollData.polls) || pollData.polls.length === 0) {
+                console.warn('[groupPollOptions] Poll não encontrada na estrutura esperada');
                 return {
                   ...post,
-                  pollOptions: enrichedOptions.length > 0 ? enrichedOptions : undefined,
+                  pollOptions: sortedOptions.length > 0 ? sortedOptions : undefined,
                 };
               }
+              
+              const poll = pollData.polls[0];
+              
+              if (!poll.answers || !Array.isArray(poll.answers) || poll.answers.length === 0) {
+                console.warn('[groupPollOptions] Poll sem answers');
+                return {
+                  ...post,
+                  pollOptions: sortedOptions.length > 0 ? sortedOptions : undefined,
+                };
+              }
+              
+              const pollAnswers = poll.answers;
+              
+              console.log('[groupPollOptions] Dados da poll buscados:', {
+                pollId: firstOptionPollId,
+                question: poll.question,
+                answersCount: pollAnswers.length,
+                answers: pollAnswers.map(ans => ({ id: ans.id, data: ans.data, voteCount: ans.voteCount })),
+              });
+
+              const enrichedOptions = sortedOptions.map((opt) => {
+                const optId = opt.postId || opt._id;
+                const pollAnswer = pollAnswers.find(ans => ans.id === optId);
+                
+                if (!pollAnswer || !pollAnswer.data) {
+                  console.warn(`[groupPollOptions] Answer não encontrada para option ${optId}`);
+                  return opt;
+                }
+                
+                return {
+                  ...opt,
+                  data: {
+                    ...opt.data,
+                    text: pollAnswer.data,
+                  },
+                  reactionsCount: pollAnswer.voteCount ?? 0,
+                };
+              });
+              
+              console.log('[groupPollOptions] Poll options enriquecidas:', {
+                postId: post.postId,
+                enrichedOptions: enrichedOptions.map(opt => ({
+                  id: opt.postId || opt._id,
+                  text: opt.data?.text,
+                  sequenceNumber: opt.sequenceNumber,
+                })),
+              });
+              
+              return {
+                ...post,
+                pollOptions: enrichedOptions.length > 0 ? enrichedOptions : undefined,
+              };
             }
           } catch (error) {
             console.error(`[groupPollOptions] Erro ao buscar poll ${firstOptionPollId}:`, error);
