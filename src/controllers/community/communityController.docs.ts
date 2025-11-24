@@ -206,6 +206,50 @@
  *         schema:
  *           type: string
  *         description: Termo de busca para filtrar posts nos campos de texto (data.text) e título (data.title). A busca é case-insensitive.
+ *       - in: query
+ *         name: postTypes
+ *         schema:
+ *           oneOf:
+ *             - type: string
+ *             - type: array
+ *               items:
+ *                 type: string
+ *         description: Lista de tipos de post (structureType/dataType) para filtrar. Aceita múltiplos valores separados por vírgula ou parâmetros repetidos.
+ *       - in: query
+ *         name: authorIds
+ *         schema:
+ *           oneOf:
+ *             - type: string
+ *             - type: array
+ *               items:
+ *                 type: string
+ *         description: Lista de IDs de autores (postedUserId) para filtrar. Aceita múltiplos valores separados por vírgula ou parâmetros repetidos.
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Retorna apenas posts com createdAt maior ou igual à data informada (ISO 8601).
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Retorna apenas posts com createdAt menor ou igual à data informada (ISO 8601).
+ *       - in: query
+ *         name: orderBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, updatedAt, reactionsCount]
+ *           default: createdAt
+ *         description: Campo utilizado para ordenação após os filtros locais.
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Direção da ordenação.
  *     responses:
  *       200:
  *         description: Feed do usuário obtido com sucesso

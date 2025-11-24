@@ -1,4 +1,4 @@
-import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel, AmityReactionResponse } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel, AmityReactionResponse, AmityPost } from '@/types/amity';
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
 import { userTokenService } from './userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
@@ -9,6 +9,17 @@ export interface AddCommunitiesResult {
   added: number;
   failed: number;
   errors: string[];
+}
+
+export type FeedOrderBy = 'createdAt' | 'updatedAt' | 'reactionsCount';
+
+export interface FeedFilterOptions {
+  postTypes?: string[];
+  authorIds?: string[];
+  startDate?: Date;
+  endDate?: Date;
+  orderBy?: FeedOrderBy;
+  order?: 'asc' | 'desc';
 }
 
 const ensureAmityClientReady = async (): Promise<void> => {
@@ -31,7 +42,8 @@ export class CommunityService {
     page: number,
     limit: number,
     userToken?: string,
-    search?: string
+    search?: string,
+    filters?: FeedFilterOptions
   ): Promise<AmityUserFeedResponse & { pagination?: { page: number; limit: number; total: number; totalPages: number } }> {
     let token = userToken;
 
@@ -85,6 +97,9 @@ export class CommunityService {
       filteredPosts = filterPostsBySearch(postsBeforeFilter, search);
       console.log(`[CommunityService] Busca aplicada: "${search}" - ${postsBeforeFilter.length} posts antes, ${filteredPosts.length} posts após filtro`);
     }
+
+    // Aplica filtros avançados
+    filteredPosts = applyFeedFilters(filteredPosts, filters);
     
     // Atualiza feedData com posts filtrados
     const filteredFeedData: AmityUserFeedData = {
@@ -435,4 +450,88 @@ export class CommunityService {
 }
 
 export const communityService = new CommunityService();
+
+const resolvePostType = (post: AmityPost): string | undefined => {
+  return (
+    post.structureType ||
+    post.dataType ||
+    (typeof post.data === 'object' && post.data && 'type' in post.data
+      ? String((post.data as { type?: unknown }).type)
+      : undefined)
+  )?.toLowerCase();
+};
+
+const parseDate = (value?: string): Date | undefined => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const applyFeedFilters = (
+  posts: AmityPost[] | undefined,
+  filters?: FeedFilterOptions
+): AmityPost[] | undefined => {
+  if (!posts || !filters) {
+    return posts;
+  }
+
+  let filtered = posts;
+
+  if (filters.postTypes && filters.postTypes.length > 0) {
+    const allowedTypes = filters.postTypes.map((type) => type.toLowerCase());
+    filtered = filtered.filter((post) => {
+      const postType = resolvePostType(post);
+      return postType ? allowedTypes.includes(postType) : false;
+    });
+  }
+
+  if (filters.authorIds && filters.authorIds.length > 0) {
+    const allowedAuthors = new Set(filters.authorIds);
+    filtered = filtered.filter((post) => {
+      return post.postedUserId ? allowedAuthors.has(post.postedUserId) : false;
+    });
+  }
+
+  if (filters.startDate) {
+    const startTime = filters.startDate.getTime();
+    filtered = filtered.filter((post) => {
+      const createdAt = parseDate(post.createdAt);
+      return createdAt ? createdAt.getTime() >= startTime : false;
+    });
+  }
+
+  if (filters.endDate) {
+    const endTime = filters.endDate.getTime();
+    filtered = filtered.filter((post) => {
+      const createdAt = parseDate(post.createdAt);
+      return createdAt ? createdAt.getTime() <= endTime : false;
+    });
+  }
+
+  if (filters.orderBy) {
+    const multiplier = filters.order === 'asc' ? 1 : -1;
+    const orderBy = filters.orderBy;
+    filtered = [...filtered].sort((a, b) => {
+      const getComparable = (post: AmityPost) => {
+        switch (orderBy) {
+          case 'updatedAt':
+            return parseDate(post.updatedAt)?.getTime() ?? 0;
+          case 'reactionsCount':
+            return post.reactionsCount ?? 0;
+          case 'createdAt':
+          default:
+            return parseDate(post.createdAt)?.getTime() ?? 0;
+        }
+      };
+
+      const aValue = getComparable(a);
+      const bValue = getComparable(b);
+
+      if (aValue === bValue) return 0;
+      return aValue > bValue ? multiplier : -multiplier;
+    });
+  }
+
+  return filtered;
+};
 
