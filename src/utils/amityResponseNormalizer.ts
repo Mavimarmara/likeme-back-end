@@ -1,20 +1,65 @@
 import { AmityUserFeedResponse, AmityUserFeedData, AmityPost, AmityPoll } from '@/types/amity';
 import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
 
+const createPollSignature = (post: AmityPost): string | null => {
+  if (post.structureType !== 'poll') {
+    return null;
+  }
+  
+  const question = post.data?.text || '';
+  const pollOptions = post.pollOptions || [];
+  
+  if (!question && pollOptions.length === 0) {
+    return null;
+  }
+  
+  const optionsText = pollOptions
+    .map(opt => opt.data?.text || '')
+    .filter(text => text !== '')
+    .sort()
+    .join('|');
+  
+  return `${question}::${optionsText}`;
+};
+
 export const deduplicatePosts = (posts: AmityPost[]): AmityPost[] => {
   const seenIds = new Set<string>();
-  return posts.filter((post) => {
+  const seenPollSignatures = new Set<string>();
+  
+  console.log(`[deduplicatePosts] Iniciando deduplicação de ${posts.length} posts`);
+  
+  const result = posts.filter((post) => {
     const id = post.postId || post._id;
-    if (!id) {
-      return true;
-    }
-    if (seenIds.has(id)) {
-      console.warn(`[deduplicatePosts] Post duplicado removido: ${id}`);
+    
+    if (id && seenIds.has(id)) {
+      console.warn(`[deduplicatePosts] Post duplicado removido por ID: ${id}`);
       return false;
     }
-    seenIds.add(id);
+    
+    if (post.structureType === 'poll') {
+      const signature = createPollSignature(post);
+      console.log(`[deduplicatePosts] Poll ${id} - signature: "${signature}"`);
+      
+      if (signature && seenPollSignatures.has(signature)) {
+        console.warn(`[deduplicatePosts] Poll duplicada removida por conteúdo: ${id} - "${post.data?.text}"`);
+        return false;
+      }
+      if (signature) {
+        seenPollSignatures.add(signature);
+        console.log(`[deduplicatePosts] Poll ${id} adicionada com signature: "${signature}"`);
+      }
+    }
+    
+    if (id) {
+      seenIds.add(id);
+    }
+    
     return true;
   });
+  
+  console.log(`[deduplicatePosts] Deduplicação concluída: ${posts.length} -> ${result.length} posts`);
+  
+  return result;
 };
 
 export const filterPostsBySearch = (posts: AmityPost[] | undefined, searchTerm?: string): AmityPost[] => {
