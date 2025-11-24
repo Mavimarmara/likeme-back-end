@@ -409,8 +409,24 @@ class SocialPlusClient {
       };
     }
 
-    return this.makeRequest<unknown>(
+    const putResponse = await this.makeRequest<unknown>(
       'PUT',
+      `/v3/polls/${pollId}/votes`,
+      { answerIds },
+      {
+        useApiKey: false,
+        bearerToken: userAccessToken,
+      }
+    );
+
+    if (putResponse.success) {
+      return putResponse;
+    }
+
+    console.warn(`[SocialPlus] PUT falhou para votePoll, tentando POST: ${putResponse.error}`);
+    
+    return this.makeRequest<unknown>(
+      'POST',
       `/v3/polls/${pollId}/votes`,
       { answerIds },
       {
