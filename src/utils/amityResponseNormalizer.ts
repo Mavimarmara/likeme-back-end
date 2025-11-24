@@ -52,6 +52,18 @@ export const groupPollOptions = (
         childrenMap.set(parentId, []);
       }
       childrenMap.get(parentId)!.push(child);
+      
+      console.log('[groupPollOptions] PostChild encontrado:', {
+        childId: child.postId || child._id,
+        parentId,
+        dataType: child.dataType,
+        data: child.data,
+        dataText: child.data?.text,
+        dataTitle: child.data?.title,
+        sequenceNumber: child.sequenceNumber,
+        reactionsCount: child.reactionsCount,
+        fullChild: JSON.stringify(child, null, 2),
+      });
     }
   });
 
@@ -67,10 +79,33 @@ export const groupPollOptions = (
     if (post.structureType === 'poll' && post.postId) {
       const pollOptions = childrenMap.get(post.postId) || [];
       
+      console.log('[groupPollOptions] Processando poll post:', {
+        postId: post.postId,
+        pollOptionsCount: pollOptions.length,
+        pollOptions: pollOptions.map(opt => ({
+          id: opt.postId || opt._id,
+          dataType: opt.dataType,
+          data: opt.data,
+          dataText: opt.data?.text,
+          dataTitle: opt.data?.title,
+          sequenceNumber: opt.sequenceNumber,
+        })),
+      });
+      
       const sortedOptions = [...pollOptions].sort((a, b) => {
         const seqA = a.sequenceNumber ?? 0;
         const seqB = b.sequenceNumber ?? 0;
         return seqA - seqB;
+      });
+      
+      console.log('[groupPollOptions] Poll options ordenadas:', {
+        postId: post.postId,
+        sortedOptions: sortedOptions.map(opt => ({
+          id: opt.postId || opt._id,
+          text: opt.data?.text,
+          title: opt.data?.title,
+          sequenceNumber: opt.sequenceNumber,
+        })),
       });
       
       return {

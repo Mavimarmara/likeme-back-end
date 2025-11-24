@@ -45,6 +45,23 @@ export class CommunityService {
     
     const { feedData, status } = normalizeAmityResponse(apiResponse);
     
+    console.log('[CommunityService] postChildren recebidos da API:', JSON.stringify(feedData.postChildren, null, 2));
+    console.log(`[CommunityService] Total de postChildren: ${feedData.postChildren?.length || 0}`);
+    
+    if (feedData.postChildren && feedData.postChildren.length > 0) {
+      feedData.postChildren.forEach((child, index) => {
+        console.log(`[CommunityService] postChildren[${index}]:`, {
+          id: child.postId || child._id,
+          parentPostId: child.parentPostId,
+          dataType: child.dataType,
+          data: child.data,
+          dataText: child.data?.text,
+          dataTitle: child.data?.title,
+          sequenceNumber: child.sequenceNumber,
+        });
+      });
+    }
+    
     // Aplica filtro de busca nos campos de texto e título se search for fornecido
     let filteredPosts = feedData.posts;
     if (search && search.trim() !== '') {
