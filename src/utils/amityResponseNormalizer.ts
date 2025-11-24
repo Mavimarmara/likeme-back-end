@@ -99,7 +99,12 @@ export const groupPollOptions = async (
               let poll: AmityPoll | undefined;
               
               if (pollData && typeof pollData === 'object') {
-                if ('data' in pollData && pollData.data && typeof pollData.data === 'object') {
+                if ('polls' in pollData && Array.isArray((pollData as { polls?: unknown[] }).polls)) {
+                  const polls = (pollData as { polls: AmityPoll[] }).polls;
+                  if (polls && polls.length > 0) {
+                    poll = polls[0];
+                  }
+                } else if ('data' in pollData && pollData.data && typeof pollData.data === 'object') {
                   poll = pollData.data as AmityPoll;
                 } else if ('poll' in pollData && pollData.poll && typeof pollData.poll === 'object') {
                   poll = pollData.poll as AmityPoll;
@@ -108,24 +113,31 @@ export const groupPollOptions = async (
                 }
               }
               
-              if (poll && poll.options && poll.options.length > 0) {
+              if (poll && poll.answers && poll.answers.length > 0) {
                 console.log('[groupPollOptions] Dados da poll buscados:', {
                   pollId: firstOptionPollId,
                   question: poll.question,
-                  optionsCount: poll.options.length,
-                  options: poll.options.map(opt => ({ text: opt.text, voteCount: opt.voteCount })),
+                  answersCount: poll.answers.length,
+                  answers: poll.answers.map(ans => ({ id: ans.id, data: ans.data, voteCount: ans.voteCount })),
                 });
 
-                const enrichedOptions = sortedOptions.map((opt, index) => {
-                  const pollOption = poll!.options![index];
+                const enrichedOptions = sortedOptions.map((opt) => {
+                  const optId = opt.postId || opt._id;
+                  let pollAnswer = poll!.answers!.find(ans => ans.id === optId);
                   
-                  if (pollOption && pollOption.text) {
+                  if (!pollAnswer) {
+                    const optIndex = sortedOptions.indexOf(opt);
+                    pollAnswer = poll!.answers![optIndex];
+                  }
+                  
+                  if (pollAnswer && pollAnswer.data) {
                     return {
                       ...opt,
                       data: {
                         ...opt.data,
-                        text: pollOption.text,
+                        text: pollAnswer.data,
                       },
+                      reactionsCount: pollAnswer.voteCount || opt.reactionsCount || 0,
                     };
                   }
                   return opt;

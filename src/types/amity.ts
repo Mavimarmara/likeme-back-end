@@ -7,6 +7,15 @@ export interface AmityVideoFileId {
   high?: string;
 }
 
+export interface AmityPollAnswer {
+  id?: string;
+  data?: string;
+  dataType?: string;
+  voteCount?: number;
+  isVotedByUser?: boolean;
+  [key: string]: unknown;
+}
+
 export interface AmityPollOption {
   optionId?: string;
   text?: string;
@@ -18,12 +27,17 @@ export interface AmityPollOption {
 export interface AmityPoll {
   pollId?: string;
   question?: string;
+  title?: string;
   options?: AmityPollOption[];
+  answers?: AmityPollAnswer[];
+  answerType?: string;
   totalVoteCount?: number;
   totalVotes?: number;
   endedAt?: string;
   endDate?: string;
+  closedAt?: string;
   isFinished?: boolean;
+  status?: string;
   [key: string]: unknown;
 }
 
