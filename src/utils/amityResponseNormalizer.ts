@@ -135,6 +135,7 @@ export const groupPollOptions = async (
                 const pollAnswer = pollAnswers.find(ans => ans.id === optId);
                 
                 if (pollAnswer && pollAnswer.data) {
+                  const answerIndex = pollAnswers.indexOf(pollAnswer);
                   enrichedOptionsMap.set(optId, {
                     ...opt,
                     data: {
@@ -142,6 +143,7 @@ export const groupPollOptions = async (
                       text: pollAnswer.data,
                     },
                     reactionsCount: pollAnswer.voteCount ?? 0,
+                    sequenceNumber: answerIndex,
                   });
                 } else {
                   enrichedOptionsMap.set(optId, opt);
@@ -168,14 +170,49 @@ export const groupPollOptions = async (
                     reactionsCount: pollAnswer.voteCount ?? 0,
                     sequenceNumber: index,
                   } as AmityPost);
+                } else if (existingOption.sequenceNumber === undefined || existingOption.sequenceNumber === null) {
+                  existingOption.sequenceNumber = index;
                 }
               });
               
-              const enrichedOptions = Array.from(enrichedOptionsMap.values()).sort((a, b) => {
-                const seqA = a.sequenceNumber ?? 0;
-                const seqB = b.sequenceNumber ?? 0;
-                return seqA - seqB;
-              });
+              const enrichedOptions = pollAnswers
+                .map((pollAnswer, index) => {
+                  if (!pollAnswer.id || !pollAnswer.data) {
+                    return null;
+                  }
+                  
+                  let option = enrichedOptionsMap.get(pollAnswer.id);
+                  
+                  if (!option) {
+                    option = {
+                      postId: pollAnswer.id,
+                      _id: pollAnswer.id,
+                      parentPostId: post.postId,
+                      structureType: 'poll',
+                      dataType: pollAnswer.dataType || 'text',
+                      data: {
+                        text: pollAnswer.data,
+                        pollId: firstOptionPollId,
+                      },
+                      reactionsCount: pollAnswer.voteCount ?? 0,
+                      sequenceNumber: index,
+                    } as AmityPost;
+                  } else {
+                    option.sequenceNumber = index;
+                    if (!option.data) {
+                      option.data = {};
+                    }
+                    if (!option.data.text) {
+                      option.data.text = pollAnswer.data;
+                    }
+                    if (option.reactionsCount === undefined || option.reactionsCount === null) {
+                      option.reactionsCount = pollAnswer.voteCount ?? 0;
+                    }
+                  }
+                  
+                  return option;
+                })
+                .filter((opt): opt is AmityPost => opt !== null && opt !== undefined);
               
               console.log('[groupPollOptions] Poll options enriquecidas:', {
                 postId: post.postId,
