@@ -93,6 +93,7 @@ export const groupPollOptions = async (
         if (firstOptionPollId) {
           try {
             const pollResponse = await socialPlusClient.getPoll(firstOptionPollId, userToken);
+            console.log('[groupPollOptions] Poll response:', JSON.stringify(pollResponse));
             if (pollResponse.success && pollResponse.data) {
               const pollData = pollResponse.data as unknown;
               let poll: AmityPoll | undefined;
