@@ -1,6 +1,22 @@
 import { AmityUserFeedResponse, AmityUserFeedData, AmityPost, AmityPoll } from '@/types/amity';
 import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
 
+export const deduplicatePosts = (posts: AmityPost[]): AmityPost[] => {
+  const seenIds = new Set<string>();
+  return posts.filter((post) => {
+    const id = post.postId || post._id;
+    if (!id) {
+      return true;
+    }
+    if (seenIds.has(id)) {
+      console.warn(`[deduplicatePosts] Post duplicado removido: ${id}`);
+      return false;
+    }
+    seenIds.add(id);
+    return true;
+  });
+};
+
 export const filterPostsBySearch = (posts: AmityPost[] | undefined, searchTerm?: string): AmityPost[] => {
   if (!posts || !searchTerm || searchTerm.trim() === '') {
     return posts || [];
@@ -45,9 +61,10 @@ export const groupPollOptions = async (
   postChildren: AmityPost[],
   userToken?: string
 ): Promise<AmityPost[]> => {
+  const uniquePostChildren = deduplicatePosts(postChildren);
   const childrenMap = new Map<string, AmityPost[]>();
   
-  postChildren.forEach((child) => {
+  uniquePostChildren.forEach((child) => {
     const parentId = child.parentPostId;
     if (parentId) {
       if (!childrenMap.has(parentId)) {
@@ -77,8 +94,10 @@ export const groupPollOptions = async (
     });
   });
 
+  const uniquePosts = deduplicatePosts(posts);
+  
   const postsWithPollOptions = await Promise.all(
-    posts.map(async (post) => {
+    uniquePosts.map(async (post) => {
       if (post.structureType === 'poll' && post.postId) {
         const pollOptions = childrenMap.get(post.postId) || [];
         
@@ -214,10 +233,12 @@ export const groupPollOptions = async (
                 })
                 .filter((opt): opt is AmityPost => opt !== null && opt !== undefined);
               
+              const deduplicatedOptions = deduplicatePosts(enrichedOptions);
+              
               console.log('[groupPollOptions] Poll options enriquecidas:', {
                 postId: post.postId,
-                totalOptions: enrichedOptions.length,
-                enrichedOptions: enrichedOptions.map(opt => ({
+                totalOptions: deduplicatedOptions.length,
+                enrichedOptions: deduplicatedOptions.map(opt => ({
                   id: opt.postId || opt._id,
                   text: opt.data?.text,
                   sequenceNumber: opt.sequenceNumber,
@@ -227,7 +248,7 @@ export const groupPollOptions = async (
               
               return {
                 ...post,
-                pollOptions: enrichedOptions.length > 0 ? enrichedOptions : undefined,
+                pollOptions: deduplicatedOptions.length > 0 ? deduplicatedOptions : undefined,
               };
             }
           } catch (error) {
@@ -260,11 +281,12 @@ export const buildAmityFeedResponse = async (
   const paging = feedData.paging ?? {};
 
   const postsWithPollOptions = await groupPollOptions(posts, postChildren, userToken);
+  const deduplicatedPosts = deduplicatePosts(postsWithPollOptions);
 
   return {
     status,
     data: {
-      posts: postsWithPollOptions,
+      posts: deduplicatedPosts,
       postChildren: [],
       comments: feedData.comments ?? [],
       users: feedData.users ?? [],
