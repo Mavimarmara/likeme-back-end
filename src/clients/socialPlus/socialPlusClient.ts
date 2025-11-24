@@ -436,6 +436,66 @@ class SocialPlusClient {
     );
   }
 
+  async addCommentReaction(
+    commentId: string,
+    reactionName: string,
+    userAccessToken: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userAccessToken) {
+      return {
+        success: false,
+        error: 'Token de autenticação do usuário é obrigatório para reagir a comentários.',
+      };
+    }
+
+    if (!reactionName || reactionName.trim() === '') {
+      return {
+        success: false,
+        error: 'reactionName é obrigatório.',
+      };
+    }
+
+    return this.makeRequest<unknown>(
+      'POST',
+      `/v3/comments/${commentId}/reactions`,
+      { reaction: reactionName },
+      {
+        useApiKey: false,
+        bearerToken: userAccessToken,
+      }
+    );
+  }
+
+  async removeCommentReaction(
+    commentId: string,
+    reactionName: string,
+    userAccessToken: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userAccessToken) {
+      return {
+        success: false,
+        error: 'Token de autenticação do usuário é obrigatório para remover reações.',
+      };
+    }
+
+    if (!reactionName || reactionName.trim() === '') {
+      return {
+        success: false,
+        error: 'reactionName é obrigatório.',
+      };
+    }
+
+    return this.makeRequest<unknown>(
+      'DELETE',
+      `/v3/comments/${commentId}/reactions/${reactionName}`,
+      undefined,
+      {
+        useApiKey: false,
+        bearerToken: userAccessToken,
+      }
+    );
+  }
+
   async getUserFeed(params?: GetUserFeedParams): Promise<SocialPlusResponse<unknown>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());

@@ -343,54 +343,38 @@ export class CommunityService {
     reactionName: string = 'like'
   ): Promise<AmityReactionResponse> {
     try {
-      await ensureAmityClientReady();
-
-      // Garantir que o usuário está logado no SDK
-      if (userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { 
-            socialPlusUserId: true,
-            person: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        });
-        
-        if (user?.socialPlusUserId) {
-          const displayName = user.person?.firstName && user.person?.lastName 
-            ? `${user.person.firstName} ${user.person.lastName}` 
-            : user.socialPlusUserId;
-          await loginToAmity(user.socialPlusUserId, displayName);
-        }
-      }
-
-      // Dynamic import do SDK do Amity
-      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
-      if (!amityModule) {
-        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
-      }
-
-      const { ReactionRepository } = amityModule;
-
-      // Adicionar reação ao comentário
-      // ReactionRepository.addReaction(referenceType, referenceId, reactionName)
-      const success = await ReactionRepository.addReaction('comment', commentId, reactionName);
-
-      if (success) {
-        return {
-          success: true,
-          message: 'Reação adicionada com sucesso',
-        };
-      } else {
+      if (!userId) {
         return {
           success: false,
-          error: 'Não foi possível adicionar a reação',
+          error: 'Usuário não autenticado. Faça login para reagir a comentários.',
         };
       }
+
+      const tokenResult = await userTokenService.getToken(userId, true);
+      if (!tokenResult.token) {
+        return {
+          success: false,
+          error: tokenResult.error || 'Não foi possível obter o token do usuário.',
+        };
+      }
+
+      const response = await socialPlusClient.addCommentReaction(
+        commentId,
+        reactionName,
+        tokenResult.token
+      );
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error || 'Erro ao adicionar reação ao comentário',
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Reação adicionada com sucesso',
+      };
     } catch (error) {
       console.error('[CommunityService] Erro ao adicionar reação ao comentário:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -407,54 +391,38 @@ export class CommunityService {
     reactionName: string = 'like'
   ): Promise<AmityReactionResponse> {
     try {
-      await ensureAmityClientReady();
-
-      // Garantir que o usuário está logado no SDK
-      if (userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { 
-            socialPlusUserId: true,
-            person: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        });
-        
-        if (user?.socialPlusUserId) {
-          const displayName = user.person?.firstName && user.person?.lastName 
-            ? `${user.person.firstName} ${user.person.lastName}` 
-            : user.socialPlusUserId;
-          await loginToAmity(user.socialPlusUserId, displayName);
-        }
-      }
-
-      // Dynamic import do SDK do Amity
-      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
-      if (!amityModule) {
-        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
-      }
-
-      const { ReactionRepository } = amityModule;
-
-      // Remover reação do comentário
-      // ReactionRepository.removeReaction(referenceType, referenceId, reactionName)
-      const success = await ReactionRepository.removeReaction('comment', commentId, reactionName);
-
-      if (success) {
-        return {
-          success: true,
-          message: 'Reação removida com sucesso',
-        };
-      } else {
+      if (!userId) {
         return {
           success: false,
-          error: 'Não foi possível remover a reação',
+          error: 'Usuário não autenticado. Faça login para remover reações.',
         };
       }
+
+      const tokenResult = await userTokenService.getToken(userId, true);
+      if (!tokenResult.token) {
+        return {
+          success: false,
+          error: tokenResult.error || 'Não foi possível obter o token do usuário.',
+        };
+      }
+
+      const response = await socialPlusClient.removeCommentReaction(
+        commentId,
+        reactionName,
+        tokenResult.token
+      );
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error || 'Erro ao remover reação do comentário',
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Reação removida com sucesso',
+      };
     } catch (error) {
       console.error('[CommunityService] Erro ao remover reação do comentário:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';

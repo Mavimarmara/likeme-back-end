@@ -380,8 +380,8 @@
  *         description: Erro ao processar voto
  * /api/communities/comments/{commentId}/reactions:
  *   post:
- *     summary: Adicionar reação a comentário (SDK)
- *     description: Adiciona uma reação a um comentário usando o SDK do Amity (ReactionRepository.addReaction). Requer token de autenticação do usuário e que o SDK do Amity esteja inicializado.
+ *     summary: Adicionar reação a comentário (REST)
+ *     description: Adiciona uma reação a um comentário usando a API REST do Amity (/v3/comments/{commentId}/reactions). Requer token de autenticação do usuário gerado via social.plus.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
@@ -426,14 +426,14 @@
  *                 message:
  *                   type: string
  *       400:
- *         description: Erro na requisição (commentId inválido ou erro ao adicionar reação)
+ *         description: Erro na requisição (commentId inválido, usuário não sincronizado ou reação já aplicada)
  *       401:
  *         description: Usuário não autenticado ou token inválido
  *       500:
- *         description: SDK do Amity não está inicializado ou erro ao processar reação
+ *         description: Erro interno ao comunicar com a API REST do Amity
  *   delete:
- *     summary: Remover reação de comentário (SDK)
- *     description: Remove uma reação de um comentário usando o SDK do Amity (ReactionRepository.removeReaction). Requer token de autenticação do usuário e que o SDK do Amity esteja inicializado.
+ *     summary: Remover reação de comentário (REST)
+ *     description: Remove uma reação de um comentário usando a API REST do Amity (/v3/comments/{commentId}/reactions/{reactionName}). Requer token de autenticação do usuário gerado via social.plus.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
@@ -478,10 +478,10 @@
  *                 message:
  *                   type: string
  *       400:
- *         description: Erro na requisição (commentId inválido ou erro ao remover reação)
+ *         description: Erro na requisição (commentId inválido, usuário não sincronizado ou reação inexistente)
  *       401:
  *         description: Usuário não autenticado ou token inválido
  *       500:
- *         description: SDK do Amity não está inicializado ou erro ao processar reação
+ *         description: Erro interno ao comunicar com a API REST do Amity
  */
 
