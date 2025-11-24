@@ -79,7 +79,7 @@ export class CommunityService {
     console.log('[CommunityService] feedData.posts (após normalização e filtro):', JSON.stringify(filteredFeedData.posts, null, 2));
     console.log(`[CommunityService] Total de posts (após normalização e filtro): ${filteredFeedData.posts?.length || 0}`);
     
-    return buildAmityFeedResponse(filteredFeedData, status, page, limit);
+    return buildAmityFeedResponse(filteredFeedData, status, page, limit, token);
   }
 
   async addUserToAllCommunities(

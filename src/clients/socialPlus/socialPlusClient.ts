@@ -344,6 +344,56 @@ class SocialPlusClient {
     );
   }
 
+  async getPoll(pollId: string, userAccessToken?: string): Promise<SocialPlusResponse<unknown>> {
+    if (!this.apiKey) {
+      return {
+        success: false,
+        error: 'Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.',
+      };
+    }
+
+    if (userAccessToken) {
+      return this.makeRequest<unknown>(
+        'GET',
+        `/v4/polls/${pollId}`,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: userAccessToken,
+        }
+      );
+    }
+
+    let token: string | null = null;
+    try {
+      token = await this.getServerToken();
+    } catch (error) {
+      console.warn('Erro ao obter token de servidor para getPoll:', error);
+      token = null;
+    }
+    
+    if (token) {
+      return this.makeRequest<unknown>(
+        'GET',
+        `/v4/polls/${pollId}`,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: token,
+        }
+      );
+    }
+
+    return this.makeRequest<unknown>(
+      'GET',
+      `/v4/polls/${pollId}`,
+      undefined,
+      {
+        useApiKey: true,
+      }
+    );
+  }
+
   async getUserFeed(params?: GetUserFeedParams): Promise<SocialPlusResponse<unknown>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());

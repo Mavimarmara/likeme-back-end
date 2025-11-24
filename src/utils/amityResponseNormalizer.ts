@@ -1,4 +1,5 @@
-import { AmityUserFeedResponse, AmityUserFeedData, AmityPost } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData, AmityPost, AmityPoll } from '@/types/amity';
+import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
 
 export const filterPostsBySearch = (posts: AmityPost[] | undefined, searchTerm?: string): AmityPost[] => {
   if (!posts || !searchTerm || searchTerm.trim() === '') {
@@ -39,10 +40,11 @@ export const normalizeAmityResponse = (
   return { feedData: {}, status: 'ok' };
 };
 
-export const groupPollOptions = (
+export const groupPollOptions = async (
   posts: AmityPost[],
-  postChildren: AmityPost[]
-): AmityPost[] => {
+  postChildren: AmityPost[],
+  userToken?: string
+): Promise<AmityPost[]> => {
   const childrenMap = new Map<string, AmityPost[]>();
   
   postChildren.forEach((child) => {
@@ -75,60 +77,104 @@ export const groupPollOptions = (
     });
   });
 
-  return posts.map((post) => {
-    if (post.structureType === 'poll' && post.postId) {
-      const pollOptions = childrenMap.get(post.postId) || [];
+  const postsWithPollOptions = await Promise.all(
+    posts.map(async (post) => {
+      if (post.structureType === 'poll' && post.postId) {
+        const pollOptions = childrenMap.get(post.postId) || [];
+        
+        const sortedOptions = [...pollOptions].sort((a, b) => {
+          const seqA = a.sequenceNumber ?? 0;
+          const seqB = b.sequenceNumber ?? 0;
+          return seqA - seqB;
+        });
+
+        const firstOptionPollId = sortedOptions[0]?.data?.pollId;
+        
+        if (firstOptionPollId) {
+          try {
+            const pollResponse = await socialPlusClient.getPoll(firstOptionPollId, userToken);
+            if (pollResponse.success && pollResponse.data) {
+              const pollData = pollResponse.data as unknown;
+              let poll: AmityPoll | undefined;
+              
+              if (pollData && typeof pollData === 'object') {
+                if ('data' in pollData && pollData.data && typeof pollData.data === 'object') {
+                  poll = pollData.data as AmityPoll;
+                } else if ('poll' in pollData && pollData.poll && typeof pollData.poll === 'object') {
+                  poll = pollData.poll as AmityPoll;
+                } else {
+                  poll = pollData as AmityPoll;
+                }
+              }
+              
+              if (poll && poll.options && poll.options.length > 0) {
+                console.log('[groupPollOptions] Dados da poll buscados:', {
+                  pollId: firstOptionPollId,
+                  question: poll.question,
+                  optionsCount: poll.options.length,
+                  options: poll.options.map(opt => ({ text: opt.text, voteCount: opt.voteCount })),
+                });
+
+                const enrichedOptions = sortedOptions.map((opt, index) => {
+                  const pollOption = poll!.options![index];
+                  
+                  if (pollOption && pollOption.text) {
+                    return {
+                      ...opt,
+                      data: {
+                        ...opt.data,
+                        text: pollOption.text,
+                      },
+                    };
+                  }
+                  return opt;
+                });
+                
+                console.log('[groupPollOptions] Poll options enriquecidas:', {
+                  postId: post.postId,
+                  enrichedOptions: enrichedOptions.map(opt => ({
+                    id: opt.postId || opt._id,
+                    text: opt.data?.text,
+                    sequenceNumber: opt.sequenceNumber,
+                  })),
+                });
+                
+                return {
+                  ...post,
+                  pollOptions: enrichedOptions.length > 0 ? enrichedOptions : undefined,
+                };
+              }
+            }
+          } catch (error) {
+            console.error(`[groupPollOptions] Erro ao buscar poll ${firstOptionPollId}:`, error);
+          }
+        }
+        
+        return {
+          ...post,
+          pollOptions: sortedOptions.length > 0 ? sortedOptions : undefined,
+        };
+      }
       
-      console.log('[groupPollOptions] Processando poll post:', {
-        postId: post.postId,
-        pollOptionsCount: pollOptions.length,
-        pollOptions: pollOptions.map(opt => ({
-          id: opt.postId || opt._id,
-          dataType: opt.dataType,
-          data: opt.data,
-          dataText: opt.data?.text,
-          dataTitle: opt.data?.title,
-          sequenceNumber: opt.sequenceNumber,
-        })),
-      });
-      
-      const sortedOptions = [...pollOptions].sort((a, b) => {
-        const seqA = a.sequenceNumber ?? 0;
-        const seqB = b.sequenceNumber ?? 0;
-        return seqA - seqB;
-      });
-      
-      console.log('[groupPollOptions] Poll options ordenadas:', {
-        postId: post.postId,
-        sortedOptions: sortedOptions.map(opt => ({
-          id: opt.postId || opt._id,
-          text: opt.data?.text,
-          title: opt.data?.title,
-          sequenceNumber: opt.sequenceNumber,
-        })),
-      });
-      
-      return {
-        ...post,
-        pollOptions: sortedOptions.length > 0 ? sortedOptions : undefined,
-      };
-    }
-    
-    return post;
-  });
+      return post;
+    })
+  );
+
+  return postsWithPollOptions;
 };
 
-export const buildAmityFeedResponse = (
+export const buildAmityFeedResponse = async (
   feedData: AmityUserFeedData,
   status: string,
   page: number,
-  limit: number
-): AmityUserFeedResponse & { pagination?: { page: number; limit: number; total: number; totalPages: number } } => {
+  limit: number,
+  userToken?: string
+): Promise<AmityUserFeedResponse & { pagination?: { page: number; limit: number; total: number; totalPages: number } }> => {
   const posts = feedData.posts ?? [];
   const postChildren = feedData.postChildren ?? [];
   const paging = feedData.paging ?? {};
 
-  const postsWithPollOptions = groupPollOptions(posts, postChildren);
+  const postsWithPollOptions = await groupPollOptions(posts, postChildren, userToken);
 
   return {
     status,
