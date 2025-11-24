@@ -1,11 +1,5 @@
 import { AmityUserFeedResponse, AmityUserFeedData, AmityPost } from '@/types/amity';
 
-/**
- * Filtra posts baseado em busca nos campos de texto e título
- * @param posts - Array de posts para filtrar
- * @param searchTerm - Termo de busca
- * @returns Array de posts filtrados
- */
 export const filterPostsBySearch = (posts: AmityPost[] | undefined, searchTerm?: string): AmityPost[] => {
   if (!posts || !searchTerm || searchTerm.trim() === '') {
     return posts || [];
@@ -21,11 +15,6 @@ export const filterPostsBySearch = (posts: AmityPost[] | undefined, searchTerm?:
   });
 };
 
-/**
- * Normaliza a resposta da API Amity que pode vir em diferentes formatos
- * @param apiResponse - Resposta da API que pode ser AmityUserFeedResponse ou AmityUserFeedData
- * @returns Objeto normalizado com feedData e status
- */
 export const normalizeAmityResponse = (
   apiResponse: AmityUserFeedResponse | AmityUserFeedData | undefined
 ): { feedData: AmityUserFeedData; status: string } => {
@@ -33,7 +22,6 @@ export const normalizeAmityResponse = (
     return { feedData: {}, status: 'ok' };
   }
 
-  // Formato: { status, data: {...} }
   if ('data' in apiResponse && apiResponse.data) {
     return {
       feedData: apiResponse.data,
@@ -41,7 +29,6 @@ export const normalizeAmityResponse = (
     };
   }
 
-  // Formato: { posts, postChildren, ... } diretamente
   if ('posts' in apiResponse) {
     return {
       feedData: apiResponse as AmityUserFeedData,
@@ -52,17 +39,10 @@ export const normalizeAmityResponse = (
   return { feedData: {}, status: 'ok' };
 };
 
-/**
- * Agrupa as opções de poll (postChildren) dentro dos posts principais
- * @param posts - Array de posts principais
- * @param postChildren - Array de postChildren (opções de poll)
- * @returns Array de posts com pollOptions agrupadas
- */
 export const groupPollOptions = (
   posts: AmityPost[],
   postChildren: AmityPost[]
 ): AmityPost[] => {
-  // Cria um mapa de postChildren por parentPostId
   const childrenMap = new Map<string, AmityPost[]>();
   
   postChildren.forEach((child) => {
@@ -75,7 +55,6 @@ export const groupPollOptions = (
     }
   });
 
-  // Ordena os children por sequenceNumber antes de adicionar ao post
   childrenMap.forEach((children) => {
     children.sort((a, b) => {
       const seqA = a.sequenceNumber ?? 0;
@@ -84,28 +63,26 @@ export const groupPollOptions = (
     });
   });
 
-  // Adiciona pollOptions aos posts que são polls
   return posts.map((post) => {
-    // Se o post é um poll e tem children, adiciona as opções
     if (post.structureType === 'poll' && post.postId) {
       const pollOptions = childrenMap.get(post.postId) || [];
+      
+      const sortedOptions = [...pollOptions].sort((a, b) => {
+        const seqA = a.sequenceNumber ?? 0;
+        const seqB = b.sequenceNumber ?? 0;
+        return seqA - seqB;
+      });
+      
       return {
         ...post,
-        pollOptions: pollOptions.length > 0 ? pollOptions : undefined,
+        pollOptions: sortedOptions.length > 0 ? sortedOptions : undefined,
       };
     }
+    
     return post;
   });
 };
 
-/**
- * Constrói a resposta completa do feed do usuário do Amity
- * @param feedData - Dados do feed normalizados
- * @param status - Status da resposta
- * @param page - Página atual
- * @param limit - Limite de itens por página
- * @returns Resposta completa formatada
- */
 export const buildAmityFeedResponse = (
   feedData: AmityUserFeedData,
   status: string,
@@ -116,14 +93,13 @@ export const buildAmityFeedResponse = (
   const postChildren = feedData.postChildren ?? [];
   const paging = feedData.paging ?? {};
 
-  // Agrupa as opções de poll dentro dos posts principais
   const postsWithPollOptions = groupPollOptions(posts, postChildren);
 
   return {
     status,
     data: {
       posts: postsWithPollOptions,
-      postChildren: [], // Remove postChildren da resposta, pois já estão agrupados nos posts
+      postChildren: [],
       comments: feedData.comments ?? [],
       users: feedData.users ?? [],
       files: feedData.files ?? [],

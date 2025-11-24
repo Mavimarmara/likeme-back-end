@@ -7,6 +7,26 @@ export interface AmityVideoFileId {
   high?: string;
 }
 
+export interface AmityPollOption {
+  optionId?: string;
+  text?: string;
+  voteCount?: number;
+  votes?: number;
+  [key: string]: unknown;
+}
+
+export interface AmityPoll {
+  pollId?: string;
+  question?: string;
+  options?: AmityPollOption[];
+  totalVoteCount?: number;
+  totalVotes?: number;
+  endedAt?: string;
+  endDate?: string;
+  isFinished?: boolean;
+  [key: string]: unknown;
+}
+
 export interface AmityPostData {
   title?: string;
   text?: string;
@@ -63,7 +83,7 @@ export interface AmityPost {
   myReactions?: string[];
   commentsCount?: number;
   comments?: string[];
-  children?: string[];
+  children?: string[] | AmityPost[]; // Pode ser array de IDs ou array de posts completos
   childrenNumber?: number;
   isDeleted?: boolean;
   hasFlaggedComment?: boolean;
