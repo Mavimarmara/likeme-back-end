@@ -34,12 +34,14 @@ export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Pro
 
 export const votePoll = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { pollId } = req.params;
-    const { answerIds } = req.body;
+    const { pollId: pollIdParam } = req.params;
+    const { answerIds, pollId: pollIdBody } = req.body;
     const userId = req.user?.id;
 
+    const pollId = pollIdBody || pollIdParam;
+
     if (!pollId) {
-      sendError(res, 'pollId é obrigatório', 400);
+      sendError(res, 'pollId é obrigatório (pode ser enviado no body ou como parâmetro)', 400);
       return;
     }
 

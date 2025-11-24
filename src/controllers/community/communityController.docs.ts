@@ -245,10 +245,10 @@
  *     parameters:
  *       - in: path
  *         name: pollId
- *         required: true
+ *         required: false
  *         schema:
  *           type: string
- *         description: ID da poll
+ *         description: ID da poll (opcional, pode ser enviado no body)
  *     requestBody:
  *       required: true
  *       content:
@@ -258,6 +258,10 @@
  *             required:
  *               - answerIds
  *             properties:
+ *               pollId:
+ *                 type: string
+ *                 description: ID da poll (obrigatório se não enviado como parâmetro). Este é o pollId real que está em data.pollId das opções, não o postId.
+ *                 example: "184449157f7705489ae1ef37ae3882501763940362253"
  *               answerIds:
  *                 type: array
  *                 items:
