@@ -82,6 +82,29 @@ export class CommunityService {
     return buildAmityFeedResponse(filteredFeedData, status, page, limit, token);
   }
 
+  async votePoll(
+    userId: string | undefined,
+    pollId: string,
+    answerIds: string[],
+    userToken?: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    let token = userToken;
+
+    if (!token && userId) {
+      const tokenResult = await userTokenService.getToken(userId, false);
+      token = tokenResult.token || undefined;
+    }
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'Token de autenticação do usuário necessário para votar em poll',
+      };
+    }
+
+    return socialPlusClient.votePoll(pollId, answerIds, token);
+  }
+
   async addUserToAllCommunities(
     userId: string,
     userToken: string

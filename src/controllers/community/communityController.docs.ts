@@ -235,5 +235,57 @@
  *         description: Usuário não está sincronizado com a social.plus
  *       500:
  *         description: Erro ao gerar token de autenticação do usuário
+ * /api/communities/polls/{pollId}/votes:
+ *   put:
+ *     summary: Votar em poll (API v3)
+ *     description: Registra o voto do usuário autenticado em uma poll usando a API v3 do Amity (/v3/polls/{pollId}/votes). Requer token de autenticação do usuário.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: pollId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID da poll
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - answerIds
+ *             properties:
+ *               answerIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array de IDs das respostas selecionadas
+ *                 example: ["6923980a66ded7913e7222df"]
+ *     responses:
+ *       200:
+ *         description: Voto registrado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   description: Dados retornados pela API do Amity
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Erro na requisição (pollId ou answerIds inválidos)
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       500:
+ *         description: Erro ao processar voto
  */
 

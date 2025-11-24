@@ -390,6 +390,36 @@ class SocialPlusClient {
     };
   }
 
+  async votePoll(
+    pollId: string,
+    answerIds: string[],
+    userAccessToken: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userAccessToken) {
+      return {
+        success: false,
+        error: 'User access token is required to vote in poll.',
+      };
+    }
+
+    if (!answerIds || answerIds.length === 0) {
+      return {
+        success: false,
+        error: 'At least one answer ID is required to vote.',
+      };
+    }
+
+    return this.makeRequest<unknown>(
+      'PUT',
+      `/v3/polls/${pollId}/votes`,
+      { answerIds },
+      {
+        useApiKey: false,
+        bearerToken: userAccessToken,
+      }
+    );
+  }
+
   async getUserFeed(params?: GetUserFeedParams): Promise<SocialPlusResponse<unknown>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());

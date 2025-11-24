@@ -31,3 +31,32 @@ export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Pro
     handleError(res, error, 'obter feed do usuário');
   }
 };
+
+export const votePoll = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { pollId } = req.params;
+    const { answerIds } = req.body;
+    const userId = req.user?.id;
+
+    if (!pollId) {
+      sendError(res, 'pollId é obrigatório', 400);
+      return;
+    }
+
+    if (!answerIds || !Array.isArray(answerIds) || answerIds.length === 0) {
+      sendError(res, 'answerIds é obrigatório e deve ser um array não vazio', 400);
+      return;
+    }
+
+    const result = await communityService.votePoll(userId, pollId, answerIds);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao votar em poll', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Voto registrado com sucesso');
+  } catch (error) {
+    handleError(res, error, 'votar em poll');
+  }
+};
