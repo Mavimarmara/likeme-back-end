@@ -124,31 +124,67 @@ export const groupPollOptions = async (
                 answers: pollAnswers.map(ans => ({ id: ans.id, data: ans.data, voteCount: ans.voteCount })),
               });
 
-              const enrichedOptions = sortedOptions.map((opt) => {
+              const enrichedOptionsMap = new Map<string, AmityPost>();
+              
+              sortedOptions.forEach((opt) => {
                 const optId = opt.postId || opt._id;
-                const pollAnswer = pollAnswers.find(ans => ans.id === optId);
-                
-                if (!pollAnswer || !pollAnswer.data) {
-                  console.warn(`[groupPollOptions] Answer não encontrada para option ${optId}`);
-                  return opt;
+                if (!optId) {
+                  return;
                 }
                 
-                return {
-                  ...opt,
-                  data: {
-                    ...opt.data,
-                    text: pollAnswer.data,
-                  },
-                  reactionsCount: pollAnswer.voteCount ?? 0,
-                };
+                const pollAnswer = pollAnswers.find(ans => ans.id === optId);
+                
+                if (pollAnswer && pollAnswer.data) {
+                  enrichedOptionsMap.set(optId, {
+                    ...opt,
+                    data: {
+                      ...opt.data,
+                      text: pollAnswer.data,
+                    },
+                    reactionsCount: pollAnswer.voteCount ?? 0,
+                  });
+                } else {
+                  enrichedOptionsMap.set(optId, opt);
+                }
+              });
+              
+              pollAnswers.forEach((pollAnswer, index) => {
+                if (!pollAnswer.id || !pollAnswer.data) {
+                  return;
+                }
+                
+                const existingOption = enrichedOptionsMap.get(pollAnswer.id);
+                if (!existingOption) {
+                  enrichedOptionsMap.set(pollAnswer.id, {
+                    postId: pollAnswer.id,
+                    _id: pollAnswer.id,
+                    parentPostId: post.postId,
+                    structureType: 'poll',
+                    dataType: pollAnswer.dataType || 'text',
+                    data: {
+                      text: pollAnswer.data,
+                      pollId: firstOptionPollId,
+                    },
+                    reactionsCount: pollAnswer.voteCount ?? 0,
+                    sequenceNumber: index,
+                  } as AmityPost);
+                }
+              });
+              
+              const enrichedOptions = Array.from(enrichedOptionsMap.values()).sort((a, b) => {
+                const seqA = a.sequenceNumber ?? 0;
+                const seqB = b.sequenceNumber ?? 0;
+                return seqA - seqB;
               });
               
               console.log('[groupPollOptions] Poll options enriquecidas:', {
                 postId: post.postId,
+                totalOptions: enrichedOptions.length,
                 enrichedOptions: enrichedOptions.map(opt => ({
                   id: opt.postId || opt._id,
                   text: opt.data?.text,
                   sequenceNumber: opt.sequenceNumber,
+                  voteCount: opt.reactionsCount,
                 })),
               });
               
