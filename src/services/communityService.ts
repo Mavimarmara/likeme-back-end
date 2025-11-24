@@ -1,7 +1,9 @@
-import { AmityUserFeedResponse, AmityUserFeedData } from '@/types/amity';
+import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel } from '@/types/amity';
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
 import { userTokenService } from './userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
+import { getAmityClient, isAmityReady, loginToAmity } from '@/utils/amityClient';
+import prisma from '@/config/database';
 
 export interface AddCommunitiesResult {
   added: number;
@@ -196,6 +198,126 @@ export class CommunityService {
       return result;
     } catch (error) {
       console.error('[CommunityService] Erro ao adicionar usuário a todas as comunidades:', error);
+      throw error;
+    }
+  }
+
+  async getChannels(
+    userId: string | undefined,
+    types?: ('conversation' | 'broadcast' | 'live' | 'community')[]
+  ): Promise<AmityChannelsResponse> {
+    try {
+      // Verificar se o SDK do Amity está disponível
+      if (!isAmityReady()) {
+        throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
+      }
+
+      // Garantir que o usuário está logado no SDK
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { 
+            socialPlusUserId: true,
+            firstName: true,
+            lastName: true,
+          },
+        });
+        
+        if (user?.socialPlusUserId) {
+          const displayName = user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}` 
+            : user.socialPlusUserId;
+          await loginToAmity(user.socialPlusUserId, displayName);
+        }
+      }
+
+      // Dynamic import do SDK do Amity
+      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
+      if (!amityModule) {
+        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
+      }
+
+      const { ChannelRepository } = amityModule;
+
+      // Preparar parâmetros de filtro
+      const params: { types?: string[] } = {};
+      if (types && types.length > 0) {
+        params.types = types;
+      }
+
+      // Promise para aguardar a resposta do callback
+      return new Promise<AmityChannelsResponse>((resolve, reject) => {
+        let channels: AmityChannel[] = [];
+        let hasNextPage = false;
+        let loading = true;
+        let error: Error | null = null;
+        let resolved = false;
+
+        const unsubscriber = ChannelRepository.getChannels(
+          params,
+          ({ data: channelsData, onNextPage, hasNextPage: hasMore, loading: isLoading, error: channelError }) => {
+            if (channelError) {
+              error = channelError instanceof Error ? channelError : new Error(String(channelError));
+              loading = false;
+              if (!resolved) {
+                resolved = true;
+                reject(error);
+              }
+              return;
+            }
+
+            loading = isLoading || false;
+
+            if (channelsData) {
+              // Converter os dados do SDK para o formato AmityChannel
+              channels = channelsData.map((channel: any) => ({
+                channelId: channel.channelId,
+                displayName: channel.displayName,
+                description: channel.description,
+                avatarFileId: channel.avatarFileId,
+                type: channel.type,
+                metadata: channel.metadata,
+                memberCount: channel.memberCount,
+                unreadCount: channel.unreadCount,
+                isMuted: channel.isMuted,
+                isFlaggedByMe: channel.isFlaggedByMe,
+                createdAt: channel.createdAt,
+                updatedAt: channel.updatedAt,
+                lastActivity: channel.lastActivity,
+                ...channel,
+              }));
+            }
+
+            hasNextPage = hasMore || false;
+
+            // Resolver quando não estiver mais carregando e ainda não foi resolvido
+            if (!loading && !resolved) {
+              resolved = true;
+              resolve({
+                channels,
+                hasNextPage,
+                loading: false,
+                error: null,
+              });
+            }
+          }
+        );
+
+        // Timeout de segurança (10 segundos)
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            resolve({
+              channels,
+              hasNextPage,
+              loading: false,
+              error: error || new Error('Timeout ao buscar channels'),
+            });
+          }
+        }, 10000);
+      });
+    } catch (error) {
+      console.error('[CommunityService] Erro ao buscar channels:', error);
       throw error;
     }
   }

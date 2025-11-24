@@ -282,6 +282,30 @@ export interface AmityUserFeedResponse {
   data?: AmityUserFeedData;
 }
 
+export interface AmityChannel {
+  channelId?: string;
+  displayName?: string;
+  description?: string;
+  avatarFileId?: string;
+  type?: 'conversation' | 'broadcast' | 'live' | 'community';
+  metadata?: Record<string, unknown>;
+  memberCount?: number;
+  unreadCount?: number;
+  isMuted?: boolean;
+  isFlaggedByMe?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  lastActivity?: string;
+  [key: string]: unknown;
+}
+
+export interface AmityChannelsResponse {
+  channels?: AmityChannel[];
+  hasNextPage?: boolean;
+  loading?: boolean;
+  error?: Error | null;
+}
+
 
 
 

@@ -62,3 +62,33 @@ export const votePoll = async (req: AuthenticatedRequest, res: Response): Promis
     handleError(res, error, 'votar em poll');
   }
 };
+
+export const getChannels = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { types } = req.query;
+
+    // Validar e converter tipos se fornecidos
+    let channelTypes: ('conversation' | 'broadcast' | 'live' | 'community')[] | undefined;
+    if (types) {
+      const validTypes = ['conversation', 'broadcast', 'live', 'community'];
+      if (typeof types === 'string') {
+        const type = types as 'conversation' | 'broadcast' | 'live' | 'community';
+        if (validTypes.includes(type)) {
+          channelTypes = [type];
+        }
+      } else if (Array.isArray(types)) {
+        channelTypes = types
+          .filter((t): t is 'conversation' | 'broadcast' | 'live' | 'community' => 
+            typeof t === 'string' && validTypes.includes(t as any)
+          );
+      }
+    }
+
+    const channels = await communityService.getChannels(userId, channelTypes);
+    
+    sendSuccess(res, channels, 'Channels obtidos com sucesso');
+  } catch (error) {
+    handleError(res, error, 'obter channels');
+  }
+};

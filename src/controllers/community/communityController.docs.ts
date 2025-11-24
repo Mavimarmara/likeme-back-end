@@ -147,6 +147,36 @@
  *           type: string
  *         updatedAt:
  *           type: string
+ *     AmityChannel:
+ *       type: object
+ *       properties:
+ *         channelId:
+ *           type: string
+ *         displayName:
+ *           type: string
+ *         description:
+ *           type: string
+ *         avatarFileId:
+ *           type: string
+ *         type:
+ *           type: string
+ *           enum: [conversation, broadcast, live, community]
+ *         metadata:
+ *           type: object
+ *         memberCount:
+ *           type: integer
+ *         unreadCount:
+ *           type: integer
+ *         isMuted:
+ *           type: boolean
+ *         isFlaggedByMe:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *         updatedAt:
+ *           type: string
+ *         lastActivity:
+ *           type: string
  */
 
 /**
@@ -235,6 +265,63 @@
  *         description: Usuário não está sincronizado com a social.plus
  *       500:
  *         description: Erro ao gerar token de autenticação do usuário
+ * /api/communities/channels:
+ *   get:
+ *     summary: Obter channels do usuário (SDK)
+ *     description: Retorna os channels do usuário autenticado usando o SDK do Amity (ChannelRepository.getChannels). Requer token de autenticação do usuário e que o SDK do Amity esteja inicializado.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: types
+ *         schema:
+ *           oneOf:
+ *             - type: string
+ *               enum: [conversation, broadcast, live, community]
+ *             - type: array
+ *               items:
+ *                 type: string
+ *                 enum: [conversation, broadcast, live, community]
+ *         description: Filtro opcional para tipos de channels. Pode ser um único tipo ou array de tipos.
+ *         example: conversation
+ *     responses:
+ *       200:
+ *         description: Channels obtidos com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     channels:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/AmityChannel'
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       description: Indica se há mais páginas disponíveis
+ *                     loading:
+ *                       type: boolean
+ *                       description: Indica se ainda está carregando
+ *                     error:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Erro, se houver
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       400:
+ *         description: SDK do Amity não está inicializado ou usuário não está sincronizado com a social.plus
+ *       500:
+ *         description: Erro ao buscar channels
  * /api/communities/polls/{pollId}/votes:
  *   put:
  *     summary: Votar em poll (API v3)
