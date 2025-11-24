@@ -355,10 +355,10 @@ class SocialPlusClient {
     if (userAccessToken) {
       return this.makeRequest<unknown>(
         'GET',
-        `/v4/polls/${pollId}`,
+        `/v3/polls/${pollId}`,
         undefined,
         {
-          useApiKey: true,
+          useApiKey: false,
           bearerToken: userAccessToken,
         }
       );
@@ -375,23 +375,19 @@ class SocialPlusClient {
     if (token) {
       return this.makeRequest<unknown>(
         'GET',
-        `/v4/polls/${pollId}`,
+        `/v3/polls/${pollId}`,
         undefined,
         {
-          useApiKey: true,
+          useApiKey: false,
           bearerToken: token,
         }
       );
     }
 
-    return this.makeRequest<unknown>(
-      'GET',
-      `/v4/polls/${pollId}`,
-      undefined,
-      {
-        useApiKey: true,
-      }
-    );
+    return {
+      success: false,
+      error: 'Token de autenticação necessário para buscar dados de poll',
+    };
   }
 
   async getUserFeed(params?: GetUserFeedParams): Promise<SocialPlusResponse<unknown>> {
