@@ -113,6 +113,30 @@ export class CommunityService {
     return buildAmityFeedResponse(filteredFeedData, status, page, limit, token);
   }
 
+  async listCommunities(
+    userId: string | undefined,
+    page: number = 1,
+    limit: number = 10,
+    sortBy?: string,
+    includeDeleted: boolean = false,
+    userToken?: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    let token = userToken;
+
+    if (!token && userId) {
+      const tokenResult = await userTokenService.getToken(userId, false);
+      token = tokenResult.token || undefined;
+    }
+
+    return socialPlusClient.listCommunities({
+      userAccessToken: token,
+      page,
+      limit,
+      sortBy,
+      includeDeleted,
+    });
+  }
+
   async votePoll(
     userId: string | undefined,
     pollId: string,

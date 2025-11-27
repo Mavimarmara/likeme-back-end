@@ -181,6 +181,75 @@
 
 /**
  * @swagger
+ * /api/communities:
+ *   get:
+ *     summary: Listar comunidades (API v3)
+ *     description: Retorna a lista de comunidades usando a API v3 do Amity (/v3/communities). Requer token de autenticação do usuário. Retorna informações sobre as comunidades disponíveis.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número da página
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Número de itens por página
+ *         example: 10
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         description: Campo para ordenação (opcional)
+ *         example: createdAt
+ *       - in: query
+ *         name: includeDeleted
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Incluir comunidades deletadas
+ *         example: false
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/communities?page=1&limit=10&sortBy=createdAt&includeDeleted=false" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
+ *     responses:
+ *       200:
+ *         description: Comunidades listadas com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communities:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/AmityCommunity'
+ *                     paging:
+ *                       $ref: '#/components/schemas/AmityPaging'
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Usuário não autenticado ou token inválido
+ *       400:
+ *         description: Usuário não está sincronizado com a social.plus
+ *       500:
+ *         description: Erro ao gerar token de autenticação do usuário ou ao comunicar com a API do Amity
  * /api/communities/feed:
  *   get:
  *     summary: Obter feed do usuário (API v4)
@@ -195,17 +264,20 @@
  *           type: integer
  *           default: 1
  *         description: Número da página
+ *         example: 1
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
  *         description: Número de itens por página
+ *         example: 10
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
  *         description: Termo de busca para filtrar posts nos campos de texto (data.text) e título (data.title). A busca é case-insensitive.
+ *         example: saúde
  *       - in: query
  *         name: postTypes
  *         schema:
@@ -215,6 +287,7 @@
  *               items:
  *                 type: string
  *         description: Lista de tipos de post (structureType/dataType) para filtrar. Aceita múltiplos valores separados por vírgula ou parâmetros repetidos.
+ *         example: poll,text
  *       - in: query
  *         name: authorIds
  *         schema:
@@ -224,18 +297,21 @@
  *               items:
  *                 type: string
  *         description: Lista de IDs de autores (postedUserId) para filtrar. Aceita múltiplos valores separados por vírgula ou parâmetros repetidos.
+ *         example: userId1,userId2
  *       - in: query
  *         name: startDate
  *         schema:
  *           type: string
  *           format: date-time
  *         description: Retorna apenas posts com createdAt maior ou igual à data informada (ISO 8601).
+ *         example: '2024-01-01T00:00:00Z'
  *       - in: query
  *         name: endDate
  *         schema:
  *           type: string
  *           format: date-time
  *         description: Retorna apenas posts com createdAt menor ou igual à data informada (ISO 8601).
+ *         example: '2024-12-31T23:59:59Z'
  *       - in: query
  *         name: orderBy
  *         schema:
@@ -243,6 +319,7 @@
  *           enum: [createdAt, updatedAt, reactionsCount]
  *           default: createdAt
  *         description: Campo utilizado para ordenação após os filtros locais.
+ *         example: createdAt
  *       - in: query
  *         name: order
  *         schema:
@@ -250,6 +327,12 @@
  *           enum: [asc, desc]
  *           default: desc
  *         description: Direção da ordenação.
+ *         example: desc
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/communities/feed?page=1&limit=10&search=saúde&postTypes=poll,text&orderBy=createdAt&order=desc" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
  *     responses:
  *       200:
  *         description: Feed do usuário obtido com sucesso
@@ -329,6 +412,11 @@
  *                 enum: [conversation, broadcast, live, community]
  *         description: Filtro opcional para tipos de channels. Pode ser um único tipo ou array de tipos.
  *         example: conversation
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/communities/channels?types=conversation" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
  *     responses:
  *       200:
  *         description: Channels obtidos com sucesso
@@ -399,6 +487,13 @@
  *                   type: string
  *                 description: Array de IDs das respostas selecionadas
  *                 example: ["6923980a66ded7913e7222df"]
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X PUT "{baseUrl}/api/communities/polls/184449157f7705489ae1ef37ae3882501763940362253/votes" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+ *             -H "Content-Type: application/json" \
+ *             -d '{"answerIds": ["6923980a66ded7913e7222df"]}'
  *     responses:
  *       200:
  *         description: Voto registrado com sucesso
@@ -448,6 +543,13 @@
  *                 default: like
  *                 description: 'Nome da reação (padrão: like)'
  *                 example: like
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X POST "{baseUrl}/api/communities/comments/691f87c3c91a311eb23b24e8/reactions" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+ *             -H "Content-Type: application/json" \
+ *             -d '{"reactionName": "like"}'
  *     responses:
  *       200:
  *         description: Reação adicionada com sucesso
@@ -500,6 +602,13 @@
  *                 default: like
  *                 description: 'Nome da reação a ser removida (padrão: like)'
  *                 example: like
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X DELETE "{baseUrl}/api/communities/comments/691f87c3c91a311eb23b24e8/reactions" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+ *             -H "Content-Type: application/json" \
+ *             -d '{"reactionName": "like"}'
  *     responses:
  *       200:
  *         description: Reação removida com sucesso

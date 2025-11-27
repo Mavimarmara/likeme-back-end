@@ -86,6 +86,36 @@ const handleError = (res: Response, error: unknown, operation: string): void => 
   sendError(res, `Erro ao ${operation}: ${errorMessage}`);
 };
 
+export const listCommunities = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { page, limit } = buildPaginationParams(req.query);
+    const userId = req.user?.id;
+    const { sortBy, includeDeleted } = req.query;
+
+    const sortByParam = typeof sortBy === 'string' ? sortBy : undefined;
+    const includeDeletedParam = typeof includeDeleted === 'string' 
+      ? (includeDeleted === 'true' || includeDeleted === '1')
+      : Boolean(includeDeleted);
+
+    const result = await communityService.listCommunities(
+      userId,
+      page,
+      limit,
+      sortByParam,
+      includeDeletedParam
+    );
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao listar comunidades', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Comunidades listadas com sucesso');
+  } catch (error) {
+    handleError(res, error, 'listar comunidades');
+  }
+};
+
 export const getUserFeed = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit, search } = buildPaginationParams(req.query);

@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { getUserFeed, votePoll, getChannels, addCommentReaction, removeCommentReaction } from '@/controllers/community/communityController';
+import { listCommunities, getUserFeed, votePoll, getChannels, addCommentReaction, removeCommentReaction } from '@/controllers/community/communityController';
 import { authenticateToken } from '@/middleware/auth';
 
 const router = Router();
 
 router.use(authenticateToken);
 
+router.get('/', listCommunities);
 router.get('/feed', getUserFeed);
 router.get('/channels', getChannels);
 router.put('/polls/:pollId/votes', votePoll);
