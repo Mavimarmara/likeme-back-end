@@ -184,7 +184,7 @@
  * /api/communities/feed:
  *   get:
  *     summary: Obter feed do usuário (API v4)
- *     description: Retorna o feed personalizado do usuário autenticado usando a API v4 do Amity (/v4/me/global-feeds). Requer token de autenticação do usuário. Retorna estrutura completa incluindo posts, postChildren, comments, users, files, communities, categories, etc.
+ *     description: Retorna o feed personalizado do usuário autenticado usando a API v4 do Amity (/v4/me/global-feeds). Requer token de autenticação do usuário. Retorna estrutura completa incluindo posts, postChildren, comments, users, files, communities, categories, etc. Os filtros avançados (postTypes, authorIds, startDate, endDate, orderBy, order) são aplicados localmente após buscar os dados da API, permitindo combinação de múltiplos filtros simultaneamente.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
