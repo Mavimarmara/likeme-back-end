@@ -36,7 +36,7 @@
  *           enum: [user, community]
  *         structureType:
  *           type: string
- *           description: Tipo de estrutura do post (ex: "poll", "text")
+ *           description: 'Tipo de estrutura do post (ex: poll, text)'
  *         data:
  *           type: object
  *           description: Dados do post (title, text, pollId, etc.)
@@ -446,7 +446,7 @@
  *               reactionName:
  *                 type: string
  *                 default: like
- *                 description: Nome da reação (padrão: "like")
+ *                 description: 'Nome da reação (padrão: like)'
  *                 example: like
  *     responses:
  *       200:
@@ -498,7 +498,7 @@
  *               reactionName:
  *                 type: string
  *                 default: like
- *                 description: Nome da reação a ser removida (padrão: "like")
+ *                 description: 'Nome da reação a ser removida (padrão: like)'
  *                 example: like
  *     responses:
  *       200:

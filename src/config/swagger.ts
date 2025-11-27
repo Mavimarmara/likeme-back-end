@@ -33,6 +33,12 @@ export const swaggerOptions = {
         description: getServerDescription(),
       },
     ],
+    tags: [
+      {
+        name: 'Communities',
+        description: 'Endpoints relacionados a comunidades, posts, comentários e interações sociais',
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
