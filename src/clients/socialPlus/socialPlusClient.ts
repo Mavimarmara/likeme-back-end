@@ -142,11 +142,16 @@ class SocialPlusClient {
         let errorDataMessage: string | undefined;
         
         if (data && typeof data === 'object') {
-          if ('message' in data && data.message) {
-            errorMessage = String(data.message);
-            errorDataMessage = String(data.message);
-          } else if ('error' in data && data.error) {
-            errorMessage = String(data.error);
+          const dataObj = data as Record<string, unknown>;
+          if ('message' in dataObj && dataObj.message) {
+            errorMessage = String(dataObj.message);
+            errorDataMessage = String(dataObj.message);
+          } else if ('error' in dataObj && dataObj.error) {
+            errorMessage = String(dataObj.error);
+            errorDataMessage = String(dataObj.error);
+          } else if ('errors' in dataObj && Array.isArray(dataObj.errors) && dataObj.errors.length > 0) {
+            errorMessage = String(dataObj.errors[0]);
+            errorDataMessage = String(dataObj.errors[0]);
           }
         }
         
@@ -154,6 +159,8 @@ class SocialPlusClient {
           status: response.status,
           statusText: response.statusText,
           error: errorMessage,
+          url: url,
+          method: method,
           fullData: data,
         });
         return {
@@ -498,8 +505,9 @@ class SocialPlusClient {
 
   async getUserFeed(params?: GetUserFeedParams): Promise<SocialPlusResponse<unknown>> {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    // A API v4 do Amity não aceita page e limit diretamente
+    // A paginação é feita via cursor (before/after) retornado no paging
+    // Removemos page e limit da query string
     if (params?.search && params.search.trim() !== '') {
       queryParams.append('search', params.search.trim());
     }
