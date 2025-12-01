@@ -128,13 +128,90 @@ export class CommunityService {
       token = tokenResult.token || undefined;
     }
 
-    return socialPlusClient.listCommunities({
+    // Chama a API sem query params (a API não aceita)
+    const response = await socialPlusClient.listCommunities({
       userAccessToken: token,
-      page,
-      limit,
-      sortBy,
-      includeDeleted,
     });
+
+    if (!response.success || !response.data) {
+      return response;
+    }
+
+    // Aplica filtros e paginação localmente
+    const data = response.data as {
+      communities?: Array<Record<string, unknown>>;
+      communityUsers?: Array<Record<string, unknown>>;
+      files?: Array<Record<string, unknown>>;
+      users?: Array<Record<string, unknown>>;
+      categories?: Array<Record<string, unknown>>;
+      feeds?: Array<Record<string, unknown>>;
+      paging?: { next?: string; previous?: string };
+    };
+
+    let communities = data.communities || [];
+
+    // Filtra comunidades deletadas se necessário
+    if (!includeDeleted) {
+      communities = communities.filter(
+        (community) => !community.isDeleted || community.isDeleted === false
+      );
+    }
+
+    // Aplica ordenação se necessário
+    if (sortBy) {
+      communities.sort((a, b) => {
+        const aValue = a[sortBy];
+        const bValue = b[sortBy];
+        
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return aValue.localeCompare(bValue);
+        }
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return aValue - bValue;
+        }
+        
+        if (aValue instanceof Date && bValue instanceof Date) {
+          return aValue.getTime() - bValue.getTime();
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          // Tenta parsear como data ISO
+          const aDate = new Date(aValue);
+          const bDate = new Date(bValue);
+          if (!Number.isNaN(aDate.getTime()) && !Number.isNaN(bDate.getTime())) {
+            return aDate.getTime() - bDate.getTime();
+          }
+        }
+        
+        return String(aValue).localeCompare(String(bValue));
+      });
+    }
+
+    // Aplica paginação
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedCommunities = communities.slice(startIndex, endIndex);
+    const total = communities.length;
+    const totalPages = Math.ceil(total / limit);
+
+    // Retorna dados paginados mantendo a estrutura original
+    return {
+      success: true,
+      data: {
+        ...data,
+        communities: paginatedCommunities,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+        },
+      },
+    };
   }
 
   async votePoll(

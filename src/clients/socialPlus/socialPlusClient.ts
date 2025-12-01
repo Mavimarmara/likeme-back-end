@@ -286,14 +286,11 @@ class SocialPlusClient {
   }
 
   async listCommunities(params?: ListCommunitiesParams): Promise<SocialPlusResponse<unknown>> {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.includeDeleted !== undefined) queryParams.append('includeDeleted', params.includeDeleted.toString());
-
-    const query = queryParams.toString();
-    const endpoint = `/v3/communities${query ? `?${query}` : ''}`;
+    // A API v3 do Amity (/v3/communities) não aceita query params
+    // A paginação é feita via cursor (before/after) retornado no paging
+    // Os parâmetros page, limit, sortBy e includeDeleted devem ser aplicados localmente
+    const endpoint = `/v3/communities`;
+    console.log('[SocialPlus] listCommunities chamado - query params removidos para evitar erro de validação da API');
 
     if (params?.userAccessToken) {
       return this.makeRequest<unknown>(
