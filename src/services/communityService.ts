@@ -202,8 +202,13 @@ export class CommunityService {
     return {
       success: true,
       data: {
-        ...data,
         communities: paginatedCommunities,
+        communityUsers: data.communityUsers || [],
+        files: data.files || [],
+        users: data.users || [],
+        categories: data.categories || [],
+        feeds: data.feeds || [],
+        paging: data.paging || { next: undefined, previous: undefined },
         pagination: {
           page,
           limit,
