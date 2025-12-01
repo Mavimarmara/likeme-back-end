@@ -505,12 +505,12 @@ class SocialPlusClient {
 
   async getUserFeed(params?: GetUserFeedParams): Promise<SocialPlusResponse<unknown>> {
     const queryParams = new URLSearchParams();
-    // A API v4 do Amity não aceita page e limit diretamente
-    // A paginação é feita via cursor (before/after) retornado no paging
-    // Removemos page e limit da query string
-    if (params?.search && params.search.trim() !== '') {
-      queryParams.append('search', params.search.trim());
-    }
+    // A API v4 do Amity (/v4/me/global-feeds) não aceita parâmetros de query
+    // Todos os parâmetros devem ser enviados via headers ou não são suportados
+    // Removemos todos os query params para evitar erro de validação
+    
+    // Nota: O parâmetro 'search' também não é suportado pela API v4
+    // A busca deve ser feita localmente após receber os dados
 
     if (!this.apiKey) {
       return {
@@ -520,6 +520,7 @@ class SocialPlusClient {
     }
 
     const query = queryParams.toString();
+    console.log('[SocialPlus] getUserFeed chamado - query params removidos para evitar erro de validação da API');
 
     if (params?.userAccessToken) {
       console.log('[SocialPlus] Usando token de usuário para getUserFeed');
