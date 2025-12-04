@@ -338,16 +338,22 @@ export class CommunityService {
         throw new Error('Token de acesso do usuário não disponível. Faça login novamente.');
       }
 
-      const typesArray = types && types.length > 0 ? types.map(t => t.toLowerCase()) : undefined;
-
-      const response = await socialPlusClient.getChannels(userAccessToken, typesArray);
+      const response = await socialPlusClient.getChannels(userAccessToken);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Erro ao buscar channels da API');
       }
 
       const data = response.data as any;
-      const channelsData = data.channels || [];
+      let channelsData = data.channels || [];
+
+      if (types && types.length > 0) {
+        const typesLower = types.map(t => t.toLowerCase());
+        channelsData = channelsData.filter((channel: any) => {
+          const channelType = channel.type?.toLowerCase();
+          return channelType && typesLower.includes(channelType);
+        });
+      }
 
       const channels: AmityChannel[] = channelsData.map((channel: any) => ({
         channelId: channel.channelId,

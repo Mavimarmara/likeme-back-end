@@ -616,7 +616,7 @@ class SocialPlusClient {
     );
   }
 
-  async getChannels(userAccessToken?: string, types?: string[]): Promise<SocialPlusResponse<unknown>> {
+  async getChannels(userAccessToken?: string): Promise<SocialPlusResponse<unknown>> {
     if (!this.apiKey) {
       return {
         success: false,
@@ -624,13 +624,7 @@ class SocialPlusClient {
       };
     }
 
-    const queryParams = new URLSearchParams();
-    if (types && types.length > 0) {
-      types.forEach(type => queryParams.append('types', type));
-    }
-
-    const query = queryParams.toString();
-    const endpoint = `/v3/channels${query ? `?${query}` : ''}`;
+    const endpoint = `/v3/channels`;
 
     if (userAccessToken) {
       return this.makeRequest<unknown>(
