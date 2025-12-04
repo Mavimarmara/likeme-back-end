@@ -42,7 +42,7 @@
  * @swagger
  * /api/users/{id}:
  *   get:
- *     summary: Obter usuário por ID
+ *     summary: Obter usuário por ID (inclui dados do Social Plus se disponível)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -52,9 +52,59 @@
  *         required: true
  *         schema:
  *           type: string
+ *         description: ID do usuário no banco de dados
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           default: public
+ *         description: Tipo de dados do usuário no Social Plus (public)
  *     responses:
  *       200:
  *         description: Usuário obtido com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   description: Dados do usuário local combinados com dados do Social Plus (se disponível)
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     personId:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     avatar:
+ *                       type: string
+ *                     isActive:
+ *                       type: boolean
+ *                     socialPlusUserId:
+ *                       type: string
+ *                     person:
+ *                       type: object
+ *                     roleGroups:
+ *                       type: array
+ *                     socialPlus:
+ *                       type: object
+ *                       description: Dados do usuário no Social Plus (se o usuário tiver socialPlusUserId)
+ *                       properties:
+ *                         users:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                         roles:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                         files:
+ *                           type: array
+ *                           items:
+ *                             type: object
  *       404:
  *         description: Usuário não encontrado
  */
@@ -142,4 +192,5 @@
  *       404:
  *         description: Usuário não encontrado
  */
+
 

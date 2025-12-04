@@ -285,6 +285,58 @@ class SocialPlusClient {
     return this.makeRequest<{ id: string }>('POST', '/v1/users', userData);
   }
 
+  async getUser(userId: string, userAccessToken?: string, type: string = 'public'): Promise<SocialPlusResponse<unknown>> {
+    if (!this.apiKey) {
+      return {
+        success: false,
+        error: 'Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.',
+      };
+    }
+
+    const endpoint = `/v3/users/${userId}?type=${type}`;
+
+    if (userAccessToken) {
+      return this.makeRequest<unknown>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: userAccessToken,
+        }
+      );
+    }
+
+    let token: string | null = null;
+    try {
+      token = await this.getServerToken();
+    } catch (error) {
+      console.warn('Erro ao obter token de servidor para getUser:', error);
+      token = null;
+    }
+
+    if (token) {
+      return this.makeRequest<unknown>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: token,
+        }
+      );
+    }
+
+    return this.makeRequest<unknown>(
+      'GET',
+      endpoint,
+      undefined,
+      {
+        useApiKey: true,
+      }
+    );
+  }
+
   async listCommunities(params?: ListCommunitiesParams): Promise<SocialPlusResponse<unknown>> {
     // A API v3 do Amity (/v3/communities) não aceita query params
     // A paginação é feita via cursor (before/after) retornado no paging

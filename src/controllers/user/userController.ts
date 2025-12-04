@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
+import { AuthenticatedRequest } from '@/types';
 import prisma from '@/config/database';
 import { sendSuccess, sendError } from '@/utils/response';
+import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
+import { userTokenService } from '@/services/userTokenService';
 
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -61,9 +64,10 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getUserById = async (req: Request, res: Response): Promise<void> => {
+export const getUserById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { type } = req.query;
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -82,7 +86,41 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    sendSuccess(res, user, 'Usuário obtido com sucesso');
+    // Se o usuário tiver socialPlusUserId, busca também os dados do Social Plus
+    let socialPlusData = null;
+    if (user.socialPlusUserId) {
+      try {
+        const userType = (type as string) || 'public';
+        
+        // Tenta obter o token do usuário autenticado, mas não é obrigatório
+        let userAccessToken: string | undefined;
+        const currentUserId = req.user?.id;
+        
+        if (currentUserId) {
+          const tokenResult = await userTokenService.getToken(currentUserId, false);
+          userAccessToken = tokenResult.token || undefined;
+        }
+
+        const response = await socialPlusClient.getUser(user.socialPlusUserId, userAccessToken, userType);
+        
+        if (response.success && response.data) {
+          socialPlusData = response.data;
+        } else {
+          console.warn('Erro ao obter dados do Social Plus:', response.error);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados do Social Plus:', error);
+        // Não falha a requisição se não conseguir buscar no Social Plus
+      }
+    }
+
+    // Combina os dados do usuário local com os dados do Social Plus
+    const responseData = {
+      ...user,
+      socialPlus: socialPlusData,
+    };
+
+    sendSuccess(res, responseData, 'Usuário obtido com sucesso');
   } catch (error) {
     console.error('Get user error:', error);
     sendError(res, 'Erro ao obter usuário');
@@ -182,4 +220,5 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     sendError(res, 'Erro ao deletar usuário');
   }
 };
+
 
