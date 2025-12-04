@@ -68,6 +68,13 @@
  *                 type: string
  *                 format: date
  *                 description: Data de nascimento (opcional)
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X POST "{baseUrl}/api/persons" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+ *             -H "Content-Type: application/json" \
+ *             -d '{"firstName":"João","lastName":"Silva","birthdate":"1990-01-01"}'
  *     responses:
  *       200:
  *         description: Pessoa atualizada com sucesso (quando já existe)
@@ -111,6 +118,11 @@
  *     tags: [Persons]
  *     security:
  *       - bearerAuth: []
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/persons/123e4567-e89b-12d3-a456-426614174000" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
  *     parameters:
  *       - in: path
  *         name: id
@@ -157,6 +169,11 @@
  *           type: integer
  *           default: 10
  *         description: Limite de itens por página
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/persons?page=1&limit=10" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
  *     responses:
  *       200:
  *         description: Lista de pessoas obtida com sucesso
@@ -213,6 +230,13 @@
  *               birthdate:
  *                 type: string
  *                 format: date-time
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X PUT "{baseUrl}/api/persons/123e4567-e89b-12d3-a456-426614174000" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+ *             -H "Content-Type: application/json" \
+ *             -d '{"firstName":"João","lastName":"Silva"}'
  *     responses:
  *       200:
  *         description: Pessoa atualizada com sucesso
@@ -235,6 +259,11 @@
  *         schema:
  *           type: string
  *         description: ID da pessoa
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X DELETE "{baseUrl}/api/persons/123e4567-e89b-12d3-a456-426614174000" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
  *     responses:
  *       200:
  *         description: Pessoa deletada com sucesso

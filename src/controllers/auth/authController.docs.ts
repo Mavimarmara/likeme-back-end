@@ -76,6 +76,12 @@
  *               avatar:
  *                 type: string
  *                 format: uri
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X POST "{baseUrl}/api/auth/register" \
+ *             -H "Content-Type: application/json" \
+ *             -d '{"email":"usuario@example.com","password":"senha123","firstName":"João","lastName":"Silva"}'
  *     responses:
  *       201:
  *         description: Usuário criado com sucesso
@@ -101,6 +107,13 @@
  *     summary: Login com Auth0
  *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. O idToken pode ser enviado no body ou no header Authorization (Bearer token).
  *     tags: [Auth]
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X POST "{baseUrl}/api/auth/login" \
+ *             -H "Content-Type: application/json" \
+ *             -H "Authorization: Bearer YOUR_ID_TOKEN_HERE" \
+ *             -d '{"idToken":"YOUR_ID_TOKEN_HERE"}'
  *     requestBody:
  *       required: false
  *       content:
@@ -342,6 +355,11 @@
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/auth/profile" \
+ *             -H "Authorization: Bearer YOUR_TOKEN_HERE"
  *     responses:
  *       200:
  *         description: Perfil obtido com sucesso

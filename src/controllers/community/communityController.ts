@@ -173,7 +173,6 @@ export const getChannels = async (req: AuthenticatedRequest, res: Response): Pro
     const userId = req.user?.id;
     const { types } = req.query;
 
-    // Validar e converter tipos se fornecidos
     let channelTypes: ('conversation' | 'broadcast' | 'live' | 'community')[] | undefined;
     if (types) {
       const validTypes = ['conversation', 'broadcast', 'live', 'community'];
@@ -257,19 +256,16 @@ export const getProviderUser = async (req: AuthenticatedRequest, res: Response):
       return;
     }
 
-    // Validação básica do formato do userId (deve ser uma string não vazia)
     if (typeof userId !== 'string' || userId.trim().length === 0) {
       sendError(res, 'userId inválido', 400);
       return;
     }
 
-    // Limita o tamanho do userId para prevenir ataques
     if (userId.length > 255) {
       sendError(res, 'userId muito longo', 400);
       return;
     }
 
-    // Busca dados do usuário no Social Plus com type=public (apenas dados públicos)
     const response = await socialPlusClient.getUser(userId.trim(), undefined, 'public');
 
     if (!response.success) {
@@ -282,7 +278,6 @@ export const getProviderUser = async (req: AuthenticatedRequest, res: Response):
       return;
     }
 
-    // Filtra apenas dados não sensíveis
     const nonSensitiveData = filterNonSensitiveUserData(response.data);
 
     if (!nonSensitiveData) {
