@@ -2,7 +2,6 @@ import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityC
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
 import { userTokenService } from './userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
-import { getAmityClient, isAmityReady, loginToAmity, initializeAmityClient } from '@/utils/amityClient';
 import prisma from '@/config/database';
 
 export interface AddCommunitiesResult {
@@ -21,20 +20,6 @@ export interface FeedFilterOptions {
   orderBy?: FeedOrderBy;
   order?: 'asc' | 'desc';
 }
-
-const ensureAmityClientReady = async (): Promise<void> => {
-  if (!isAmityReady()) {
-    try {
-      await initializeAmityClient();
-    } catch (error) {
-      console.error('[Amity] Erro ao inicializar cliente:', error);
-    }
-  }
-
-  if (!isAmityReady()) {
-    throw new Error('SDK do Amity não está inicializado. Verifique as configurações.');
-  }
-};
 
 export class CommunityService {
   async getUserFeed(
@@ -342,141 +327,53 @@ export class CommunityService {
     types?: ('conversation' | 'broadcast' | 'live' | 'community')[]
   ): Promise<AmityChannelsResponse> {
     try {
-      await ensureAmityClientReady();
-
       if (!userId) {
         throw new Error('Usuário não autenticado. Faça login para obter channels.');
       }
 
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { 
-          socialPlusUserId: true,
-          person: {
-            select: {
-              firstName: true,
-              lastName: true,
-            },
-          },
-        },
-      });
-      
-      if (!user?.socialPlusUserId) {
-        throw new Error('Usuário não está sincronizado com a social.plus');
+      const tokenResult = await userTokenService.getToken(userId, false);
+      const userAccessToken = tokenResult.token || undefined;
+
+      if (!userAccessToken) {
+        throw new Error('Token de acesso do usuário não disponível. Faça login novamente.');
       }
 
-      const displayName = user.person?.firstName && user.person?.lastName 
-        ? `${user.person.firstName} ${user.person.lastName}` 
-        : user.socialPlusUserId;
+      const typesArray = types && types.length > 0 ? types.map(t => t.toLowerCase()) : undefined;
 
-      const loginResult = await loginToAmity(user.socialPlusUserId, displayName);
-      
-      if (!loginResult) {
-        throw new Error('Não foi possível fazer login no Amity SDK');
+      const response = await socialPlusClient.getChannels(userAccessToken, typesArray);
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Erro ao buscar channels da API');
       }
 
-      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
-      if (!amityModule) {
-        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
-      }
+      const data = response.data as any;
+      const channelsData = data.channels || [];
 
-      if (!isAmityReady()) {
-        throw new Error('SDK do Amity não está conectado após o login');
-      }
+      const channels: AmityChannel[] = channelsData.map((channel: any) => ({
+        channelId: channel.channelId,
+        displayName: channel.displayName,
+        description: channel.description,
+        avatarFileId: channel.avatarFileId,
+        type: channel.type,
+        metadata: channel.metadata,
+        memberCount: channel.memberCount,
+        unreadCount: channel.unreadCount,
+        isMuted: channel.isMuted,
+        isFlaggedByMe: channel.isFlaggedByMe,
+        createdAt: channel.createdAt,
+        updatedAt: channel.updatedAt,
+        lastActivity: channel.lastActivity,
+        ...channel,
+      }));
 
-      const client = getAmityClient();
-      if (!client) {
-        throw new Error('Cliente do Amity não está disponível');
-      }
+      const hasNextPage = !!(data.paging && data.paging.next);
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const { ChannelRepository } = amityModule;
-
-      // Preparar parâmetros de filtro
-      const params: { types?: ('conversation' | 'broadcast' | 'live' | 'community')[] } = {};
-      if (types && types.length > 0) {
-        params.types = types;
-      }
-
-      return new Promise<AmityChannelsResponse>((resolve, reject) => {
-        let channels: AmityChannel[] = [];
-        let hasNextPage = false;
-        let loading = true;
-        let error: Error | null = null;
-        let resolved = false;
-
-        try {
-          const unsubscriber = ChannelRepository.getChannels(
-            params,
-            ({ data: channelsData, onNextPage, hasNextPage: hasMore, loading: isLoading, error: channelError }) => {
-              if (channelError) {
-                error = channelError instanceof Error ? channelError : new Error(String(channelError));
-                loading = false;
-                if (!resolved) {
-                  resolved = true;
-                  unsubscriber?.();
-                  reject(error);
-                }
-                return;
-              }
-
-              loading = isLoading || false;
-
-              if (channelsData) {
-                channels = channelsData.map((channel: any) => ({
-                  channelId: channel.channelId,
-                  displayName: channel.displayName,
-                  description: channel.description,
-                  avatarFileId: channel.avatarFileId,
-                  type: channel.type,
-                  metadata: channel.metadata,
-                  memberCount: channel.memberCount,
-                  unreadCount: channel.unreadCount,
-                  isMuted: channel.isMuted,
-                  isFlaggedByMe: channel.isFlaggedByMe,
-                  createdAt: channel.createdAt,
-                  updatedAt: channel.updatedAt,
-                  lastActivity: channel.lastActivity,
-                  ...channel,
-                }));
-              }
-
-              hasNextPage = hasMore || false;
-
-              if (!loading && !resolved) {
-                resolved = true;
-                unsubscriber?.();
-                resolve({
-                  channels,
-                  hasNextPage,
-                  loading: false,
-                  error: null,
-                });
-              }
-            }
-          );
-
-          setTimeout(() => {
-            if (!resolved) {
-              resolved = true;
-              unsubscriber?.();
-              resolve({
-                channels,
-                hasNextPage,
-                loading: false,
-                error: error || new Error('Timeout ao buscar channels'),
-              });
-            }
-          }, 10000);
-        } catch (sdkError: any) {
-          if (!resolved) {
-            resolved = true;
-            const errorMessage = sdkError?.message || String(sdkError);
-            reject(new Error(`Erro ao usar ChannelRepository: ${errorMessage}`));
-          }
-        }
-      });
+      return {
+        channels,
+        hasNextPage,
+        loading: false,
+        error: null,
+      };
     } catch (error) {
       console.error('[CommunityService] Erro ao buscar channels:', error);
       throw error;

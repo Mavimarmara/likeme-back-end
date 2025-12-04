@@ -615,6 +615,64 @@ class SocialPlusClient {
       }
     );
   }
+
+  async getChannels(userAccessToken?: string, types?: string[]): Promise<SocialPlusResponse<unknown>> {
+    if (!this.apiKey) {
+      return {
+        success: false,
+        error: 'Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.',
+      };
+    }
+
+    const queryParams = new URLSearchParams();
+    if (types && types.length > 0) {
+      types.forEach(type => queryParams.append('types', type));
+    }
+
+    const query = queryParams.toString();
+    const endpoint = `/v3/channels${query ? `?${query}` : ''}`;
+
+    if (userAccessToken) {
+      return this.makeRequest<unknown>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: userAccessToken,
+        }
+      );
+    }
+
+    let token: string | null = null;
+    try {
+      token = await this.getServerToken();
+    } catch (error) {
+      console.warn('Erro ao obter token de servidor para getChannels:', error);
+      token = null;
+    }
+
+    if (token) {
+      return this.makeRequest<unknown>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+          bearerToken: token,
+        }
+      );
+    }
+
+    return this.makeRequest<unknown>(
+      'GET',
+      endpoint,
+      undefined,
+      {
+        useApiKey: true,
+      }
+    );
+  }
 }
 
 export const socialPlusClient = new SocialPlusClient();

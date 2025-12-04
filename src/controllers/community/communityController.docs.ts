@@ -394,8 +394,8 @@
  *         description: Erro ao gerar token de autenticação do usuário
  * /api/communities/channels:
  *   get:
- *     summary: Obter channels do usuário (SDK)
- *     description: Retorna os channels do usuário autenticado usando o SDK do Amity (ChannelRepository.getChannels). Requer token de autenticação do usuário e que o SDK do Amity esteja inicializado.
+ *     summary: Obter channels do usuário
+ *     description: Retorna os channels do usuário autenticado usando a API REST do Amity (/api/v3/channels). Requer token de autenticação do usuário.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
