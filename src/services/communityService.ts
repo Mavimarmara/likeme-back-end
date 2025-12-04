@@ -344,30 +344,48 @@ export class CommunityService {
     try {
       await ensureAmityClientReady();
 
-      // Garantir que o usuário está logado no SDK
-      if (userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { 
-            socialPlusUserId: true,
-            person: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        });
-        
-        if (user?.socialPlusUserId) {
-          const displayName = user.person?.firstName && user.person?.lastName 
-            ? `${user.person.firstName} ${user.person.lastName}` 
-            : user.socialPlusUserId;
-          await loginToAmity(user.socialPlusUserId, displayName);
-        }
+      if (!userId) {
+        throw new Error('Usuário não autenticado. Faça login para obter channels.');
       }
 
-      // Dynamic import do SDK do Amity
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+          socialPlusUserId: true,
+          person: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+      
+      if (!user?.socialPlusUserId) {
+        throw new Error('Usuário não está sincronizado com a social.plus');
+      }
+
+      const displayName = user.person?.firstName && user.person?.lastName 
+        ? `${user.person.firstName} ${user.person.lastName}` 
+        : user.socialPlusUserId;
+
+      const loginResult = await loginToAmity(user.socialPlusUserId, displayName);
+      
+      if (!loginResult) {
+        throw new Error('Não foi possível fazer login no Amity SDK');
+      }
+
+      if (!isAmityReady()) {
+        throw new Error('SDK do Amity não está conectado após o login');
+      }
+
+      const client = getAmityClient();
+      if (!client) {
+        throw new Error('Cliente do Amity não está disponível');
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const amityModule = await import('@amityco/ts-sdk').catch(() => null);
       if (!amityModule) {
         throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');

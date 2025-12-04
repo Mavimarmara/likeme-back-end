@@ -108,7 +108,11 @@ export const loginToAmity = async (
     const { Client } = amityModule;
 
     try {
-      const loginResult: any = await Client.login({ userId, displayName }, sessionHandler);
+      if (!amityClient) {
+        throw new Error('Cliente do Amity não está inicializado');
+      }
+
+      const loginResult: any = await amityClient.login({ userId, displayName }, sessionHandler);
 
       // Verificar se o login retornou um userId (pode ser diferente do que passamos)
       const returnedUserId = loginResult?.userId || loginResult?.user?.userId || userId;
