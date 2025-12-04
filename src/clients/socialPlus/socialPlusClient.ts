@@ -307,6 +307,17 @@ class SocialPlusClient {
       );
     }
 
+    if (type === 'public') {
+      return this.makeRequest<unknown>(
+        'GET',
+        endpoint,
+        undefined,
+        {
+          useApiKey: true,
+        }
+      );
+    }
+
     let token: string | null = null;
     try {
       token = await this.getServerToken();
