@@ -75,29 +75,6 @@ export const loginToAmity = async (
       }
     }
 
-    // Tentar inicializar o cliente, mas não falhar se a API key não for válida para o SDK
-    if (!isInitialized || !amityClient) {
-      try {
-        await initializeAmityClient();
-      } catch (initError: any) {
-        // Se a API key não for válida para o SDK, apenas logar e continuar
-        if (initError?.code === 400100 || initError?.message?.includes('API Key is not usable')) {
-          console.warn('Amity SDK: API Key não é utilizável para o SDK. Continuando sem login no SDK.');
-          // Retornar o userId mesmo sem token - o sistema pode funcionar sem o SDK
-          return { userId, accessToken };
-        }
-        console.warn('Erro ao inicializar Amity client:', initError?.message || initError);
-        return { userId, accessToken };
-      }
-    }
-
-    if (!amityClient) {
-      console.warn('Amity client não disponível. Login não será realizado no SDK, mas o sistema continuará funcionando.');
-      return { userId, accessToken };
-    }
-
-    // Dynamic import para evitar erro se o pacote não estiver instalado
-    // @ts-ignore - Pacote pode não estar instalado ainda
     const amityModule = await import('@amityco/ts-sdk').catch(() => null);
     
     if (!amityModule) {
@@ -107,12 +84,27 @@ export const loginToAmity = async (
 
     const { Client } = amityModule;
 
+    if (!config.socialPlus.apiKey || !config.socialPlus.region) {
+      console.warn('Amity: API Key ou Region não configurados. Login não será realizado no SDK.');
+      return { userId, accessToken };
+    }
+
     try {
-      if (!amityClient) {
-        throw new Error('Cliente do Amity não está inicializado');
+      if (!isInitialized || !amityClient) {
+        try {
+          amityClient = Client.createClient(config.socialPlus.apiKey, config.socialPlus.region);
+          isInitialized = true;
+          console.log('Amity client criado para login');
+        } catch (createError: any) {
+          if (createError?.code === 400100 || createError?.message?.includes('API Key is not usable')) {
+            console.warn('Amity SDK: API Key não é utilizável para o SDK.');
+            return { userId, accessToken };
+          }
+          throw createError;
+        }
       }
 
-      const loginResult: any = await amityClient.login({ userId, displayName }, sessionHandler);
+      const loginResult: any = await Client.login({ userId, displayName }, sessionHandler);
 
       // Verificar se o login retornou um userId (pode ser diferente do que passamos)
       const returnedUserId = loginResult?.userId || loginResult?.user?.userId || userId;

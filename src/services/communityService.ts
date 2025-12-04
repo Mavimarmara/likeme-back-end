@@ -375,6 +375,11 @@ export class CommunityService {
         throw new Error('Não foi possível fazer login no Amity SDK');
       }
 
+      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
+      if (!amityModule) {
+        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
+      }
+
       if (!isAmityReady()) {
         throw new Error('SDK do Amity não está conectado após o login');
       }
@@ -384,12 +389,7 @@ export class CommunityService {
         throw new Error('Cliente do Amity não está disponível');
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const amityModule = await import('@amityco/ts-sdk').catch(() => null);
-      if (!amityModule) {
-        throw new Error('SDK do Amity não encontrado. Execute: npm install @amityco/ts-sdk');
-      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const { ChannelRepository } = amityModule;
 
@@ -399,7 +399,6 @@ export class CommunityService {
         params.types = types;
       }
 
-      // Promise para aguardar a resposta do callback
       return new Promise<AmityChannelsResponse>((resolve, reject) => {
         let channels: AmityChannel[] = [];
         let hasNextPage = false;
@@ -407,68 +406,76 @@ export class CommunityService {
         let error: Error | null = null;
         let resolved = false;
 
-        const unsubscriber = ChannelRepository.getChannels(
-          params,
-          ({ data: channelsData, onNextPage, hasNextPage: hasMore, loading: isLoading, error: channelError }) => {
-            if (channelError) {
-              error = channelError instanceof Error ? channelError : new Error(String(channelError));
-              loading = false;
-              if (!resolved) {
-                resolved = true;
-                reject(error);
+        try {
+          const unsubscriber = ChannelRepository.getChannels(
+            params,
+            ({ data: channelsData, onNextPage, hasNextPage: hasMore, loading: isLoading, error: channelError }) => {
+              if (channelError) {
+                error = channelError instanceof Error ? channelError : new Error(String(channelError));
+                loading = false;
+                if (!resolved) {
+                  resolved = true;
+                  unsubscriber?.();
+                  reject(error);
+                }
+                return;
               }
-              return;
+
+              loading = isLoading || false;
+
+              if (channelsData) {
+                channels = channelsData.map((channel: any) => ({
+                  channelId: channel.channelId,
+                  displayName: channel.displayName,
+                  description: channel.description,
+                  avatarFileId: channel.avatarFileId,
+                  type: channel.type,
+                  metadata: channel.metadata,
+                  memberCount: channel.memberCount,
+                  unreadCount: channel.unreadCount,
+                  isMuted: channel.isMuted,
+                  isFlaggedByMe: channel.isFlaggedByMe,
+                  createdAt: channel.createdAt,
+                  updatedAt: channel.updatedAt,
+                  lastActivity: channel.lastActivity,
+                  ...channel,
+                }));
+              }
+
+              hasNextPage = hasMore || false;
+
+              if (!loading && !resolved) {
+                resolved = true;
+                unsubscriber?.();
+                resolve({
+                  channels,
+                  hasNextPage,
+                  loading: false,
+                  error: null,
+                });
+              }
             }
+          );
 
-            loading = isLoading || false;
-
-            if (channelsData) {
-              // Converter os dados do SDK para o formato AmityChannel
-              channels = channelsData.map((channel: any) => ({
-                channelId: channel.channelId,
-                displayName: channel.displayName,
-                description: channel.description,
-                avatarFileId: channel.avatarFileId,
-                type: channel.type,
-                metadata: channel.metadata,
-                memberCount: channel.memberCount,
-                unreadCount: channel.unreadCount,
-                isMuted: channel.isMuted,
-                isFlaggedByMe: channel.isFlaggedByMe,
-                createdAt: channel.createdAt,
-                updatedAt: channel.updatedAt,
-                lastActivity: channel.lastActivity,
-                ...channel,
-              }));
-            }
-
-            hasNextPage = hasMore || false;
-
-            // Resolver quando não estiver mais carregando e ainda não foi resolvido
-            if (!loading && !resolved) {
+          setTimeout(() => {
+            if (!resolved) {
               resolved = true;
+              unsubscriber?.();
               resolve({
                 channels,
                 hasNextPage,
                 loading: false,
-                error: null,
+                error: error || new Error('Timeout ao buscar channels'),
               });
             }
-          }
-        );
-
-        // Timeout de segurança (10 segundos)
-        setTimeout(() => {
+          }, 10000);
+        } catch (sdkError: any) {
           if (!resolved) {
             resolved = true;
-            resolve({
-              channels,
-              hasNextPage,
-              loading: false,
-              error: error || new Error('Timeout ao buscar channels'),
-            });
+            const errorMessage = sdkError?.message || String(sdkError);
+            reject(new Error(`Erro ao usar ChannelRepository: ${errorMessage}`));
           }
-        }, 10000);
+        }
       });
     } catch (error) {
       console.error('[CommunityService] Erro ao buscar channels:', error);
