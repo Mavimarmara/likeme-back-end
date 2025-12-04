@@ -2,9 +2,6 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendError, sendSuccess } from '@/utils/response';
 import { communityService, FeedFilterOptions, FeedOrderBy } from '@/services/communityService';
-import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
-import { filterNonSensitiveUserData } from '@/controllers/user/userController';
-import { userTokenService } from '@/services/userTokenService';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -248,53 +245,3 @@ export const removeCommentReaction = async (req: AuthenticatedRequest, res: Resp
   }
 };
 
-export const getProviderUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { userId } = req.params;
-    const currentUserId = req.user?.id;
-
-    if (!userId) {
-      sendError(res, 'userId é obrigatório', 400);
-      return;
-    }
-
-    if (typeof userId !== 'string' || userId.trim().length === 0) {
-      sendError(res, 'userId inválido', 400);
-      return;
-    }
-
-    if (userId.length > 255) {
-      sendError(res, 'userId muito longo', 400);
-      return;
-    }
-
-    let userAccessToken: string | undefined;
-    if (currentUserId) {
-      const tokenResult = await userTokenService.getToken(currentUserId, false);
-      userAccessToken = tokenResult.token || undefined;
-    }
-
-    const response = await socialPlusClient.getUser(userId.trim(), userAccessToken, 'public');
-
-    if (!response.success) {
-      sendError(res, response.error || 'Erro ao obter dados do usuário do Social Plus', 400);
-      return;
-    }
-
-    if (!response.data) {
-      sendError(res, 'Usuário não encontrado no Social Plus', 404);
-      return;
-    }
-
-    const nonSensitiveData = filterNonSensitiveUserData(response.data);
-
-    if (!nonSensitiveData) {
-      sendError(res, 'Dados do usuário não disponíveis', 404);
-      return;
-    }
-
-    sendSuccess(res, nonSensitiveData, 'Dados do usuário obtidos com sucesso');
-  } catch (error) {
-    handleError(res, error, 'obter dados do usuário do provider');
-  }
-};
