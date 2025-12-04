@@ -57,7 +57,10 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
-    sendSuccess(res, user, 'Usuário criado com sucesso', 201);
+    // Filtra dados sensíveis antes de retornar
+    const safeUser = filterSensitiveUserData(user);
+
+    sendSuccess(res, safeUser, 'Usuário criado com sucesso', 201);
   } catch (error) {
     console.error('Create user error:', error);
     sendError(res, 'Erro ao criar usuário');
@@ -68,6 +71,14 @@ export const getUserById = async (req: AuthenticatedRequest, res: Response): Pro
   try {
     const { id } = req.params;
     const { type } = req.query;
+    const currentUserId = req.user?.id;
+
+    // Verificação de autorização: usuário só pode ver seu próprio perfil
+    // TODO: Adicionar verificação de admin/roles quando implementado
+    if (currentUserId !== id) {
+      sendError(res, 'Não autorizado a visualizar dados de outro usuário', 403);
+      return;
+    }
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -92,9 +103,8 @@ export const getUserById = async (req: AuthenticatedRequest, res: Response): Pro
       try {
         const userType = (type as string) || 'public';
         
-        // Tenta obter o token do usuário autenticado, mas não é obrigatório
+        // Tenta obter o token do usuário autenticado
         let userAccessToken: string | undefined;
-        const currentUserId = req.user?.id;
         
         if (currentUserId) {
           const tokenResult = await userTokenService.getToken(currentUserId, false);
@@ -104,7 +114,8 @@ export const getUserById = async (req: AuthenticatedRequest, res: Response): Pro
         const response = await socialPlusClient.getUser(user.socialPlusUserId, userAccessToken, userType);
         
         if (response.success && response.data) {
-          socialPlusData = response.data;
+          // Filtra dados sensíveis do Social Plus antes de retornar
+          socialPlusData = filterNonSensitiveUserData(response.data);
         } else {
           console.warn('Erro ao obter dados do Social Plus:', response.error);
         }
@@ -114,9 +125,12 @@ export const getUserById = async (req: AuthenticatedRequest, res: Response): Pro
       }
     }
 
+    // Filtra dados sensíveis do usuário local (password, salt)
+    const safeUser = filterSensitiveUserData(user);
+
     // Combina os dados do usuário local com os dados do Social Plus
     const responseData = {
-      ...user,
+      ...safeUser,
       socialPlus: socialPlusData,
     };
 
@@ -157,8 +171,11 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
       }),
     ]);
 
+    // Filtra dados sensíveis de todos os usuários
+    const safeUsers = users.map(user => filterSensitiveUserData(user));
+
     sendSuccess(res, {
-      users,
+      users: safeUsers,
       pagination: {
         page,
         limit,
@@ -172,14 +189,25 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
+export const updateUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const currentUserId = req.user?.id;
     const updateData = req.body;
+
+    // Verificação de autorização: usuário só pode atualizar seu próprio perfil
+    // TODO: Adicionar verificação de admin/roles quando implementado
+    if (currentUserId !== id) {
+      sendError(res, 'Não autorizado a atualizar dados de outro usuário', 403);
+      return;
+    }
+
+    // Remove campos sensíveis que não devem ser atualizados via API
+    const { password, salt, ...safeUpdateData } = updateData;
 
     const user = await prisma.user.update({
       where: { id },
-      data: updateData,
+      data: safeUpdateData,
       include: {
         person: {
           include: {
@@ -190,7 +218,10 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
-    sendSuccess(res, user, 'Usuário atualizado com sucesso');
+    // Filtra dados sensíveis antes de retornar
+    const safeUser = filterSensitiveUserData(user);
+
+    sendSuccess(res, safeUser, 'Usuário atualizado com sucesso');
   } catch (error) {
     console.error('Update user error:', error);
     if ((error as any).code === 'P2025') {
@@ -201,9 +232,17 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const currentUserId = req.user?.id;
+
+    // Verificação de autorização: usuário só pode deletar seu próprio perfil
+    // TODO: Adicionar verificação de admin/roles quando implementado
+    if (currentUserId !== id) {
+      sendError(res, 'Não autorizado a deletar outro usuário', 403);
+      return;
+    }
 
     await prisma.user.update({
       where: { id },
@@ -219,6 +258,47 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     }
     sendError(res, 'Erro ao deletar usuário');
   }
+};
+
+/**
+ * Filtra dados sensíveis do usuário local (password, salt)
+ */
+const filterSensitiveUserData = (user: any): any => {
+  if (!user) return null;
+  
+  const { password, salt, ...safeUser } = user;
+  return safeUser;
+};
+
+/**
+ * Filtra dados não sensíveis do usuário do Social Plus
+ * Remove informações como permissões, roles internas, flags, metadados sensíveis, etc.
+ * Retorna apenas dados públicos como displayName, profileHandle, avatar, description, etc.
+ */
+export const filterNonSensitiveUserData = (socialPlusData: any): any => {
+  if (!socialPlusData || !socialPlusData.users || !Array.isArray(socialPlusData.users) || socialPlusData.users.length === 0) {
+    return null;
+  }
+
+  const user = socialPlusData.users[0];
+  
+  // Retorna apenas dados públicos/não sensíveis
+  return {
+    userId: user.userId,
+    displayName: user.displayName,
+    profileHandle: user.profileHandle,
+    description: user.description,
+    avatarCustomUrl: user.avatarCustomUrl,
+    avatarFileId: user.avatarFileId,
+    isBrand: user.isBrand,
+    isDeleted: user.isDeleted,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    // Arquivos públicos (avatar)
+    files: socialPlusData.files?.filter((file: any) => 
+      file.fileId === user.avatarFileId && file.accessType === 'public'
+    ) || [],
+  };
 };
 
 
