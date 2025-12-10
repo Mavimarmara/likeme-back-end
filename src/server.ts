@@ -20,6 +20,10 @@ import personalObjectiveRoutes from '@/routes/objective/personalObjectiveRoutes'
 import userPersonalObjectiveRoutes from '@/routes/objective/userPersonalObjectiveRoutes';
 import tipRoutes from '@/routes/tip/tipRoutes';
 import communityRoutes from '@/routes/community/communityRoutes';
+import productRoutes from '@/routes/product/productRoutes';
+import orderRoutes from '@/routes/order/orderRoutes';
+import adRoutes from '@/routes/ad/adRoutes';
+import advertiserRoutes from '@/routes/advertiser/advertiserRoutes';
 
 const app = express();
 
@@ -242,6 +246,10 @@ app.use('/api/personal-objectives', personalObjectiveRoutes);
 app.use('/api/user-personal-objectives', userPersonalObjectiveRoutes);
 app.use('/api/tips', tipRoutes);
 app.use('/api/communities', communityRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/ads', adRoutes);
+app.use('/api/advertisers', advertiserRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({

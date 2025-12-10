@@ -179,3 +179,135 @@ export const objectiveIdParamSchema = Joi.object({
 export const idParamSchema = Joi.object({
   id: Joi.string().required(),
 });
+
+// ============================================
+// PRODUCT VALIDATION SCHEMAS
+// ============================================
+
+export const createProductSchema = Joi.object({
+  name: Joi.string().min(2).max(200).required(),
+  description: Joi.string().max(2000).optional(),
+  sku: Joi.string().max(100).optional(),
+  price: Joi.number().positive().precision(2).required(),
+  cost: Joi.number().positive().precision(2).optional(),
+  quantity: Joi.number().integer().min(0).default(0),
+  image: Joi.string().uri().max(500).optional(),
+  category: Joi.string().max(100).optional(),
+  brand: Joi.string().max(100).optional(),
+  status: Joi.string().valid('active', 'inactive', 'out_of_stock').default('active'),
+  weight: Joi.number().positive().precision(3).optional(),
+  dimensions: Joi.string().max(50).optional(),
+});
+
+export const updateProductSchema = Joi.object({
+  name: Joi.string().min(2).max(200).optional(),
+  description: Joi.string().max(2000).optional(),
+  sku: Joi.string().max(100).optional(),
+  price: Joi.number().positive().precision(2).optional(),
+  cost: Joi.number().positive().precision(2).optional(),
+  quantity: Joi.number().integer().min(0).optional(),
+  image: Joi.string().uri().max(500).optional(),
+  category: Joi.string().max(100).optional(),
+  brand: Joi.string().max(100).optional(),
+  status: Joi.string().valid('active', 'inactive', 'out_of_stock').optional(),
+  weight: Joi.number().positive().precision(3).optional(),
+  dimensions: Joi.string().max(50).optional(),
+});
+
+export const updateStockSchema = Joi.object({
+  quantity: Joi.number().integer().required(),
+  operation: Joi.string().valid('add', 'subtract', 'set').required(),
+});
+
+// ============================================
+// ORDER VALIDATION SCHEMAS
+// ============================================
+
+export const orderItemSchema = Joi.object({
+  productId: Joi.string().required(),
+  quantity: Joi.number().integer().positive().required(),
+  discount: Joi.number().min(0).precision(2).default(0),
+});
+
+export const createOrderSchema = Joi.object({
+  userId: Joi.string().optional(),
+  items: Joi.array().items(orderItemSchema).min(1).required(),
+  status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').default('pending'),
+  shippingCost: Joi.number().min(0).precision(2).default(0),
+  tax: Joi.number().min(0).precision(2).default(0),
+  shippingAddress: Joi.string().max(500).optional(),
+  billingAddress: Joi.string().max(500).optional(),
+  notes: Joi.string().max(1000).optional(),
+  paymentMethod: Joi.string().max(100).optional(),
+  paymentStatus: Joi.string().valid('pending', 'paid', 'failed', 'refunded').default('pending'),
+  trackingNumber: Joi.string().max(100).optional(),
+});
+
+export const updateOrderSchema = Joi.object({
+  status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').optional(),
+  shippingAddress: Joi.string().max(500).optional(),
+  billingAddress: Joi.string().max(500).optional(),
+  notes: Joi.string().max(1000).optional(),
+  paymentMethod: Joi.string().max(100).optional(),
+  paymentStatus: Joi.string().valid('pending', 'paid', 'failed', 'refunded').optional(),
+  trackingNumber: Joi.string().max(100).optional(),
+  restoreStock: Joi.boolean().optional(),
+});
+
+// ============================================
+// AD VALIDATION SCHEMAS
+// ============================================
+
+export const createAdSchema = Joi.object({
+  advertiserId: Joi.string().required(),
+  productId: Joi.string().optional(),
+  title: Joi.string().min(2).max(200).required(),
+  description: Joi.string().max(2000).optional(),
+  image: Joi.string().uri().max(500).optional(),
+  startDate: Joi.date().iso().optional(),
+  endDate: Joi.date().iso().greater(Joi.ref('startDate')).optional(),
+  status: Joi.string().valid('active', 'inactive', 'expired').default('active'),
+  targetAudience: Joi.string().max(200).optional(),
+  budget: Joi.number().positive().precision(2).optional(),
+});
+
+export const updateAdSchema = Joi.object({
+  productId: Joi.string().optional(),
+  title: Joi.string().min(2).max(200).optional(),
+  description: Joi.string().max(2000).optional(),
+  image: Joi.string().uri().max(500).optional(),
+  startDate: Joi.date().iso().optional(),
+  endDate: Joi.date().iso().optional(),
+  status: Joi.string().valid('active', 'inactive', 'expired').optional(),
+  targetAudience: Joi.string().max(200).optional(),
+  budget: Joi.number().positive().precision(2).optional(),
+});
+
+// ============================================
+// ADVERTISER VALIDATION SCHEMAS
+// ============================================
+
+export const createAdvertiserSchema = Joi.object({
+  userId: Joi.string().optional(),
+  name: Joi.string().min(2).max(200).required(),
+  description: Joi.string().max(2000).optional(),
+  logo: Joi.string().uri().max(500).optional(),
+  contactEmail: Joi.string().email().max(200).optional(),
+  contactPhone: Joi.string().max(50).optional(),
+  website: Joi.string().uri().max(500).optional(),
+  status: Joi.string().valid('active', 'inactive', 'suspended').default('active'),
+});
+
+export const updateAdvertiserSchema = Joi.object({
+  name: Joi.string().min(2).max(200).optional(),
+  description: Joi.string().max(2000).optional(),
+  logo: Joi.string().uri().max(500).optional(),
+  contactEmail: Joi.string().email().max(200).optional(),
+  contactPhone: Joi.string().max(50).optional(),
+  website: Joi.string().uri().max(500).optional(),
+  status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
+});
+
+export const userIdParamSchema = Joi.object({
+  userId: Joi.string().required(),
+});

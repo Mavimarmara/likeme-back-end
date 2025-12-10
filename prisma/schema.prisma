@@ -71,6 +71,8 @@ model User {
   personalObjectives UserPersonalObjective[] @relation("UserPersonalObjectives")
   communities        CommunityMember[]       @relation("UserCommunities")
   createdCommunities Community[]             @relation("UserCreatedCommunities")
+  orders             Order[]                 @relation("UserOrders")
+  advertiser         Advertiser?             @relation("UserAdvertiser")
 
   @@index([personId])
   @@index([username])
@@ -228,4 +230,139 @@ model CommunityMember {
   @@index([userId])
   @@index([communityId])
   @@map("community_member")
+}
+
+// ============================================
+// E-COMMERCE MODELS - Product and Order Management
+// ============================================
+
+model Product {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  name            String
+  description     String?
+  sku             String?   @unique
+  price           Decimal   @db.Decimal(10, 2)
+  cost            Decimal?  @db.Decimal(10, 2)
+  quantity        Int       @default(0) // Available stock
+  image           String?
+  category        String?
+  brand           String?
+  status          String    @default("active") // active, inactive, out_of_stock
+  weight          Decimal?  @db.Decimal(10, 3) // in kg
+  dimensions      String? // format: "LxHxW" (length x height x width)
+  
+  // Relations
+  orderItems      OrderItem[]  @relation("ProductOrderItems")
+  ads             Ad[]         @relation("ProductAds")
+
+  @@index([sku])
+  @@index([name])
+  @@index([category])
+  @@index([status])
+  @@index([quantity])
+  @@map("product")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  deletedAt       DateTime?   @map("deleted_at")
+  userId          String      @map("user_id")
+  status          String      @default("pending") // pending, processing, shipped, delivered, cancelled
+  total           Decimal     @db.Decimal(10, 2)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  shippingCost    Decimal     @default(0) @db.Decimal(10, 2) @map("shipping_cost")
+  tax             Decimal     @default(0) @db.Decimal(10, 2)
+  shippingAddress String?     @map("shipping_address")
+  billingAddress  String?     @map("billing_address")
+  notes           String?
+  paymentMethod   String?     @map("payment_method")
+  paymentStatus   String      @default("pending") @map("payment_status") // pending, paid, failed, refunded
+  trackingNumber  String?     @map("tracking_number")
+  
+  // Relations
+  user      User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  items     OrderItem[] @relation("OrderItems")
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("order")
+}
+
+model OrderItem {
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  orderId       String    @map("order_id")
+  productId     String    @map("product_id")
+  quantity      Int
+  unitPrice     Decimal   @db.Decimal(10, 2) @map("unit_price") // Price at time of sale
+  discount      Decimal   @default(0) @db.Decimal(10, 2)
+  total         Decimal   @db.Decimal(10, 2)
+  
+  // Relations
+  order   Order   @relation("OrderItems", fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation("ProductOrderItems", fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_item")
+}
+
+model Advertiser {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  userId          String    @unique @map("user_id") // A user can be an advertiser
+  name            String
+  description     String?
+  logo            String?
+  contactEmail    String?   @map("contact_email")
+  contactPhone    String?   @map("contact_phone")
+  website         String?
+  status          String    @default("active") // active, inactive, suspended
+  
+  // Relations
+  user       User       @relation("UserAdvertiser", fields: [userId], references: [id], onDelete: Cascade)
+  ads        Ad[]       @relation("AdvertiserAds")
+
+  @@index([userId])
+  @@index([status])
+  @@map("advertiser")
+}
+
+model Ad {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  advertiserId    String    @map("advertiser_id")
+  productId       String    @map("product_id")
+  title           String
+  description     String?
+  image           String?
+  startDate       DateTime? @map("start_date")
+  endDate         DateTime? @map("end_date")
+  status          String    @default("active") // active, inactive, expired
+  targetAudience  String?   @map("target_audience")
+  budget          Decimal?  @db.Decimal(10, 2)
+  
+  // Relations
+  advertiser Advertiser @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
+  product    Product    @relation("ProductAds", fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([advertiserId])
+  @@index([productId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("ad")
 }
