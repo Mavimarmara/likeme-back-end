@@ -36,9 +36,20 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
     });
 
     sendSuccess(res, product, 'Product created successfully', 201);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create product error:', error);
-    sendError(res, 'Error creating product');
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+    });
+    
+    if (error?.code === 'P2001' || error?.message?.includes('does not exist')) {
+      sendError(res, 'Database tables not initialized. Please run Prisma migrations.', 500, error?.message);
+      return;
+    }
+    
+    sendError(res, 'Error creating product', 500, error?.message);
   }
 };
 
@@ -69,9 +80,19 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
     }
 
     sendSuccess(res, product, 'Product retrieved successfully');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get product error:', error);
-    sendError(res, 'Error retrieving product');
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+    });
+    
+    if (error?.code === 'P2001' || error?.message?.includes('does not exist')) {
+      sendError(res, 'Database tables not initialized. Please run Prisma migrations.', 500, error?.message);
+      return;
+    }
+    
+    sendError(res, 'Error retrieving product', 500, error?.message);
   }
 };
 
@@ -123,9 +144,24 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
         totalPages: Math.ceil(total / limit),
       },
     }, 'Products retrieved successfully');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get all products error:', error);
-    sendError(res, 'Error retrieving products');
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack,
+    });
+    
+    // If it's a Prisma error about missing table, provide helpful message
+    if (error?.code === 'P2001' || 
+        error?.message?.includes('does not exist') || 
+        error?.code === '42P01') {
+      sendError(res, 'Database tables not initialized. Please run migration: prisma/migrations/add_product_order_ad_models.sql', 503, error?.message);
+      return;
+    }
+    
+    sendError(res, 'Error retrieving products', 500, error?.message);
   }
 };
 

@@ -22,6 +22,18 @@ export const errorHandler = (
     });
   }
 
+  // Handle Prisma errors for missing tables/models
+  if (error.code === 'P2001' || 
+      error.message?.includes('does not exist') || 
+      error.message?.includes('Unknown table') ||
+      error.message?.includes('relation') && error.message?.includes('does not exist')) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database tables not initialized. Please run Prisma migrations.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+
   if (error.name === 'ValidationError') {
     return res.status(400).json({
       success: false,
