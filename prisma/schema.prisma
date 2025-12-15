@@ -354,6 +354,8 @@ model Ad {
   status          String    @default("active") // active, inactive, expired
   targetAudience  String?   @map("target_audience")
   budget          Decimal?  @db.Decimal(10, 2)
+  externalUrl     String?   @map("external_url") // External URL for the ad (e.g., Amazon product link)
+  category        String?   // amazon product, physical product, program
   
   // Relations
   advertiser Advertiser @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
@@ -362,6 +364,7 @@ model Ad {
   @@index([advertiserId])
   @@index([productId])
   @@index([status])
+  @@index([category])
   @@index([startDate])
   @@index([endDate])
   @@map("ad")

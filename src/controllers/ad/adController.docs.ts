@@ -42,6 +42,14 @@
  *               budget:
  *                 type: number
  *                 format: decimal
+ *               externalUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: External URL for the ad (e.g., Amazon product link)
+ *               category:
+ *                 type: string
+ *                 enum: [amazon product, physical product, program]
+ *                 description: Category of the ad
  *     responses:
  *       201:
  *         description: Ad created successfully
@@ -105,7 +113,13 @@
  *         name: activeOnly
  *         schema:
  *           type: boolean
- *           description: Filter only currently active ads
+ *         description: Filter only currently active ads
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [amazon product, physical product, program]
+ *         description: Filter ads by category
  *     responses:
  *       200:
  *         description: List of ads retrieved successfully
@@ -152,6 +166,14 @@
  *                 type: string
  *               budget:
  *                 type: number
+ *               externalUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: External URL for the ad (e.g., Amazon product link)
+ *               category:
+ *                 type: string
+ *                 enum: [amazon product, physical product, program]
+ *                 description: Category of the ad
  *     responses:
  *       200:
  *         description: Ad updated successfully

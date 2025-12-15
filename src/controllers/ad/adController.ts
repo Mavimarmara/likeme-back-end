@@ -41,6 +41,8 @@ export const createAd = async (req: Request, res: Response): Promise<void> => {
         status: adData.status || 'active',
         targetAudience: adData.targetAudience,
         budget: adData.budget,
+        externalUrl: adData.externalUrl,
+        category: adData.category,
       },
       include: {
         advertiser: true,
@@ -95,6 +97,7 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
     const advertiserId = req.query.advertiserId as string;
     const productId = req.query.productId as string;
     const status = req.query.status as string;
+    const category = req.query.category as string;
 
     const where: any = {
       deletedAt: null,
@@ -110,6 +113,10 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
 
     if (status) {
       where.status = status;
+    }
+
+    if (category) {
+      where.category = category;
     }
 
     // Filter active ads by date

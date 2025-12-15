@@ -269,6 +269,8 @@ export const createAdSchema = Joi.object({
   status: Joi.string().valid('active', 'inactive', 'expired').default('active'),
   targetAudience: Joi.string().max(200).optional(),
   budget: Joi.number().positive().precision(2).optional(),
+  externalUrl: Joi.string().uri().max(1000).optional(),
+  category: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
 });
 
 export const updateAdSchema = Joi.object({
@@ -281,6 +283,8 @@ export const updateAdSchema = Joi.object({
   status: Joi.string().valid('active', 'inactive', 'expired').optional(),
   targetAudience: Joi.string().max(200).optional(),
   budget: Joi.number().positive().precision(2).optional(),
+  externalUrl: Joi.string().uri().max(1000).optional(),
+  category: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
 });
 
 // ============================================
