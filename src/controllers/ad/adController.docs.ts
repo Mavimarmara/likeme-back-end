@@ -13,13 +13,14 @@
  *           schema:
  *             type: object
  *             required:
- *               - advertiserId
  *               - title
  *             properties:
  *               advertiserId:
  *                 type: string
+ *                 description: Optional advertiser ID
  *               productId:
  *                 type: string
+ *                 description: Optional product ID
  *               title:
  *                 type: string
  *               description:
@@ -146,8 +147,12 @@
  *           schema:
  *             type: object
  *             properties:
+ *               advertiserId:
+ *                 type: string
+ *                 description: Optional advertiser ID (can be null to remove)
  *               productId:
  *                 type: string
+ *                 description: Optional product ID (can be null to remove)
  *               title:
  *                 type: string
  *               description:

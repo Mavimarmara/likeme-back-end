@@ -344,8 +344,8 @@ model Ad {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-  advertiserId    String    @map("advertiser_id")
-  productId       String    @map("product_id")
+  advertiserId    String?   @map("advertiser_id")
+  productId       String?   @map("product_id")
   title           String
   description     String?
   image           String?
@@ -358,8 +358,8 @@ model Ad {
   category        String?   // amazon product, physical product, program
   
   // Relations
-  advertiser Advertiser @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
-  product    Product    @relation("ProductAds", fields: [productId], references: [id], onDelete: Cascade)
+  advertiser Advertiser? @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
+  product    Product?    @relation("ProductAds", fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([advertiserId])
   @@index([productId])

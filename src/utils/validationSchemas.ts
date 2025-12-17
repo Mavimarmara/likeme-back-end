@@ -259,7 +259,7 @@ export const updateOrderSchema = Joi.object({
 // ============================================
 
 export const createAdSchema = Joi.object({
-  advertiserId: Joi.string().required(),
+  advertiserId: Joi.string().optional(),
   productId: Joi.string().optional(),
   title: Joi.string().min(2).max(200).required(),
   description: Joi.string().max(2000).optional(),
@@ -274,7 +274,8 @@ export const createAdSchema = Joi.object({
 });
 
 export const updateAdSchema = Joi.object({
-  productId: Joi.string().optional(),
+  advertiserId: Joi.string().optional().allow(null),
+  productId: Joi.string().optional().allow(null),
   title: Joi.string().min(2).max(200).optional(),
   description: Joi.string().max(2000).optional(),
   image: Joi.string().uri().max(500).optional(),

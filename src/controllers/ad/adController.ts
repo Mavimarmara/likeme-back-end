@@ -7,17 +7,19 @@ export const createAd = async (req: Request, res: Response): Promise<void> => {
   try {
     const adData = req.body;
 
-    // Check if advertiser exists
-    const advertiser = await prisma.advertiser.findUnique({
-      where: { id: adData.advertiserId },
-    });
+    // Check if advertiser exists (only if advertiserId is provided)
+    if (adData.advertiserId) {
+      const advertiser = await prisma.advertiser.findUnique({
+        where: { id: adData.advertiserId },
+      });
 
-    if (!advertiser || advertiser.deletedAt) {
-      sendError(res, 'Advertiser not found', 404);
-      return;
+      if (!advertiser || advertiser.deletedAt) {
+        sendError(res, 'Advertiser not found', 404);
+        return;
+      }
     }
 
-    // Check if product exists
+    // Check if product exists (only if productId is provided)
     if (adData.productId) {
       const product = await prisma.product.findUnique({
         where: { id: adData.productId },
@@ -180,15 +182,31 @@ export const updateAd = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if product exists if productId is being updated
-    if (updateData.productId && updateData.productId !== ad.productId) {
-      const product = await prisma.product.findUnique({
-        where: { id: updateData.productId },
-      });
+    // Check if advertiser exists if advertiserId is being updated
+    if (updateData.advertiserId !== undefined && updateData.advertiserId !== ad.advertiserId) {
+      if (updateData.advertiserId) {
+        const advertiser = await prisma.advertiser.findUnique({
+          where: { id: updateData.advertiserId },
+        });
 
-      if (!product || product.deletedAt) {
-        sendError(res, 'Product not found', 404);
-        return;
+        if (!advertiser || advertiser.deletedAt) {
+          sendError(res, 'Advertiser not found', 404);
+          return;
+        }
+      }
+    }
+
+    // Check if product exists if productId is being updated
+    if (updateData.productId !== undefined && updateData.productId !== ad.productId) {
+      if (updateData.productId) {
+        const product = await prisma.product.findUnique({
+          where: { id: updateData.productId },
+        });
+
+        if (!product || product.deletedAt) {
+          sendError(res, 'Product not found', 404);
+          return;
+        }
       }
     }
 
