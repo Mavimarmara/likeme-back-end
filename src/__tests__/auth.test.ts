@@ -17,14 +17,15 @@ afterAll(async () => {
 afterEach(async () => {
   if (process.env.NODE_ENV === 'test') {
     try {
-      await prisma.userPersonalObjective.deleteMany({});
-      await prisma.roleGroupUser.deleteMany({});
-      await prisma.roleGroupRole.deleteMany({});
+      // Limpar dados em ordem respeitando foreign keys
+      await prisma.userPersonalObjective.deleteMany({}).catch(() => {});
+      await prisma.roleGroupUser.deleteMany({}).catch(() => {});
+      await prisma.roleGroupRole.deleteMany({}).catch(() => {});
       await prisma.user.deleteMany({});
       await prisma.personContact.deleteMany({});
       await prisma.person.deleteMany({});
     } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
+      // Ignorar erros de limpeza silenciosamente
     }
   }
 });
