@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import prisma from '@/config/database';
 import { sendSuccess, sendError } from '@/utils/response';
+import { extractAmazonProductData } from '@/utils/amazonScraper';
 
 export const createAd = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -82,6 +83,48 @@ export const getAdById = async (req: Request, res: Response): Promise<void> => {
     if (!ad || ad.deletedAt) {
       sendError(res, 'Ad not found', 404);
       return;
+    }
+
+    // Se não houver productId mas houver externalUrl, buscar dados do produto
+    if (!ad.productId && ad.externalUrl && ad.externalUrl.includes('amazon.')) {
+      try {
+        const productData = await extractAmazonProductData(ad.externalUrl);
+        
+        // Adicionar os dados do produto extraído ao objeto de resposta
+        const adWithProduct = {
+          ...ad,
+          product: {
+            id: null,
+            name: productData.title,
+            description: productData.description,
+            price: productData.price,
+            image: productData.image,
+            images: productData.images,
+            brand: productData.brand,
+            category: ad.category,
+            rating: productData.rating,
+            reviewCount: productData.reviewCount,
+            externalUrl: ad.externalUrl,
+            asin: productData.asin,
+            // Campos adicionais para manter compatibilidade
+            sku: productData.asin,
+            cost: null,
+            quantity: 0,
+            status: 'active',
+            weight: null,
+            dimensions: null,
+            createdAt: ad.createdAt,
+            updatedAt: ad.updatedAt,
+            deletedAt: null,
+          },
+        };
+
+        sendSuccess(res, adWithProduct, 'Ad retrieved successfully with external product data');
+        return;
+      } catch (error: any) {
+        console.error('Error fetching external product data:', error);
+        // Continuar e retornar o ad sem dados do produto se houver erro
+      }
     }
 
     sendSuccess(res, ad, 'Ad retrieved successfully');

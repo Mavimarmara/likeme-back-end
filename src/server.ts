@@ -24,6 +24,7 @@ import productRoutes from '@/routes/product/productRoutes';
 import orderRoutes from '@/routes/order/orderRoutes';
 import adRoutes from '@/routes/ad/adRoutes';
 import advertiserRoutes from '@/routes/advertiser/advertiserRoutes';
+import amazonRoutes from '@/routes/amazon/amazonRoutes';
 
 const app = express();
 
@@ -250,6 +251,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/ads', adRoutes);
 app.use('/api/advertisers', advertiserRoutes);
+app.use('/api/amazon', amazonRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({

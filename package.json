@@ -19,6 +19,7 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:products": "ts-node -r tsconfig-paths/register scripts/seed-products.ts",
+    "db:seed:ads": "ts-node -r tsconfig-paths/register scripts/seed-ads.ts",
     "vercel:dev": "npx vercel dev",
     "vercel:deploy": "npx vercel",
     "vercel:prod": "npx vercel --prod",
