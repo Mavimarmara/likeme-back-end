@@ -325,12 +325,6 @@ export const adIdParamSchema = Joi.object({
   adId: Joi.string().required(),
 });
 
-export const searchProductsQuerySchema = Joi.object({
-  keywords: Joi.string().min(1).max(500).required(),
-  searchIndex: Joi.string().max(100).optional(),
-  itemCount: Joi.number().integer().min(1).max(50).optional(),
-});
-
 export const userIdParamSchema = Joi.object({
   userId: Joi.string().required(),
 });

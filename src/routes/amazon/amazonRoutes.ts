@@ -5,12 +5,10 @@ import { validateQuery, validateParams } from '@/middleware/validation';
 import { 
   getProductByUrl,
   getProductByAd,
-  searchProducts,
 } from '@/controllers/amazon/amazonController';
 import {
   externalUrlQuerySchema,
   adIdParamSchema,
-  searchProductsQuerySchema,
 } from '@/utils/validationSchemas';
 
 const router = Router();
@@ -32,14 +30,6 @@ router.get(
   generalRateLimiter,
   validateParams(adIdParamSchema),
   getProductByAd
-);
-
-// GET /api/amazon/search?keywords=...
-router.get(
-  '/search',
-  generalRateLimiter,
-  validateQuery(searchProductsQuerySchema),
-  searchProducts
 );
 
 export default router;
