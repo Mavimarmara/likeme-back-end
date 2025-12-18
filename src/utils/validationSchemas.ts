@@ -328,3 +328,39 @@ export const adIdParamSchema = Joi.object({
 export const userIdParamSchema = Joi.object({
   userId: Joi.string().required(),
 });
+
+// ============================================
+// PAYMENT VALIDATION SCHEMAS
+// ============================================
+
+export const processPaymentSchema = Joi.object({
+  orderId: Joi.string().uuid().required(),
+  cardData: Joi.object({
+    cardNumber: Joi.string().pattern(/^[\d\s]+$/).min(13).max(19).required(),
+    cardHolderName: Joi.string().min(3).max(100).required(),
+    cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
+    cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
+  }).required(),
+  billingAddress: Joi.object({
+    country: Joi.string().default('br'),
+    state: Joi.string().min(2).max(2).required(),
+    city: Joi.string().min(2).max(100).required(),
+    neighborhood: Joi.string().min(2).max(100).optional(),
+    street: Joi.string().min(2).max(200).required(),
+    streetNumber: Joi.string().min(1).max(20).required(),
+    zipcode: Joi.string().pattern(/^[\d-]+$/).min(8).max(10).required(),
+    complement: Joi.string().max(200).optional(),
+  }).required(),
+});
+
+export const transactionIdParamSchema = Joi.object({
+  transactionId: Joi.string().required(),
+});
+
+export const capturePaymentSchema = Joi.object({
+  amount: Joi.number().positive().optional(),
+});
+
+export const refundPaymentSchema = Joi.object({
+  amount: Joi.number().positive().optional(),
+});

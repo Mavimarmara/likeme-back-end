@@ -94,4 +94,7 @@ export const config = {
       tokenTtlMs: parseInt(process.env.SOCIAL_PLUS_TOKEN_TTL_MS || '300000', 10), // default 5 min
     };
   })(),
+  pagarme: {
+    apiKey: process.env.PAGARME_API_KEY || '',
+  },
 };
