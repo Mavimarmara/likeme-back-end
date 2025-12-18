@@ -165,14 +165,28 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Filter active ads by date
-    if (req.query.activeOnly === 'true') {
+    const activeOnly = req.query.activeOnly;
+    if (activeOnly === 'true' || activeOnly === '1' || String(activeOnly).toLowerCase() === 'true') {
       const now = new Date();
-      where.status = 'active';
-      where.OR = [
-        { startDate: null },
-        { startDate: { lte: now } },
-      ];
+      
+      // Set status to active if not already set
+      if (!where.status) {
+        where.status = 'active';
+      }
+      
+      // Ads are active if:
+      // 1. startDate is null OR startDate <= now (ad has started)
+      // 2. endDate is null OR endDate >= now (ad hasn't ended)
+      // Combine with existing filters using AND
+      const existingAnd = where.AND || [];
       where.AND = [
+        ...existingAnd,
+        {
+          OR: [
+            { startDate: null },
+            { startDate: { lte: now } },
+          ],
+        },
         {
           OR: [
             { endDate: null },
@@ -180,6 +194,12 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
           ],
         },
       ];
+    }
+
+    // Debug log
+    if (process.env.NODE_ENV === 'development') {
+      console.log('GetAllAds - Query params:', req.query);
+      console.log('GetAllAds - Where clause:', JSON.stringify(where, null, 2));
     }
 
     const [ads, total] = await Promise.all([
@@ -195,6 +215,11 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
       }),
       prisma.ad.count({ where }),
     ]);
+
+    // Debug log
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`GetAllAds - Found ${ads.length} ads (total: ${total})`);
+    }
 
     sendSuccess(res, {
       ads,
