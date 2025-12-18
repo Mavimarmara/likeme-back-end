@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(20000);
 
@@ -10,24 +11,17 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
 afterEach(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      // Limpar dados em ordem respeitando foreign keys
-      await prisma.userPersonalObjective.deleteMany({}).catch(() => {});
-      await prisma.roleGroupUser.deleteMany({}).catch(() => {});
-      await prisma.roleGroupRole.deleteMany({}).catch(() => {});
-      await prisma.user.deleteMany({});
-      await prisma.personContact.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      // Ignorar erros de limpeza silenciosamente
-    }
-  }
+  // Limpar tracker após cada teste para evitar acúmulo
+  // Mas não deletar dados aqui - deixar o afterAll fazer isso
 });
 
 describe('Auth Endpoints', () => {
@@ -53,6 +47,19 @@ describe('Auth Endpoints', () => {
         expect(response.body.data.user).toBeDefined();
         expect(response.body.data.user.person).toBeDefined();
         
+        // Rastrear IDs criados
+        if (response.body.data.user?.id) {
+          testDataTracker.add('user', response.body.data.user.id);
+        }
+        if (response.body.data.user?.person?.id) {
+          testDataTracker.add('person', response.body.data.user.person.id);
+        }
+        if (response.body.data.user?.person?.contacts) {
+          response.body.data.user.person.contacts.forEach((contact: any) => {
+            if (contact.id) testDataTracker.add('personContact', contact.id);
+          });
+        }
+        
         const emailContact = response.body.data.user.person.contacts?.find(
           (c: any) => c.type === 'email'
         );
@@ -75,9 +82,24 @@ describe('Auth Endpoints', () => {
         password: 'password123',
       };
 
-      await request(app)
+      const response1 = await request(app)
         .post('/api/auth/register')
         .send(userData1);
+      
+      // Rastrear dados criados no primeiro registro
+      if (response1.status === 201 && response1.body.data?.user) {
+        if (response1.body.data.user.id) {
+          testDataTracker.add('user', response1.body.data.user.id);
+        }
+        if (response1.body.data.user.person?.id) {
+          testDataTracker.add('person', response1.body.data.user.person.id);
+        }
+        if (response1.body.data.user.person?.contacts) {
+          response1.body.data.user.person.contacts.forEach((contact: any) => {
+            if (contact.id) testDataTracker.add('personContact', contact.id);
+          });
+        }
+      }
 
       const userData2 = {
         firstName: 'Test',
@@ -91,6 +113,21 @@ describe('Auth Endpoints', () => {
         .send(userData2);
 
       expect([409, 400, 429]).toContain(response.status);
+      
+      // Se o segundo registro tiver sucesso (improvável), rastrear também
+      if (response.status === 201 && response.body.data?.user) {
+        if (response.body.data.user.id) {
+          testDataTracker.add('user', response.body.data.user.id);
+        }
+        if (response.body.data.user.person?.id) {
+          testDataTracker.add('person', response.body.data.user.person.id);
+        }
+        if (response.body.data.user.person?.contacts) {
+          response.body.data.user.person.contacts.forEach((contact: any) => {
+            if (contact.id) testDataTracker.add('personContact', contact.id);
+          });
+        }
+      }
     });
 
     it('should validate required fields', async () => {

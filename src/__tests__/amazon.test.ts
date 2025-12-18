@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -13,17 +14,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      await prisma.ad.deleteMany({});
-      await prisma.advertiser.deleteMany({});
-      await prisma.user.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -71,6 +66,7 @@ describe('Amazon Endpoints', () => {
         lastName: 'User',
       },
     });
+    testDataTracker.add('person', tokenPerson.id);
 
     const tokenUser = await prisma.user.create({
       data: {
@@ -80,6 +76,7 @@ describe('Amazon Endpoints', () => {
         isActive: true,
       },
     });
+    testDataTracker.add('user', tokenUser.id);
 
     const jwt = require('jsonwebtoken');
     authToken = jwt.sign({ userId: tokenUser.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -91,6 +88,7 @@ describe('Amazon Endpoints', () => {
         lastName: 'Test',
       },
     });
+    testDataTracker.add('person', advertiserPerson.id);
 
     // Criar advertiser de teste
     testUser = await prisma.user.create({
@@ -101,6 +99,7 @@ describe('Amazon Endpoints', () => {
         isActive: true,
       },
     });
+    testDataTracker.add('user', testUser.id);
 
     testAdvertiser = await prisma.advertiser.create({
       data: {
@@ -109,6 +108,7 @@ describe('Amazon Endpoints', () => {
         status: 'active',
       },
     });
+    testDataTracker.add('advertiser', testAdvertiser.id);
 
     // Criar anúncio de teste com externalUrl
     testAd = await prisma.ad.create({
@@ -121,6 +121,7 @@ describe('Amazon Endpoints', () => {
         status: 'active',
       },
     });
+    testDataTracker.add('ad', testAd.id);
   });
 
   describe('GET /api/amazon/product-by-url', () => {
@@ -227,25 +228,28 @@ describe('Amazon Endpoints', () => {
         if (exists) return testAdvertiser;
       }
       
-      // Recriar advertiser
-      const advertiserPerson = await prisma.person.create({
-        data: { firstName: 'Advertiser', lastName: 'Test' },
-      });
+    // Recriar advertiser
+    const advertiserPerson = await prisma.person.create({
+      data: { firstName: 'Advertiser', lastName: 'Test' },
+    });
+    testDataTracker.add('person', advertiserPerson.id);
 
-      const user = await prisma.user.create({
-        data: {
-          personId: advertiserPerson.id,
-          username: `testadvertiser${Date.now()}@example.com`,
-          password: 'hashedpassword',
-          isActive: true,
-        },
-      });
+    const user = await prisma.user.create({
+      data: {
+        personId: advertiserPerson.id,
+        username: `testadvertiser${Date.now()}@example.com`,
+        password: 'hashedpassword',
+        isActive: true,
+      },
+    });
+    testDataTracker.add('user', user.id);
 
-      testAdvertiser = await prisma.advertiser.create({
-        data: { userId: user.id, name: 'Test Advertiser', status: 'active' },
-      });
-      
-      return testAdvertiser;
+    testAdvertiser = await prisma.advertiser.create({
+      data: { userId: user.id, name: 'Test Advertiser', status: 'active' },
+    });
+    testDataTracker.add('advertiser', testAdvertiser.id);
+    
+    return testAdvertiser;
     };
 
     it('should extract product data from ad externalUrl', async () => {
@@ -263,6 +267,7 @@ describe('Amazon Endpoints', () => {
             status: 'active',
           },
         });
+        testDataTracker.add('ad', testAd.id);
       }
 
       const mockHtml = `
@@ -316,6 +321,7 @@ describe('Amazon Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', adWithoutUrl.id);
 
       const response = await request(app)
         .get(`/api/amazon/product-by-ad/${adWithoutUrl.id}`)
@@ -339,6 +345,7 @@ describe('Amazon Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', adWithNonAmazonUrl.id);
 
       const response = await request(app)
         .get(`/api/amazon/product-by-ad/${adWithNonAmazonUrl.id}`)

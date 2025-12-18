@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -10,16 +11,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      await prisma.personContact.deleteMany({});
-      await prisma.person.deleteMany({});
-      await prisma.user.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -31,6 +27,7 @@ const createTestToken = async (): Promise<string> => {
       lastName: 'User',
     },
   });
+  testDataTracker.add('person', person.id);
 
   const user = await prisma.user.create({
     data: {
@@ -40,6 +37,7 @@ const createTestToken = async (): Promise<string> => {
       isActive: true,
     },
   });
+  testDataTracker.add('user', user.id);
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -148,6 +146,7 @@ describe('Person Endpoints', () => {
           lastName: 'Person',
         },
       });
+      testDataTracker.add('person', newPerson.id);
 
       const response = await request(app)
         .delete(`/api/persons/${newPerson.id}`)
@@ -199,6 +198,9 @@ describe('PersonContact Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.type).toBe(contactData.type);
       expect(response.body.data.value).toBe(contactData.value);
+      if (response.body.data?.id) {
+        testDataTracker.add('personContact', response.body.data.id);
+      }
     });
 
     it('should validate required fields', async () => {
@@ -233,6 +235,7 @@ describe('PersonContact Endpoints', () => {
           value: '+5511999999999',
         },
       });
+      testDataTracker.add('personContact', contact.id);
 
       const response = await request(app)
         .get(`/api/person-contacts/${contact.id}`)
@@ -253,6 +256,7 @@ describe('PersonContact Endpoints', () => {
           value: '+5511888888888',
         },
       });
+      testDataTracker.add('personContact', contact.id);
 
       const updateData = {
         value: '+5511777777777',
@@ -278,6 +282,7 @@ describe('PersonContact Endpoints', () => {
           value: '+5511666666666',
         },
       });
+      testDataTracker.add('personContact', contact.id);
 
       const response = await request(app)
         .delete(`/api/person-contacts/${contact.id}`)

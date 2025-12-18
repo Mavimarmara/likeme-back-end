@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -10,16 +11,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      await prisma.tip.deleteMany({});
-      await prisma.user.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -31,6 +27,7 @@ const createTestToken = async (): Promise<string> => {
       lastName: 'User',
     },
   });
+  testDataTracker.add('person', person.id);
 
   const user = await prisma.user.create({
     data: {
@@ -40,6 +37,7 @@ const createTestToken = async (): Promise<string> => {
       isActive: true,
     },
   });
+  testDataTracker.add('user', user.id);
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -99,6 +97,9 @@ describe('Tip Endpoints', () => {
       if (response.status === 201) {
         expect(response.body.success).toBe(true);
         expect(response.body.data.title).toBe(tipData.title);
+        if (response.body.data?.id) {
+          testDataTracker.add('tip', response.body.data.id);
+        }
       }
     });
 
@@ -138,6 +139,7 @@ describe('Tip Endpoints', () => {
             order: 1,
           },
         });
+        testDataTracker.add('tip', tip.id);
       } catch (error: any) {
         if (error.code === 'P2021') {
           // Tabela não existe, pular teste

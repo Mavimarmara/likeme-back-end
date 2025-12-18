@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -10,16 +11,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      await prisma.advertiser.deleteMany({});
-      await prisma.user.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -31,15 +27,19 @@ const createTestToken = async (): Promise<string> => {
       lastName: 'User',
     },
   });
+  testDataTracker.add('person', person.id);
 
+  // Usar timestamp + random para garantir unicidade
+  const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const user = await prisma.user.create({
     data: {
       personId: person.id,
-      username: `test${Date.now()}@example.com`,
+      username: `test-${uniqueId}@example.com`,
       password: 'hashedpassword',
       isActive: true,
     },
   });
+  testDataTracker.add('user', user.id);
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -91,6 +91,9 @@ describe('Advertiser Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(advertiserData.name);
       expect(response.body.data.userId).toBe(testUser!.id);
+      if (response.body.data?.id) {
+        testDataTracker.add('advertiser', response.body.data.id);
+      }
     });
 
     it('should validate required fields', async () => {
@@ -114,26 +117,34 @@ describe('Advertiser Endpoints', () => {
       const person1 = await prisma.person.create({
         data: { firstName: 'User1', lastName: 'Test' },
       });
+      testDataTracker.add('person', person1.id);
+      
+      const uniqueId1 = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const user1 = await prisma.user.create({
         data: {
           personId: person1.id,
-          username: `testuser1${Date.now()}@example.com`,
+          username: `testuser1-${uniqueId1}@example.com`,
           password: 'hashedpassword',
           isActive: true,
         },
       });
+      testDataTracker.add('user', user1.id);
 
       const person2 = await prisma.person.create({
         data: { firstName: 'User2', lastName: 'Test' },
       });
+      testDataTracker.add('person', person2.id);
+      
+      const uniqueId2 = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const user2 = await prisma.user.create({
         data: {
           personId: person2.id,
-          username: `testuser2${Date.now()}@example.com`,
+          username: `testuser2-${uniqueId2}@example.com`,
           password: 'hashedpassword',
           isActive: true,
         },
       });
+      testDataTracker.add('user', user2.id);
 
       await prisma.advertiser.createMany({
         data: [
@@ -149,6 +160,13 @@ describe('Advertiser Endpoints', () => {
           },
         ],
       });
+      
+      // Buscar IDs dos advertisers criados
+      const advertisers = await prisma.advertiser.findMany({
+        where: { userId: { in: [user1.id, user2.id] } },
+        select: { id: true },
+      });
+      advertisers.forEach(a => testDataTracker.add('advertiser', a.id));
 
       const response = await request(app)
         .get('/api/advertisers')
@@ -185,6 +203,7 @@ describe('Advertiser Endpoints', () => {
             status: 'active',
           },
         });
+        testDataTracker.add('advertiser', advertiser.id);
       }
 
       const response = await request(app)
@@ -224,6 +243,7 @@ describe('Advertiser Endpoints', () => {
             status: 'active',
           },
         });
+        testDataTracker.add('advertiser', advertiser.id);
       }
 
       const response = await request(app)
@@ -242,14 +262,18 @@ describe('Advertiser Endpoints', () => {
       const person = await prisma.person.create({
         data: { firstName: 'No', lastName: 'Advertiser' },
       });
+      testDataTracker.add('person', person.id);
+      
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const newUser = await prisma.user.create({
         data: {
           personId: person.id,
-          username: `noadvertiser${Date.now()}@example.com`,
+          username: `noadvertiser-${uniqueId}@example.com`,
           password: 'hashedpassword',
           isActive: true,
         },
       });
+      testDataTracker.add('user', newUser.id);
 
       const response = await request(app)
         .get(`/api/advertisers/user/${newUser.id}`)
@@ -274,6 +298,7 @@ describe('Advertiser Endpoints', () => {
             status: 'active',
           },
         });
+        testDataTracker.add('advertiser', advertiser.id);
       }
 
       const updateData = {
@@ -307,14 +332,18 @@ describe('Advertiser Endpoints', () => {
       const person = await prisma.person.create({
         data: { firstName: 'Delete', lastName: 'User' },
       });
+      testDataTracker.add('person', person.id);
+      
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const deleteTestUser = await prisma.user.create({
         data: {
           personId: person.id,
-          username: `deletetest${Date.now()}@example.com`,
+          username: `deletetest-${uniqueId}@example.com`,
           password: 'hashedpassword',
           isActive: true,
         },
       });
+      testDataTracker.add('user', deleteTestUser.id);
 
       const advertiser = await prisma.advertiser.create({
         data: {
@@ -323,6 +352,7 @@ describe('Advertiser Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('advertiser', advertiser.id);
 
       // Criar token para o novo usuário
       const jwt = require('jsonwebtoken');

@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -10,18 +11,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      await prisma.orderItem.deleteMany({});
-      await prisma.order.deleteMany({});
-      await prisma.product.deleteMany({});
-      await prisma.user.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -33,6 +27,7 @@ const createTestToken = async (): Promise<string> => {
       lastName: 'User',
     },
   });
+  testDataTracker.add('person', person.id);
 
   const user = await prisma.user.create({
     data: {
@@ -42,6 +37,7 @@ const createTestToken = async (): Promise<string> => {
       isActive: true,
     },
   });
+  testDataTracker.add('user', user.id);
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -69,6 +65,7 @@ describe('Order Endpoints', () => {
         status: 'active',
       },
     });
+    testDataTracker.add('product', testProduct.id);
   });
 
   describe('POST /api/orders', () => {
@@ -92,6 +89,16 @@ describe('Order Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.items).toBeDefined();
       expect(response.body.data.items.length).toBe(1);
+      
+      // Rastrear order e items criados pela API
+      if (response.body.data?.id) {
+        testDataTracker.add('order', response.body.data.id);
+      }
+      if (response.body.data?.items) {
+        response.body.data.items.forEach((item: any) => {
+          if (item.id) testDataTracker.add('orderItem', item.id);
+        });
+      }
     });
 
     it('should decrease product stock when order is created', async () => {
@@ -106,6 +113,7 @@ describe('Order Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const orderData = {
         items: [
@@ -116,10 +124,20 @@ describe('Order Endpoints', () => {
         ],
       };
 
-      await request(app)
+      const createResponse = await request(app)
         .post('/api/orders')
         .send(orderData)
         .set('Authorization', `Bearer ${authToken}`);
+      
+      // Rastrear order e items criados pela API
+      if (createResponse.body.data?.id) {
+        testDataTracker.add('order', createResponse.body.data.id);
+      }
+      if (createResponse.body.data?.items) {
+        createResponse.body.data.items.forEach((item: any) => {
+          if (item.id) testDataTracker.add('orderItem', item.id);
+        });
+      }
 
       const updatedProduct = await prisma.product.findUnique({
         where: { id: product.id },
@@ -173,12 +191,13 @@ describe('Order Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
       const unitPrice = new Decimal(product.price.toString());
       const total = unitPrice.times(1);
 
-      await prisma.order.create({
+      const order = await prisma.order.create({
         data: {
           userId: testUser!.id,
           subtotal: total,
@@ -196,7 +215,10 @@ describe('Order Endpoints', () => {
           },
           status: 'pending',
         },
+        include: { items: true },
       });
+      testDataTracker.add('order', order.id);
+      order.items.forEach(item => testDataTracker.add('orderItem', item.id));
 
       const response = await request(app)
         .get('/api/orders')
@@ -228,6 +250,7 @@ describe('Order Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
       const unitPrice = new Decimal(product.price.toString());
@@ -251,7 +274,10 @@ describe('Order Endpoints', () => {
           },
           status: 'pending',
         },
+        include: { items: true },
       });
+      testDataTracker.add('order', order.id);
+      order.items.forEach(item => testDataTracker.add('orderItem', item.id));
 
       const response = await request(app)
         .get(`/api/orders/${order.id}`)
@@ -281,6 +307,7 @@ describe('Order Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
       const unitPrice = new Decimal(product.price.toString());
@@ -304,7 +331,10 @@ describe('Order Endpoints', () => {
           },
           status: 'pending',
         },
+        include: { items: true },
       });
+      testDataTracker.add('order', order.id);
+      order.items.forEach(item => testDataTracker.add('orderItem', item.id));
 
       const updateData = {
         status: 'processing',
@@ -335,6 +365,7 @@ describe('Order Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
       const unitPrice = new Decimal(product.price.toString());
@@ -358,7 +389,10 @@ describe('Order Endpoints', () => {
           },
           status: 'pending',
         },
+        include: { items: true },
       });
+      testDataTracker.add('order', order.id);
+      order.items.forEach(item => testDataTracker.add('orderItem', item.id));
 
       const response = await request(app)
         .post(`/api/orders/${order.id}/cancel`)
@@ -386,6 +420,7 @@ describe('Order Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
       const unitPrice = new Decimal(product.price.toString());
@@ -409,7 +444,10 @@ describe('Order Endpoints', () => {
           },
           status: 'pending',
         },
+        include: { items: true },
       });
+      testDataTracker.add('order', order.id);
+      order.items.forEach(item => testDataTracker.add('orderItem', item.id));
 
       const response = await request(app)
         .delete(`/api/orders/${order.id}`)

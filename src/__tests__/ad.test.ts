@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -13,19 +14,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      // Deletar em ordem para respeitar foreign keys
-      await prisma.ad.deleteMany({});
-      await prisma.product.deleteMany({});
-      await prisma.advertiser.deleteMany({});
-      await prisma.user.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -43,6 +36,7 @@ const createTestToken = async (): Promise<string> => {
       lastName: 'User',
     },
   });
+  testDataTracker.add('person', person.id);
 
   const user = await prisma.user.create({
     data: {
@@ -52,6 +46,7 @@ const createTestToken = async (): Promise<string> => {
       isActive: true,
     },
   });
+  testDataTracker.add('user', user.id);
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -90,6 +85,7 @@ describe('Ad Endpoints', () => {
     const advertiserPerson = await prisma.person.create({
       data: { firstName: 'Advertiser', lastName: 'Test' },
     });
+    testDataTracker.add('person', advertiserPerson.id);
 
     const user = await prisma.user.create({
       data: {
@@ -99,10 +95,12 @@ describe('Ad Endpoints', () => {
         isActive: true,
       },
     });
+    testDataTracker.add('user', user.id);
 
     testAdvertiser = await prisma.advertiser.create({
       data: { userId: user.id, name: 'Test Advertiser', status: 'active' },
     });
+    testDataTracker.add('advertiser', testAdvertiser.id);
     
     return testAdvertiser;
   };
@@ -117,6 +115,7 @@ describe('Ad Endpoints', () => {
     testProduct = await prisma.product.create({
       data: { name: 'Test Product', price: 99.99, quantity: 10, status: 'active' },
     });
+    testDataTracker.add('product', testProduct.id);
     
     return testProduct;
   };
@@ -131,6 +130,7 @@ describe('Ad Endpoints', () => {
         lastName: 'Test',
       },
     });
+    testDataTracker.add('person', testAdvertiserPerson.id);
 
     // Criar advertiser de teste
     testUser = await prisma.user.create({
@@ -141,6 +141,7 @@ describe('Ad Endpoints', () => {
         isActive: true,
       },
     });
+    testDataTracker.add('user', testUser.id);
 
     testAdvertiser = await prisma.advertiser.create({
       data: {
@@ -149,6 +150,7 @@ describe('Ad Endpoints', () => {
         status: 'active',
       },
     });
+    testDataTracker.add('advertiser', testAdvertiser.id);
 
     // Criar produto de teste
     testProduct = await prisma.product.create({
@@ -159,6 +161,7 @@ describe('Ad Endpoints', () => {
         status: 'active',
       },
     });
+    testDataTracker.add('product', testProduct.id);
   });
 
   describe('GET /api/ads/:id', () => {
@@ -177,6 +180,7 @@ describe('Ad Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', adWithExternalUrl.id);
 
       // Mock da resposta do fetch para extrair dados do produto
       const mockHtml = `
@@ -226,6 +230,7 @@ describe('Ad Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', adWithProduct.id);
 
       const response = await request(app)
         .get(`/api/ads/${adWithProduct.id}`)
@@ -249,6 +254,7 @@ describe('Ad Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', adWithoutProduct.id);
 
       const response = await request(app)
         .get(`/api/ads/${adWithoutProduct.id}`)
@@ -272,6 +278,7 @@ describe('Ad Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', adWithExternalUrl.id);
 
       // Mock erro no fetch
       (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
@@ -303,6 +310,7 @@ describe('Ad Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', ad.id);
 
       const response = await request(app)
         .get(`/api/ads/${ad.id}`);
@@ -317,7 +325,7 @@ describe('Ad Endpoints', () => {
       const advertiser = await ensureTestAdvertiser();
       
       // Criar alguns anúncios
-      await prisma.ad.createMany({
+      const createdAds = await prisma.ad.createMany({
         data: [
           {
             advertiserId: advertiser.id,
@@ -336,6 +344,16 @@ describe('Ad Endpoints', () => {
           },
         ],
       });
+      
+      // Buscar IDs dos ads criados (createMany não retorna IDs, então precisamos buscar)
+      const ads = await prisma.ad.findMany({
+        where: {
+          advertiserId: advertiser.id,
+          title: { in: ['Active Ad 1', 'Active Ad 2', 'Inactive Ad'] },
+        },
+        select: { id: true },
+      });
+      ads.forEach(ad => testDataTracker.add('ad', ad.id));
 
       const response = await request(app)
         .get('/api/ads')
@@ -356,7 +374,7 @@ describe('Ad Endpoints', () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
-      await prisma.ad.create({
+      const ad = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
           title: 'Amazon Product Ad',
@@ -364,6 +382,7 @@ describe('Ad Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('ad', ad.id);
 
       const response = await request(app)
         .get('/api/ads')
@@ -405,6 +424,9 @@ describe('Ad Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.externalUrl).toBe(adData.externalUrl);
       expect(response.body.data.category).toBe(adData.category);
+      if (response.body.data?.id) {
+        testDataTracker.add('ad', response.body.data.id);
+      }
     });
 
     it('should create a new ad with productId', async () => {
@@ -427,6 +449,9 @@ describe('Ad Endpoints', () => {
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
       expect(response.body.data.productId).toBe(product.id);
+      if (response.body.data?.id) {
+        testDataTracker.add('ad', response.body.data.id);
+      }
     });
 
     it('should validate required fields', async () => {

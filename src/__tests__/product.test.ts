@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../server';
 import prisma from '@/config/database';
+import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -10,16 +11,11 @@ beforeAll(async () => {
   }
 });
 
+// Tracker global para rastrear IDs criados durante os testes
+const testDataTracker = new TestDataTracker();
+
 afterAll(async () => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      await prisma.product.deleteMany({});
-      await prisma.user.deleteMany({});
-      await prisma.person.deleteMany({});
-    } catch (error) {
-      console.error('Erro ao limpar dados de teste:', error);
-    }
-  }
+  await safeTestCleanup(testDataTracker, prisma);
   await prisma.$disconnect();
 });
 
@@ -31,6 +27,7 @@ const createTestToken = async (): Promise<string> => {
       lastName: 'User',
     },
   });
+  testDataTracker.add('person', person.id);
 
   const user = await prisma.user.create({
     data: {
@@ -40,6 +37,7 @@ const createTestToken = async (): Promise<string> => {
       isActive: true,
     },
   });
+  testDataTracker.add('user', user.id);
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -71,6 +69,9 @@ describe('Product Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(productData.name);
       expect(response.body.data.price).toBe(productData.price.toString());
+      if (response.body.data?.id) {
+        testDataTracker.add('product', response.body.data.id);
+      }
     });
 
     it('should validate required fields', async () => {
@@ -115,6 +116,13 @@ describe('Product Endpoints', () => {
           },
         ],
       });
+      
+      // Buscar IDs dos produtos criados
+      const products = await prisma.product.findMany({
+        where: { name: { in: ['Product 1', 'Product 2'] } },
+        select: { id: true },
+      });
+      products.forEach(p => testDataTracker.add('product', p.id));
 
       const response = await request(app)
         .get('/api/products')
@@ -127,7 +135,7 @@ describe('Product Endpoints', () => {
     });
 
     it('should filter products by category', async () => {
-      await prisma.product.create({
+      const product = await prisma.product.create({
         data: {
           name: 'Categorized Product',
           price: 15.99,
@@ -136,6 +144,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .get('/api/products')
@@ -157,6 +166,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .get(`/api/products/${product.id}`)
@@ -188,6 +198,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const updateData = {
         name: 'Updated Product',
@@ -224,6 +235,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .patch(`/api/products/${product.id}/stock`)
@@ -244,6 +256,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .patch(`/api/products/${product.id}/stock`)
@@ -263,6 +276,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .patch(`/api/products/${product.id}/stock`)
@@ -282,6 +296,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .patch(`/api/products/${product.id}/stock`)
@@ -302,6 +317,7 @@ describe('Product Endpoints', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', product.id);
 
       const response = await request(app)
         .delete(`/api/products/${product.id}`)
