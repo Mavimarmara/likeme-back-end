@@ -483,8 +483,6 @@ describe('Ad Endpoints', () => {
           description: 'Test description',
           externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
           category: 'amazon product',
-          price: 0,
-          quantity: 0,
           status: 'active',
         },
         status: 'active',

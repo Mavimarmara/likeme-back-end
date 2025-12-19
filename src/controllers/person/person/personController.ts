@@ -24,12 +24,8 @@ export const createOrUpdatePerson = async (req: AuthenticatedRequest, res: Respo
       return;
     }
 
-    let person;
-    let isUpdate = false;
-
     if (user.personId) {
-      // Se já tem personId, atualiza a person existente
-      person = await prisma.person.update({
+      const person = await prisma.person.update({
         where: { id: user.personId },
         data: personData,
         include: {
@@ -37,10 +33,11 @@ export const createOrUpdatePerson = async (req: AuthenticatedRequest, res: Respo
           user: true,
         },
       });
-      isUpdate = true;
-    } else {
-      // Se não tem personId, cria nova person e associa ao usuário
-      person = await prisma.person.create({
+      sendSuccess(res, person, 'Pessoa atualizada com sucesso', 200);
+      return;
+    }
+
+    const person = await prisma.person.create({
       data: personData,
       include: {
         contacts: true,
@@ -48,19 +45,12 @@ export const createOrUpdatePerson = async (req: AuthenticatedRequest, res: Respo
       },
     });
 
-      // Associa a person ao usuário
-      await prisma.user.update({
-        where: { id: currentUserId },
-        data: { personId: person.id },
-      });
-    }
+    await prisma.user.update({
+      where: { id: currentUserId },
+      data: { personId: person.id },
+    });
 
-    sendSuccess(
-      res,
-      person,
-      isUpdate ? 'Pessoa atualizada com sucesso' : 'Pessoa criada com sucesso',
-      isUpdate ? 200 : 201
-    );
+    sendSuccess(res, person, 'Pessoa criada com sucesso', 201);
   } catch (error) {
     console.error('Create or update person error:', error);
     if ((error as any).code === 'P2025') {
