@@ -1,6 +1,3 @@
-/**
- * Helper para tratamento consistente de erros Prisma
- */
 export class PrismaErrorHandler {
   static isTableNotFoundError(error: any): boolean {
     return error?.code === 'P2001' || 
