@@ -108,18 +108,18 @@ export const getAdById = async (req: Request, res: Response): Promise<void> => {
       try {
         const productData = await extractAmazonProductData(ad.product.externalUrl);
         
-        // Priorizar dados da URL externa sobre os dados salvos
-        // Se houver externalUrl, os campos do produto podem estar vazios e serão preenchidos da URL
+        // PRIORIDADE: Dados da Amazon SEMPRE vêm primeiro, dados do banco são apenas fallback se Amazon não retornar
         const adWithProduct = {
           ...ad,
           product: {
             ...ad.product,
+            // Dados da Amazon têm prioridade absoluta - só usa dados do banco se Amazon não retornar
             name: productData.title || ad.product.name || '',
             description: productData.description || ad.product.description || '',
-            price: productData.price ? parseFloat(productData.price.toString()) : (ad.product.price ? parseFloat(ad.product.price.toString()) : null),
+            price: productData.price ? parseFloat(productData.price.toString()) : ad.product.price,
             image: productData.image || ad.product.image || '',
             brand: productData.brand || ad.product.brand,
-            // Campos adicionais para manter compatibilidade com frontend
+            // Campos adicionais para manter compatibilidade com frontend (apenas da Amazon, não vêm do banco)
             images: productData.images,
             rating: productData.rating,
             reviewCount: productData.reviewCount,
@@ -240,17 +240,18 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
           try {
             const productData = await extractAmazonProductData(ad.product.externalUrl);
             
-            // Priorizar dados da URL externa sobre os dados salvos
+            // PRIORIDADE: Dados da Amazon SEMPRE vêm primeiro, dados do banco são apenas fallback se Amazon não retornar
             return {
               ...ad,
               product: {
                 ...ad.product,
+                // Dados da Amazon têm prioridade absoluta - só usa dados do banco se Amazon não retornar
                 name: productData.title || ad.product.name || '',
                 description: productData.description || ad.product.description || '',
-                price: productData.price ? parseFloat(productData.price.toString()) : (ad.product.price ? parseFloat(ad.product.price.toString()) : null),
+                price: productData.price ? parseFloat(productData.price.toString()) : ad.product.price,
                 image: productData.image || ad.product.image || '',
                 brand: productData.brand || ad.product.brand,
-                // Campos adicionais para manter compatibilidade com frontend
+                // Campos adicionais para manter compatibilidade com frontend (apenas da Amazon, não vêm do banco)
                 images: productData.images,
                 rating: productData.rating,
                 reviewCount: productData.reviewCount,
