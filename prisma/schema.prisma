@@ -248,11 +248,12 @@ model Product {
   cost            Decimal?  @db.Decimal(10, 2)
   quantity        Int       @default(0) // Available stock
   image           String?
-  category        String?
+  category        String?   // amazon product, physical product, program
   brand           String?
   status          String    @default("active") // active, inactive, out_of_stock
   weight          Decimal?  @db.Decimal(10, 3) // in kg
   dimensions      String? // format: "LxHxW" (length x height x width)
+  externalUrl     String?   @map("external_url") // External URL for the product (e.g., Amazon product link)
   
   // Relations
   orderItems      OrderItem[]  @relation("ProductOrderItems")
@@ -263,6 +264,7 @@ model Product {
   @@index([category])
   @@index([status])
   @@index([quantity])
+  @@index([externalUrl])
   @@map("product")
 }
 
@@ -346,16 +348,11 @@ model Ad {
   deletedAt       DateTime? @map("deleted_at")
   advertiserId    String?   @map("advertiser_id")
   productId       String?   @map("product_id")
-  title           String
-  description     String?
-  image           String?
   startDate       DateTime? @map("start_date")
   endDate         DateTime? @map("end_date")
   status          String    @default("active") // active, inactive, expired
   targetAudience  String?   @map("target_audience")
   budget          Decimal?  @db.Decimal(10, 2)
-  externalUrl     String?   @map("external_url") // External URL for the ad (e.g., Amazon product link)
-  category        String?   // amazon product, physical product, program
   
   // Relations
   advertiser Advertiser? @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
@@ -364,7 +361,6 @@ model Ad {
   @@index([advertiserId])
   @@index([productId])
   @@index([status])
-  @@index([category])
   @@index([startDate])
   @@index([endDate])
   @@map("ad")

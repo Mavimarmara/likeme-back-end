@@ -20,10 +20,33 @@ export const createAd = async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    // Check if product exists (only if productId is provided)
-    if (adData.productId) {
+    // Product is now required - either existing productId or create new product
+    let productId = adData.productId;
+
+    if (!productId) {
+      // Create a new product if productId is not provided
+      if (!adData.product) {
+        sendError(res, 'Product data is required when productId is not provided', 400);
+        return;
+      }
+
+      const product = await prisma.product.create({
+        data: {
+          name: adData.product.name || '',
+          description: adData.product.description,
+          image: adData.product.image,
+          price: adData.product.price || 0,
+          quantity: adData.product.quantity || 0,
+          category: adData.product.category,
+          externalUrl: adData.product.externalUrl,
+          status: adData.product.status || 'active',
+        },
+      });
+      productId = product.id;
+    } else {
+      // Check if product exists
       const product = await prisma.product.findUnique({
-        where: { id: adData.productId },
+        where: { id: productId },
       });
 
       if (!product || product.deletedAt) {
@@ -35,17 +58,12 @@ export const createAd = async (req: Request, res: Response): Promise<void> => {
     const ad = await prisma.ad.create({
       data: {
         advertiserId: adData.advertiserId,
-        productId: adData.productId,
-        title: adData.title,
-        description: adData.description,
-        image: adData.image,
+        productId: productId,
         startDate: adData.startDate ? new Date(adData.startDate) : null,
         endDate: adData.endDate ? new Date(adData.endDate) : null,
         status: adData.status || 'active',
         targetAudience: adData.targetAudience,
         budget: adData.budget,
-        externalUrl: adData.externalUrl,
-        category: adData.category,
       },
       include: {
         advertiser: true,
@@ -85,37 +103,28 @@ export const getAdById = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Se não houver productId mas houver externalUrl, buscar dados do produto
-    if (!ad.productId && ad.externalUrl && ad.externalUrl.includes('amazon.')) {
+    // Se houver product com externalUrl, buscar dados atualizados da URL externa
+    // Quando externalUrl existe, priorizar dados da URL sobre os dados salvos (podem estar vazios)
+    if (ad.product?.externalUrl && ad.product.externalUrl.includes('amazon.')) {
       try {
-        const productData = await extractAmazonProductData(ad.externalUrl);
+        const productData = await extractAmazonProductData(ad.product.externalUrl);
         
-        // Adicionar os dados do produto extraído ao objeto de resposta
+        // Priorizar dados da URL externa sobre os dados salvos
+        // Se houver externalUrl, os campos do produto podem estar vazios e serão preenchidos da URL
         const adWithProduct = {
           ...ad,
           product: {
-            id: null,
-            name: productData.title,
-            description: productData.description,
-            price: productData.price,
-            image: productData.image,
+            ...ad.product,
+            name: productData.title || ad.product.name || '',
+            description: productData.description || ad.product.description || '',
+            price: productData.price ? parseFloat(productData.price.toString()) : (ad.product.price ? parseFloat(ad.product.price.toString()) : 0),
+            image: productData.image || ad.product.image || '',
+            brand: productData.brand || ad.product.brand,
+            // Campos adicionais para manter compatibilidade com frontend
             images: productData.images,
-            brand: productData.brand,
-            category: ad.category,
             rating: productData.rating,
             reviewCount: productData.reviewCount,
-            externalUrl: ad.externalUrl,
             asin: productData.asin,
-            // Campos adicionais para manter compatibilidade
-            sku: productData.asin,
-            cost: null,
-            quantity: 0,
-            status: 'active',
-            weight: null,
-            dimensions: null,
-            createdAt: ad.createdAt,
-            updatedAt: ad.updatedAt,
-            deletedAt: null,
           },
         };
 
@@ -123,7 +132,7 @@ export const getAdById = async (req: Request, res: Response): Promise<void> => {
         return;
       } catch (error: any) {
         console.error('Error fetching external product data:', error);
-        // Continuar e retornar o ad sem dados do produto se houver erro
+        // Continuar e retornar o ad com dados do produto salvos se houver erro
       }
     }
 
@@ -160,8 +169,11 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
       where.status = status;
     }
 
+    // Filter by product category if provided
     if (category) {
-      where.category = category;
+      where.product = {
+        category: category,
+      };
     }
 
     // Filter active ads by date

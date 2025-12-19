@@ -110,14 +110,25 @@ describe('Amazon Endpoints', () => {
     });
     testDataTracker.add('advertiser', testAdvertiser.id);
 
-    // Criar anúncio de teste com externalUrl
-    testAd = await prisma.ad.create({
+    // Criar produto com externalUrl
+    const testProduct = await prisma.product.create({
       data: {
-        advertiserId: testAdvertiser.id,
-        title: 'Test Amazon Product',
+        name: 'Test Amazon Product',
         description: 'Test description',
         externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
         category: 'amazon product',
+        price: 0,
+        quantity: 0,
+        status: 'active',
+      },
+    });
+    testDataTracker.add('product', testProduct.id);
+
+    // Criar anúncio de teste vinculado ao produto
+    testAd = await prisma.ad.create({
+      data: {
+        advertiserId: testAdvertiser.id,
+        productId: testProduct.id,
         status: 'active',
       },
     });
@@ -255,15 +266,26 @@ describe('Amazon Endpoints', () => {
     it('should extract product data from ad externalUrl', async () => {
       const advertiser = await ensureTestAdvertiser();
       
-      // Garantir que testAd existe ou criar novo
+      // Garantir que testAd existe ou criar novo com produto
       if (!testAd) {
-        testAd = await prisma.ad.create({
+        // Criar produto com externalUrl
+        const product = await prisma.product.create({
           data: {
-            advertiserId: advertiser.id,
-            title: 'Test Amazon Product',
+            name: 'Test Amazon Product',
             description: 'Test description',
             externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
             category: 'amazon product',
+            price: 0,
+            quantity: 0,
+            status: 'active',
+          },
+        });
+        testDataTracker.add('product', product.id);
+
+        testAd = await prisma.ad.create({
+          data: {
+            advertiserId: advertiser.id,
+            productId: product.id,
             status: 'active',
           },
         });
@@ -313,11 +335,22 @@ describe('Amazon Endpoints', () => {
     it('should return 400 if ad has no externalUrl', async () => {
       const advertiser = await ensureTestAdvertiser();
       
+      // Criar produto sem externalUrl
+      const product = await prisma.product.create({
+        data: {
+          name: 'Product Without URL',
+          price: 10.99,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
       // Criar anúncio sem externalUrl
       const adWithoutUrl = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
-          title: 'Ad Without URL',
+          productId: product.id,
           status: 'active',
         },
       });
@@ -337,11 +370,22 @@ describe('Amazon Endpoints', () => {
     it('should return 400 if externalUrl is not from Amazon', async () => {
       const advertiser = await ensureTestAdvertiser();
       
+      // Criar produto com URL não-Amazon
+      const product = await prisma.product.create({
+        data: {
+          name: 'Product With Non-Amazon URL',
+          externalUrl: 'https://example.com/product',
+          price: 10.99,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
       const adWithNonAmazonUrl = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
-          title: 'Ad With Non-Amazon URL',
-          externalUrl: 'https://example.com/product',
+          productId: product.id,
           status: 'active',
         },
       });

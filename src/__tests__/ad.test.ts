@@ -165,18 +165,29 @@ describe('Ad Endpoints', () => {
   });
 
   describe('GET /api/ads/:id', () => {
-    it('should return ad with product data when ad has externalUrl but no productId', async () => {
+    it('should return ad with product data when product has externalUrl', async () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
-      // Criar anúncio com externalUrl mas sem productId
+      // Criar produto com externalUrl
+      const product = await prisma.product.create({
+        data: {
+          name: 'Amazon Product',
+          description: 'Test product with external URL',
+          externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
+          category: 'amazon product',
+          price: 0,
+          quantity: 0,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
+      // Criar anúncio com produto que tem externalUrl
       const adWithExternalUrl = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
-          title: 'Amazon Product Ad',
-          description: 'Test ad with external URL',
-          externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
-          category: 'amazon product',
+          productId: product.id,
           status: 'active',
         },
       });
@@ -213,7 +224,7 @@ describe('Ad Endpoints', () => {
       expect(response.body.data).toBeDefined();
       expect(response.body.data.product).toBeDefined();
       expect(response.body.data.product.name).toBe('Amazon Product Title');
-      expect(response.body.data.product.externalUrl).toBe(adWithExternalUrl.externalUrl);
+      expect(response.body.data.product.externalUrl).toBe(product.externalUrl);
     });
 
     it('should return ad with existing product when productId exists', async () => {
@@ -226,7 +237,6 @@ describe('Ad Endpoints', () => {
         data: {
           advertiserId: advertiser.id,
           productId: product.id,
-          title: 'Ad With Product',
           status: 'active',
         },
       });
@@ -247,10 +257,10 @@ describe('Ad Endpoints', () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
+      // Criar anúncio sem productId (productId é opcional)
       const adWithoutProduct = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
-          title: 'Ad Without Product',
           status: 'active',
         },
       });
@@ -269,12 +279,23 @@ describe('Ad Endpoints', () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
+      // Criar produto com externalUrl inválido
+      const product = await prisma.product.create({
+        data: {
+          name: 'Product With Invalid URL',
+          externalUrl: 'https://www.amazon.com.br/dp/INVALID',
+          category: 'amazon product',
+          price: 0,
+          quantity: 0,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
       const adWithExternalUrl = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
-          title: 'Ad With Invalid URL',
-          externalUrl: 'https://www.amazon.com.br/dp/INVALID',
-          category: 'amazon product',
+          productId: product.id,
           status: 'active',
         },
       });
@@ -303,10 +324,20 @@ describe('Ad Endpoints', () => {
     });
 
     it('should return 401 if token is missing', async () => {
+      const product = await prisma.product.create({
+        data: {
+          name: 'Test Product',
+          price: 10.99,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
       const ad = await prisma.ad.create({
         data: {
           advertiserId: testAdvertiser.id,
-          title: 'Test Ad',
+          productId: product.id,
           status: 'active',
         },
       });
@@ -324,36 +355,64 @@ describe('Ad Endpoints', () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
-      // Criar alguns anúncios
-      const createdAds = await prisma.ad.createMany({
-        data: [
-          {
-            advertiserId: advertiser.id,
-            title: 'Active Ad 1',
-            status: 'active',
-          },
-          {
-            advertiserId: advertiser.id,
-            title: 'Active Ad 2',
-            status: 'active',
-          },
-          {
-            advertiserId: advertiser.id,
-            title: 'Inactive Ad',
-            status: 'inactive',
-          },
-        ],
-      });
-      
-      // Buscar IDs dos ads criados (createMany não retorna IDs, então precisamos buscar)
-      const ads = await prisma.ad.findMany({
-        where: {
-          advertiserId: advertiser.id,
-          title: { in: ['Active Ad 1', 'Active Ad 2', 'Inactive Ad'] },
+      // Criar produtos para os anúncios
+      const product1 = await prisma.product.create({
+        data: {
+          name: 'Product 1',
+          price: 10.99,
+          quantity: 10,
+          status: 'active',
         },
-        select: { id: true },
       });
-      ads.forEach(ad => testDataTracker.add('ad', ad.id));
+      testDataTracker.add('product', product1.id);
+
+      const product2 = await prisma.product.create({
+        data: {
+          name: 'Product 2',
+          price: 20.99,
+          quantity: 5,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product2.id);
+
+      const product3 = await prisma.product.create({
+        data: {
+          name: 'Product 3',
+          price: 30.99,
+          quantity: 0,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product3.id);
+
+      // Criar alguns anúncios
+      const ad1 = await prisma.ad.create({
+        data: {
+          advertiserId: advertiser.id,
+          productId: product1.id,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('ad', ad1.id);
+
+      const ad2 = await prisma.ad.create({
+        data: {
+          advertiserId: advertiser.id,
+          productId: product2.id,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('ad', ad2.id);
+
+      const ad3 = await prisma.ad.create({
+        data: {
+          advertiserId: advertiser.id,
+          productId: product3.id,
+          status: 'inactive',
+        },
+      });
+      testDataTracker.add('ad', ad3.id);
 
       const response = await request(app)
         .get('/api/ads')
@@ -374,11 +433,22 @@ describe('Ad Endpoints', () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
+      // Criar produto com categoria
+      const product = await prisma.product.create({
+        data: {
+          name: 'Amazon Product',
+          category: 'amazon product',
+          price: 10.99,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
       const ad = await prisma.ad.create({
         data: {
           advertiserId: advertiser.id,
-          title: 'Amazon Product Ad',
-          category: 'amazon product',
+          productId: product.id,
           status: 'active',
         },
       });
@@ -394,7 +464,7 @@ describe('Ad Endpoints', () => {
       
       if (response.body.data.ads.length > 0) {
         const allMatchCategory = response.body.data.ads.every(
-          (ad: any) => ad.category === 'amazon product'
+          (ad: any) => ad.product?.category === 'amazon product'
         );
         expect(allMatchCategory).toBe(true);
       }
@@ -402,16 +472,21 @@ describe('Ad Endpoints', () => {
   });
 
   describe('POST /api/ads', () => {
-    it('should create a new ad with externalUrl', async () => {
+    it('should create a new ad with product containing externalUrl', async () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
 
       const adData = {
         advertiserId: advertiser.id,
-        title: 'New Amazon Ad',
-        description: 'Test description',
-        externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
-        category: 'amazon product',
+        product: {
+          name: 'New Amazon Product',
+          description: 'Test description',
+          externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
+          category: 'amazon product',
+          price: 0,
+          quantity: 0,
+          status: 'active',
+        },
         status: 'active',
       };
 
@@ -422,10 +497,14 @@ describe('Ad Endpoints', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
-      expect(response.body.data.externalUrl).toBe(adData.externalUrl);
-      expect(response.body.data.category).toBe(adData.category);
+      expect(response.body.data.product).toBeDefined();
+      expect(response.body.data.product.externalUrl).toBe(adData.product.externalUrl);
+      expect(response.body.data.product.category).toBe(adData.product.category);
       if (response.body.data?.id) {
         testDataTracker.add('ad', response.body.data.id);
+      }
+      if (response.body.data?.product?.id) {
+        testDataTracker.add('product', response.body.data.product.id);
       }
     });
 
@@ -437,7 +516,6 @@ describe('Ad Endpoints', () => {
       const adData = {
         advertiserId: advertiser.id,
         productId: product.id,
-        title: 'New Product Ad',
         status: 'active',
       };
 
@@ -459,7 +537,7 @@ describe('Ad Endpoints', () => {
       const advertiser = await ensureTestAdvertiser();
 
       const adData = {
-        // Missing title
+        // Missing productId and product
         advertiserId: advertiser.id,
       };
 

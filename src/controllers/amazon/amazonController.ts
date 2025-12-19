@@ -49,9 +49,12 @@ export const getProductByAd = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Buscar o anúncio
+    // Buscar o anúncio com produto
     const ad = await prisma.ad.findUnique({
       where: { id: adId },
+      include: {
+        product: true,
+      },
     });
 
     if (!ad || ad.deletedAt) {
@@ -59,35 +62,41 @@ export const getProductByAd = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (!ad.externalUrl) {
-      sendError(res, 'Ad does not have an external URL', 400);
+    if (!ad.product?.externalUrl) {
+      sendError(res, 'Ad product does not have an external URL', 400);
       return;
     }
 
     // Validar se é uma URL válida da Amazon
-    if (!ad.externalUrl.includes('amazon.')) {
-      sendError(res, 'Ad external URL is not a valid Amazon URL', 400);
+    if (!ad.product.externalUrl.includes('amazon.')) {
+      sendError(res, 'Ad product external URL is not a valid Amazon URL', 400);
       return;
     }
 
     // Extrair dados da página usando web scraping
-    const productData = await extractAmazonProductData(ad.externalUrl);
+    const productData = await extractAmazonProductData(ad.product.externalUrl);
 
     if (!productData.title) {
       sendError(res, 'Could not extract product data from Amazon page', 404);
       return;
     }
 
-    // Combinar dados do produto extraído com dados do anúncio
+    // Combinar dados do produto extraído com dados do anúncio e produto
     const normalizedProduct = {
       ...productData,
-      externalUrl: ad.externalUrl,
+      externalUrl: ad.product.externalUrl,
       ad: {
         id: ad.id,
-        title: ad.title,
-        description: ad.description,
-        category: ad.category,
+        status: ad.status,
+        startDate: ad.startDate,
+        endDate: ad.endDate,
       },
+      product: ad.product ? {
+        id: ad.product.id,
+        name: productData.title || ad.product.name,
+        description: productData.description || ad.product.description,
+        category: ad.product.category,
+      } : null,
     };
 
     sendSuccess(res, normalizedProduct, 'Amazon product retrieved successfully');

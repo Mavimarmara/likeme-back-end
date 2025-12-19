@@ -82,14 +82,16 @@ async function main() {
 
   for (const product of products) {
     try {
-      // Criar título do anúncio baseado no nome do produto
-      const adTitle = `Promoção: ${product.name}`;
-      
-      // Criar descrição do anúncio
-      const adDescription = product.description || `Confira ${product.name} - ${product.brand || 'LikeMe'}`;
+      // Determinar a categoria do produto
+      const productCategory = getAdCategory(product.category);
 
-      // Determinar a categoria do anúncio
-      const adCategory = getAdCategory(product.category);
+      // Atualizar produto com categoria se não tiver
+      if (!product.category) {
+        await prisma.product.update({
+          where: { id: product.id },
+          data: { category: productCategory },
+        });
+      }
 
       // Verificar se já existe um anúncio para este produto
       const existingAd = await prisma.ad.findFirst({
@@ -102,11 +104,7 @@ async function main() {
       const adData = {
         advertiserId: advertiser?.id || null,
         productId: product.id,
-        title: adTitle,
-        description: adDescription,
-        image: product.image,
         status: 'active' as const,
-        category: adCategory,
         startDate: new Date(),
         endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 dias a partir de hoje
         targetAudience: product.category || 'General audience',
@@ -119,7 +117,7 @@ async function main() {
           data: adData,
         });
         updated++;
-        console.log(`🔄 Atualizado: ${adTitle}`);
+        console.log(`🔄 Atualizado: ${product.name}`);
       } else {
         // Criar novo anúncio
         await prisma.ad.create({
@@ -130,7 +128,7 @@ async function main() {
           },
         });
         created++;
-        console.log(`✅ Criado: ${adTitle}`);
+        console.log(`✅ Criado: ${product.name}`);
       }
     } catch (error: any) {
       errors++;

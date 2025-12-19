@@ -261,31 +261,31 @@ export const updateOrderSchema = Joi.object({
 export const createAdSchema = Joi.object({
   advertiserId: Joi.string().optional(),
   productId: Joi.string().optional(),
-  title: Joi.string().min(2).max(200).required(),
-  description: Joi.string().max(2000).optional(),
-  image: Joi.string().uri().max(500).optional(),
+  product: Joi.object({
+    name: Joi.string().min(2).max(200).optional(),
+    description: Joi.string().max(2000).optional(),
+    image: Joi.string().uri().max(500).optional(),
+    price: Joi.number().positive().precision(2).optional(),
+    quantity: Joi.number().integer().min(0).optional(),
+    category: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
+    externalUrl: Joi.string().uri().max(1000).optional(),
+    status: Joi.string().valid('active', 'inactive', 'out_of_stock').optional(),
+  }).optional(),
   startDate: Joi.date().iso().optional(),
   endDate: Joi.date().iso().greater(Joi.ref('startDate')).optional(),
   status: Joi.string().valid('active', 'inactive', 'expired').default('active'),
   targetAudience: Joi.string().max(200).optional(),
   budget: Joi.number().positive().precision(2).optional(),
-  externalUrl: Joi.string().uri().max(1000).optional(),
-  category: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
-});
+}).xor('productId', 'product'); // Require either productId or product
 
 export const updateAdSchema = Joi.object({
   advertiserId: Joi.string().optional().allow(null),
   productId: Joi.string().optional().allow(null),
-  title: Joi.string().min(2).max(200).optional(),
-  description: Joi.string().max(2000).optional(),
-  image: Joi.string().uri().max(500).optional(),
   startDate: Joi.date().iso().optional(),
   endDate: Joi.date().iso().optional(),
   status: Joi.string().valid('active', 'inactive', 'expired').optional(),
   targetAudience: Joi.string().max(200).optional(),
   budget: Joi.number().positive().precision(2).optional(),
-  externalUrl: Joi.string().uri().max(1000).optional(),
-  category: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
 });
 
 // ============================================

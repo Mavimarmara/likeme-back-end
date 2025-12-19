@@ -12,50 +12,84 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - title
- *             properties:
- *               advertiserId:
- *                 type: string
- *                 description: Optional advertiser ID
- *               productId:
- *                 type: string
- *                 description: Optional product ID
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               image:
- *                 type: string
- *                 format: uri
- *               startDate:
- *                 type: string
- *                 format: date-time
- *               endDate:
- *                 type: string
- *                 format: date-time
- *               status:
- *                 type: string
- *                 enum: [active, inactive, expired]
- *                 default: active
- *               targetAudience:
- *                 type: string
- *               budget:
- *                 type: number
- *                 format: decimal
- *               externalUrl:
- *                 type: string
- *                 format: uri
- *                 description: External URL for the ad (e.g., Amazon product link)
- *               category:
- *                 type: string
- *                 enum: [amazon product, physical product, program]
- *                 description: Category of the ad
+ *             oneOf:
+ *               - required:
+ *                   - productId
+ *                 properties:
+ *                   advertiserId:
+ *                     type: string
+ *                     description: Optional advertiser ID
+ *                   productId:
+ *                     type: string
+ *                     description: ID of existing product
+ *                   startDate:
+ *                     type: string
+ *                     format: date-time
+ *                   endDate:
+ *                     type: string
+ *                     format: date-time
+ *                   status:
+ *                     type: string
+ *                     enum: [active, inactive, expired]
+ *                     default: active
+ *                   targetAudience:
+ *                     type: string
+ *                   budget:
+ *                     type: number
+ *                     format: decimal
+ *               - required:
+ *                   - product
+ *                 properties:
+ *                   advertiserId:
+ *                     type: string
+ *                     description: Optional advertiser ID
+ *                   product:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       image:
+ *                         type: string
+ *                         format: uri
+ *                       price:
+ *                         type: number
+ *                         format: decimal
+ *                       quantity:
+ *                         type: integer
+ *                       category:
+ *                         type: string
+ *                         enum: [amazon product, physical product, program]
+ *                       externalUrl:
+ *                         type: string
+ *                         format: uri
+ *                         description: External URL (e.g., Amazon product link). When provided, data will be fetched from URL
+ *                       status:
+ *                         type: string
+ *                         enum: [active, inactive, out_of_stock]
+ *                   startDate:
+ *                     type: string
+ *                     format: date-time
+ *                   endDate:
+ *                     type: string
+ *                     format: date-time
+ *                   status:
+ *                     type: string
+ *                     enum: [active, inactive, expired]
+ *                     default: active
+ *                   targetAudience:
+ *                     type: string
+ *                   budget:
+ *                     type: number
+ *                     format: decimal
  *     responses:
  *       201:
  *         description: Ad created successfully
+ *       400:
+ *         description: Invalid request - productId or product data required
  *       404:
- *         description: Advertiser not found
+ *         description: Advertiser or Product not found
  */
 
 /**
@@ -74,7 +108,7 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Ad retrieved successfully
+ *         description: Ad retrieved successfully. If product has externalUrl, data will be fetched from URL and prioritized
  *       404:
  *         description: Ad not found
  */
@@ -120,7 +154,7 @@
  *         schema:
  *           type: string
  *           enum: [amazon product, physical product, program]
- *         description: Filter ads by category
+ *         description: Filter ads by product category
  *     responses:
  *       200:
  *         description: List of ads retrieved successfully
@@ -149,16 +183,12 @@
  *             properties:
  *               advertiserId:
  *                 type: string
+ *                 nullable: true
  *                 description: Optional advertiser ID (can be null to remove)
  *               productId:
  *                 type: string
+ *                 nullable: true
  *                 description: Optional product ID (can be null to remove)
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               image:
- *                 type: string
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -167,18 +197,12 @@
  *                 format: date-time
  *               status:
  *                 type: string
+ *                 enum: [active, inactive, expired]
  *               targetAudience:
  *                 type: string
  *               budget:
  *                 type: number
- *               externalUrl:
- *                 type: string
- *                 format: uri
- *                 description: External URL for the ad (e.g., Amazon product link)
- *               category:
- *                 type: string
- *                 enum: [amazon product, physical product, program]
- *                 description: Category of the ad
+ *                 format: decimal
  *     responses:
  *       200:
  *         description: Ad updated successfully
@@ -206,4 +230,3 @@
  *       404:
  *         description: Ad not found
  */
-
