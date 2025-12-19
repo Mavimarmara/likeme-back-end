@@ -35,8 +35,8 @@ export const createAd = async (req: Request, res: Response): Promise<void> => {
           name: adData.product.name || '',
           description: adData.product.description,
           image: adData.product.image,
-          price: adData.product.price || 0,
-          quantity: adData.product.quantity || 0,
+          price: adData.product.price ?? null,
+          quantity: adData.product.quantity ?? null,
           category: adData.product.category,
           externalUrl: adData.product.externalUrl,
           status: adData.product.status || 'active',
@@ -63,7 +63,6 @@ export const createAd = async (req: Request, res: Response): Promise<void> => {
         endDate: adData.endDate ? new Date(adData.endDate) : null,
         status: adData.status || 'active',
         targetAudience: adData.targetAudience,
-        budget: adData.budget,
       },
       include: {
         advertiser: true,
@@ -117,7 +116,7 @@ export const getAdById = async (req: Request, res: Response): Promise<void> => {
             ...ad.product,
             name: productData.title || ad.product.name || '',
             description: productData.description || ad.product.description || '',
-            price: productData.price ? parseFloat(productData.price.toString()) : (ad.product.price ? parseFloat(ad.product.price.toString()) : 0),
+            price: productData.price ? parseFloat(productData.price.toString()) : (ad.product.price ? parseFloat(ad.product.price.toString()) : null),
             image: productData.image || ad.product.image || '',
             brand: productData.brand || ad.product.brand,
             // Campos adicionais para manter compatibilidade com frontend
@@ -233,8 +232,44 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
       console.log(`GetAllAds - Found ${ads.length} ads (total: ${total})`);
     }
 
+    // Para cada ad com product.externalUrl (Amazon), buscar dados atualizados
+    const adsWithProductData = await Promise.all(
+      ads.map(async (ad) => {
+        // Se houver product com externalUrl da Amazon, buscar dados atualizados
+        if (ad.product?.externalUrl && ad.product.externalUrl.includes('amazon.')) {
+          try {
+            const productData = await extractAmazonProductData(ad.product.externalUrl);
+            
+            // Priorizar dados da URL externa sobre os dados salvos
+            return {
+              ...ad,
+              product: {
+                ...ad.product,
+                name: productData.title || ad.product.name || '',
+                description: productData.description || ad.product.description || '',
+                price: productData.price ? parseFloat(productData.price.toString()) : (ad.product.price ? parseFloat(ad.product.price.toString()) : null),
+                image: productData.image || ad.product.image || '',
+                brand: productData.brand || ad.product.brand,
+                // Campos adicionais para manter compatibilidade com frontend
+                images: productData.images,
+                rating: productData.rating,
+                reviewCount: productData.reviewCount,
+                asin: productData.asin,
+              },
+            };
+          } catch (error: any) {
+            console.error(`Error fetching external product data for ad ${ad.id}:`, error);
+            // Retornar ad com dados salvos se houver erro no scraping
+            return ad;
+          }
+        }
+        // Retornar ad sem modificação se não tiver externalUrl
+        return ad;
+      })
+    );
+
     sendSuccess(res, {
-      ads,
+      ads: adsWithProductData,
       pagination: {
         page,
         limit,

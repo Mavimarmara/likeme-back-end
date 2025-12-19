@@ -25,7 +25,7 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
         sku: productData.sku,
         price: productData.price,
         cost: productData.cost,
-        quantity: productData.quantity || 0,
+        quantity: productData.quantity ?? null,
         image: productData.image,
         category: productData.category,
         brand: productData.brand,
@@ -258,11 +258,20 @@ export const updateStock = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    let newQuantity = product.quantity;
+    // Products with externalUrl don't have stock management
+    if (product.externalUrl) {
+      sendError(res, 'Cannot update stock for products with external URL', 400);
+      return;
+    }
+
+    // If quantity is null, treat as 0 for operations
+    const currentQuantity = product.quantity ?? 0;
+
+    let newQuantity: number;
     if (operation === 'add') {
-      newQuantity = product.quantity + quantity;
+      newQuantity = currentQuantity + quantity;
     } else if (operation === 'subtract') {
-      newQuantity = Math.max(0, product.quantity - quantity);
+      newQuantity = Math.max(0, currentQuantity - quantity);
     } else if (operation === 'set') {
       newQuantity = quantity;
     } else {

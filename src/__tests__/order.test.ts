@@ -194,6 +194,10 @@ describe('Order Endpoints', () => {
       testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
+      // Ensure product has price (test products should always have price)
+      if (!product.price) {
+        throw new Error('Test product must have a price');
+      }
       const unitPrice = new Decimal(product.price.toString());
       const total = unitPrice.times(1);
 
@@ -253,6 +257,10 @@ describe('Order Endpoints', () => {
       testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
+      // Ensure product has price (test products should always have price)
+      if (!product.price) {
+        throw new Error('Test product must have a price');
+      }
       const unitPrice = new Decimal(product.price.toString());
       const total = unitPrice.times(1);
 
@@ -310,6 +318,10 @@ describe('Order Endpoints', () => {
       testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
+      // Ensure product has price (test products should always have price)
+      if (!product.price) {
+        throw new Error('Test product must have a price');
+      }
       const unitPrice = new Decimal(product.price.toString());
       const total = unitPrice.times(1);
 
@@ -368,6 +380,10 @@ describe('Order Endpoints', () => {
       testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
+      // Ensure product has price (test products should always have price)
+      if (!product.price) {
+        throw new Error('Test product must have a price');
+      }
       const unitPrice = new Decimal(product.price.toString());
       const itemTotal = unitPrice.times(orderQuantity);
 
@@ -423,6 +439,10 @@ describe('Order Endpoints', () => {
       testDataTracker.add('product', product.id);
 
       const { Decimal } = require('@prisma/client/runtime/library');
+      // Ensure product has price (test products should always have price)
+      if (!product.price) {
+        throw new Error('Test product must have a price');
+      }
       const unitPrice = new Decimal(product.price.toString());
       const total = unitPrice.times(1);
 

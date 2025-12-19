@@ -188,16 +188,17 @@ export const createProductSchema = Joi.object({
   name: Joi.string().min(2).max(200).required(),
   description: Joi.string().max(2000).optional(),
   sku: Joi.string().max(100).optional(),
-  price: Joi.number().positive().precision(2).required(),
+  price: Joi.number().positive().precision(2).optional(),
   cost: Joi.number().positive().precision(2).optional(),
-  quantity: Joi.number().integer().min(0).default(0),
+  quantity: Joi.number().integer().min(0).optional(),
   image: Joi.string().uri().max(500).optional(),
   category: Joi.string().max(100).optional(),
   brand: Joi.string().max(100).optional(),
   status: Joi.string().valid('active', 'inactive', 'out_of_stock').default('active'),
   weight: Joi.number().positive().precision(3).optional(),
   dimensions: Joi.string().max(50).optional(),
-});
+  externalUrl: Joi.string().uri().max(1000).optional(),
+}).or('price', 'externalUrl'); // Require either price or externalUrl
 
 export const updateProductSchema = Joi.object({
   name: Joi.string().min(2).max(200).optional(),
@@ -275,7 +276,6 @@ export const createAdSchema = Joi.object({
   endDate: Joi.date().iso().greater(Joi.ref('startDate')).optional(),
   status: Joi.string().valid('active', 'inactive', 'expired').default('active'),
   targetAudience: Joi.string().max(200).optional(),
-  budget: Joi.number().positive().precision(2).optional(),
 }).xor('productId', 'product'); // Require either productId or product
 
 export const updateAdSchema = Joi.object({
@@ -285,7 +285,6 @@ export const updateAdSchema = Joi.object({
   endDate: Joi.date().iso().optional(),
   status: Joi.string().valid('active', 'inactive', 'expired').optional(),
   targetAudience: Joi.string().max(200).optional(),
-  budget: Joi.number().positive().precision(2).optional(),
 });
 
 // ============================================

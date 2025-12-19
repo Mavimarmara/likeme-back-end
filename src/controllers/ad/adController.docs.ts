@@ -34,9 +34,6 @@
  *                     default: active
  *                   targetAudience:
  *                     type: string
- *                   budget:
- *                     type: number
- *                     format: decimal
  *               - required:
  *                   - product
  *                 properties:
@@ -80,9 +77,6 @@
  *                     default: active
  *                   targetAudience:
  *                     type: string
- *                   budget:
- *                     type: number
- *                     format: decimal
  *     responses:
  *       201:
  *         description: Ad created successfully
@@ -200,9 +194,6 @@
  *                 enum: [active, inactive, expired]
  *               targetAudience:
  *                 type: string
- *               budget:
- *                 type: number
- *                 format: decimal
  *     responses:
  *       200:
  *         description: Ad updated successfully

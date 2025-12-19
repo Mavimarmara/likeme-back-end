@@ -39,7 +39,21 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
         return;
       }
 
-      if (product.quantity < item.quantity) {
+      // Products with externalUrl cannot be added to orders (they redirect to external site)
+      if (product.externalUrl) {
+        sendError(res, `Product ${product.name} has external URL and cannot be added to cart. Please use the external link.`, 400);
+        return;
+      }
+
+      // Check if product has price (required for orders)
+      if (product.price === null || product.price === undefined) {
+        sendError(res, `Product ${product.name} does not have a price`, 400);
+        return;
+      }
+
+      // Check stock availability (quantity can be null for external products, but we already checked externalUrl above)
+      const availableQuantity = product.quantity ?? 0;
+      if (availableQuantity < item.quantity) {
         sendError(res, `Insufficient stock for product ${product.name}`, 400);
         return;
       }
@@ -104,16 +118,23 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
       },
     });
 
-    // Update product stock
+    // Update product stock (only for products without externalUrl)
     for (const item of items) {
-      await prisma.product.update({
+      const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        data: {
-          quantity: {
-            decrement: item.quantity,
-          },
-        },
       });
+      
+      // Only update stock if product doesn't have externalUrl and has quantity
+      if (product && !product.externalUrl && product.quantity !== null) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            quantity: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
     }
 
     sendSuccess(res, order, 'Order created successfully', 201);

@@ -244,9 +244,9 @@ model Product {
   name            String
   description     String?
   sku             String?   @unique
-  price           Decimal   @db.Decimal(10, 2)
+  price           Decimal?  @db.Decimal(10, 2) // Optional when externalUrl is provided
   cost            Decimal?  @db.Decimal(10, 2)
-  quantity        Int       @default(0) // Available stock
+  quantity        Int?      // Optional when externalUrl is provided (Available stock)
   image           String?
   category        String?   // amazon product, physical product, program
   brand           String?
@@ -352,7 +352,6 @@ model Ad {
   endDate         DateTime? @map("end_date")
   status          String    @default("active") // active, inactive, expired
   targetAudience  String?   @map("target_audience")
-  budget          Decimal?  @db.Decimal(10, 2)
   
   // Relations
   advertiser Advertiser? @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
