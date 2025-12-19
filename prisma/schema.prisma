@@ -73,6 +73,7 @@ model User {
   createdCommunities Community[]             @relation("UserCreatedCommunities")
   orders             Order[]                 @relation("UserOrders")
   advertiser         Advertiser?             @relation("UserAdvertiser")
+  activities         Activity[]              @relation("UserActivities")
 
   @@index([personId])
   @@index([username])
@@ -363,4 +364,34 @@ model Ad {
   @@index([startDate])
   @@index([endDate])
   @@map("ad")
+}
+
+// ============================================
+// ACTIVITY MODELS - User Activities Management
+// ============================================
+
+model Activity {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  userId          String    @map("user_id")
+  name            String
+  type            String    // task, event
+  startDate       DateTime  @map("start_date")
+  startTime       String?   @map("start_time")
+  endDate         DateTime? @map("end_date")
+  endTime         String?   @map("end_time")
+  location        String?
+  reminderEnabled Boolean   @default(false) @map("reminder_enabled")
+  reminderOffset  String?   @map("reminder_offset") // e.g., "5 min before", "10 min after"
+  
+  // Relations
+  user User @relation("UserActivities", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("activity")
 }

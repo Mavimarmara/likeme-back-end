@@ -363,3 +363,32 @@ export const capturePaymentSchema = Joi.object({
 export const refundPaymentSchema = Joi.object({
   amount: Joi.number().positive().optional(),
 });
+
+// ============================================
+// ACTIVITY VALIDATION SCHEMAS
+// ============================================
+
+export const createActivitySchema = Joi.object({
+  userId: Joi.string().optional(),
+  name: Joi.string().min(1).max(200).required(),
+  type: Joi.string().valid('task', 'event').required(),
+  startDate: Joi.date().iso().required(),
+  startTime: Joi.string().max(20).optional(),
+  endDate: Joi.date().iso().optional().allow(null),
+  endTime: Joi.string().max(20).optional().allow(null),
+  location: Joi.string().max(500).optional().allow(null),
+  reminderEnabled: Joi.boolean().optional(),
+  reminderOffset: Joi.string().max(50).optional().allow(null),
+});
+
+export const updateActivitySchema = Joi.object({
+  name: Joi.string().min(1).max(200).optional(),
+  type: Joi.string().valid('task', 'event').optional(),
+  startDate: Joi.date().iso().optional(),
+  startTime: Joi.string().max(20).optional().allow(null),
+  endDate: Joi.date().iso().optional().allow(null),
+  endTime: Joi.string().max(20).optional().allow(null),
+  location: Joi.string().max(500).optional().allow(null),
+  reminderEnabled: Joi.boolean().optional(),
+  reminderOffset: Joi.string().max(50).optional().allow(null),
+});
