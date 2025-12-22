@@ -205,7 +205,7 @@ describe('ProductService', () => {
     });
 
     it('should filter by category', async () => {
-      await prisma.product.create({
+      const categoryProduct = await prisma.product.create({
         data: {
           name: 'Category Product',
           category: 'physical product',
@@ -213,6 +213,7 @@ describe('ProductService', () => {
           status: 'active',
         },
       });
+      testDataTracker.add('product', categoryProduct.id);
 
       const result = await productService.findAll(1, 10, {
         category: 'physical product',

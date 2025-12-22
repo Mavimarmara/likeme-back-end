@@ -191,7 +191,13 @@ export class AdService {
       prisma.ad.count({ where }),
     ]);
 
-    return { ads: ads as AdWithRelations[], total };
+    // Enriquecer ads com dados da Amazon e filtrar os que não conseguiram ser enriquecidos
+    const enrichedAds = await this.enrichAdsWithAmazonData(ads as AdWithRelations[]);
+    
+    // Filtrar ads cujo produto seja null (não conseguiu ser enriquecido)
+    const validAds = enrichedAds.filter(ad => ad.product !== null);
+
+    return { ads: validAds, total: validAds.length };
   }
 
   async findById(id: string): Promise<AdWithRelations | null> {
@@ -224,14 +230,31 @@ export class AdService {
 
   private async enrichProductWithAmazonData(
     product: Product | null | undefined,
-    externalUrl: string
+    externalUrl: string,
+    timeoutMs: number = 5000
   ): Promise<ProductDataFromAmazon | null> {
     if (!this.isAmazonUrl(externalUrl)) {
       return null;
     }
 
     try {
-      return await extractAmazonProductData(externalUrl);
+      // Timeout configurável para buscar dados da Amazon (padrão 5s para listagens, maior para detalhes)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout fetching Amazon data')), timeoutMs);
+      });
+
+      const amazonData = await Promise.race([
+        extractAmazonProductData(externalUrl),
+        timeoutPromise,
+      ]);
+
+      // Verificar se o título é válido (não é o fallback "Produto Amazon")
+      if (!amazonData || amazonData.title === 'Produto Amazon' || !amazonData.title || amazonData.title.trim() === '') {
+        console.warn(`Invalid title retrieved for product from ${externalUrl}`);
+        return null;
+      }
+
+      return amazonData;
     } catch (error: any) {
       console.error('Error fetching external product data:', error);
       return null;
@@ -241,8 +264,13 @@ export class AdService {
   private mergeAmazonDataWithProduct(
     product: Product | null | undefined,
     amazonData: ProductDataFromAmazon | null
-  ): any {
+  ): any | null {
     if (!product) {
+      return null;
+    }
+
+    // Se não conseguiu buscar dados da Amazon e o produto tem externalUrl Amazon, retornar null
+    if (!amazonData && product.externalUrl && this.isAmazonUrl(product.externalUrl)) {
       return null;
     }
 
@@ -280,14 +308,21 @@ export class AdService {
       ad.product!.externalUrl!
     );
 
+    const mergedProduct = this.mergeAmazonDataWithProduct(ad.product, amazonData);
+    
+    // Se o produto não conseguiu ser enriquecido, retornar null (ad não disponível)
+    if (!mergedProduct) {
+      return null;
+    }
+
     return {
       ...ad,
-      product: this.mergeAmazonDataWithProduct(ad.product, amazonData),
+      product: mergedProduct,
     };
   }
 
   async enrichAdsWithAmazonData(ads: AdWithRelations[]): Promise<AdWithRelations[]> {
-    return Promise.all(
+    const enrichedResults = await Promise.allSettled(
       ads.map(async (ad) => {
         if (!this.isAmazonUrl(ad.product?.externalUrl)) {
           return ad;
@@ -298,12 +333,27 @@ export class AdService {
           ad.product!.externalUrl!
         );
 
+        const mergedProduct = this.mergeAmazonDataWithProduct(ad.product, amazonData);
+        
+        // Se o produto não conseguiu ser enriquecido, retornar ad com product null
+        if (!mergedProduct) {
+          return {
+            ...ad,
+            product: null,
+          };
+        }
+
         return {
           ...ad,
-          product: this.mergeAmazonDataWithProduct(ad.product, amazonData),
+          product: mergedProduct,
         };
       })
     );
+
+    // Retornar apenas os ads que foram processados com sucesso
+    return enrichedResults
+      .filter((result): result is PromiseFulfilledResult<AdWithRelations> => result.status === 'fulfilled')
+      .map(result => result.value);
   }
 
   async update(id: string, updateData: any): Promise<AdWithRelations> {

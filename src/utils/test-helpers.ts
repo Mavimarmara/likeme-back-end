@@ -59,28 +59,51 @@ export async function safeTestCleanup(
     // Deletar em ordem reversa (respeitando foreign keys)
     // Ordem: ads -> orderItems -> orders -> products -> advertisers -> users -> persons -> personContacts -> tips
     
+    // Deletar ads primeiro (referenciam products)
     if (allIds.has('ad') && allIds.get('ad')!.length > 0) {
       await prisma.ad.deleteMany({
         where: { id: { in: allIds.get('ad') } },
       });
     }
     
+    // Deletar orderItems dos produtos rastreados (mesmo que não tenham sido rastreados individualmente)
+    if (allIds.has('product') && allIds.get('product')!.length > 0) {
+      await prisma.orderItem.deleteMany({
+        where: { productId: { in: allIds.get('product') } },
+      });
+    }
+    
+    // Deletar orderItems rastreados individualmente
     if (allIds.has('orderItem') && allIds.get('orderItem')!.length > 0) {
       await prisma.orderItem.deleteMany({
         where: { id: { in: allIds.get('orderItem') } },
       });
     }
     
+    // Deletar orders (após orderItems)
     if (allIds.has('order') && allIds.get('order')!.length > 0) {
       await prisma.order.deleteMany({
         where: { id: { in: allIds.get('order') } },
       });
     }
     
+    // Deletar products (após ads e orderItems)
     if (allIds.has('product') && allIds.get('product')!.length > 0) {
-      await prisma.product.deleteMany({
-        where: { id: { in: allIds.get('product') } },
-      });
+      try {
+        await prisma.product.deleteMany({
+          where: { id: { in: allIds.get('product') } },
+        });
+      } catch (error: any) {
+        // Se falhar por foreign key, tentar soft delete
+        if (error.code === 'P2003') {
+          await prisma.product.updateMany({
+            where: { id: { in: allIds.get('product') } },
+            data: { deletedAt: new Date() },
+          });
+        } else {
+          throw error;
+        }
+      }
     }
     
     if (allIds.has('advertiser') && allIds.get('advertiser')!.length > 0) {
@@ -110,6 +133,12 @@ export async function safeTestCleanup(
     if (allIds.has('tip') && allIds.get('tip')!.length > 0) {
       await prisma.tip.deleteMany({
         where: { id: { in: allIds.get('tip') } },
+      });
+    }
+    
+    if (allIds.has('activity') && allIds.get('activity')!.length > 0) {
+      await prisma.activity.deleteMany({
+        where: { id: { in: allIds.get('activity') } },
       });
     }
     
