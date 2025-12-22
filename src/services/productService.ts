@@ -1,5 +1,6 @@
 import prisma from '@/config/database';
 import type { Product, Prisma } from '@prisma/client';
+import { extractAmazonProductData } from '@/utils/amazonScraper';
 
 export interface ProductQueryFilters {
   category?: string;
@@ -13,7 +14,7 @@ export interface UpdateStockOperation {
 }
 
 export class ProductService {
-  async findById(id: string): Promise<Product | null> {
+  async findById(id: string): Promise<any> {
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
@@ -33,6 +34,11 @@ export class ProductService {
 
     if (!product || product.deletedAt) {
       return null;
+    }
+
+    // Se o produto tem externalUrl, enriquecer com dados do link externo
+    if (product.externalUrl) {
+      return await this.enrichProductWithExternalData(product);
     }
 
     return product;
@@ -66,7 +72,7 @@ export class ProductService {
     page: number,
     limit: number,
     filters: ProductQueryFilters
-  ): Promise<{ products: Product[]; total: number }> {
+  ): Promise<{ products: any[]; total: number }> {
     const skip = (page - 1) * limit;
     const where = this.buildWhereClause(filters);
 
@@ -80,7 +86,17 @@ export class ProductService {
       prisma.product.count({ where }),
     ]);
 
-    return { products, total };
+    // Enriquecer produtos com externalUrl com dados do link externo
+    const enrichedProducts = await Promise.all(
+      products.map(async (product) => {
+        if (product.externalUrl) {
+          return await this.enrichProductWithExternalData(product);
+        }
+        return product;
+      })
+    );
+
+    return { products: enrichedProducts, total };
   }
 
   async create(productData: any): Promise<Product> {
@@ -211,6 +227,51 @@ export class ProductService {
     }
 
     return operation.quantity;
+  }
+
+  private isAmazonUrl(url: string | null | undefined): boolean {
+    return !!(url && url.includes('amazon.'));
+  }
+
+  private async enrichProductWithExternalData(
+    product: Product
+  ): Promise<any> {
+    if (!product.externalUrl) {
+      return product;
+    }
+
+    if (!this.isAmazonUrl(product.externalUrl)) {
+      return product;
+    }
+
+    try {
+      const amazonData = await extractAmazonProductData(product.externalUrl);
+      
+      if (!amazonData) {
+        return product;
+      }
+
+      // Mesclar dados do Amazon com o produto, priorizando dados do Amazon
+      return {
+        ...product,
+        name: amazonData.title || product.name || '',
+        description: amazonData.description || product.description || '',
+        price: amazonData.price ? parseFloat(amazonData.price.toString()) : product.price,
+        image: amazonData.image || product.image || '',
+        brand: amazonData.brand || product.brand,
+        images: amazonData.images,
+        rating: amazonData.rating,
+        reviewCount: amazonData.reviewCount,
+        asin: amazonData.asin,
+        priceDisplay: amazonData.priceDisplay,
+        currency: amazonData.currency,
+        availability: amazonData.availability,
+      };
+    } catch (error: any) {
+      console.error('Error fetching external product data:', error);
+      // Se falhar ao buscar dados externos, retornar produto original
+      return product;
+    }
   }
 }
 
