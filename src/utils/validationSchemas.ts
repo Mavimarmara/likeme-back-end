@@ -257,7 +257,7 @@ export const createOrderSchema = Joi.object({
     zipcode: Joi.string().pattern(/^[\d-]+$/).min(8).max(10).required(),
     complement: Joi.string().max(200).optional(),
   }).required(),
-}).and('cardData', 'billingAddress'); // Se cardData for fornecido, billingAddress também deve ser
+});
 
 export const updateOrderSchema = Joi.object({
   status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').optional(),
