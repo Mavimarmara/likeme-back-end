@@ -348,24 +348,28 @@ export class OrderService {
       throw error;
     }
 
-    // Verificar status da transação
+    // Verificar status da transação/charge
+    // A API v5 retorna Order com charges, então precisamos verificar o status do charge
     const transactionStatus = pagarmeTransaction.status;
     let paymentStatus = 'pending';
 
-    if (transactionStatus === 'paid' || transactionStatus === 'authorized') {
+    // Status possíveis na API v5: paid, pending, canceled, failed
+    // Status possíveis na API v1 (legada): paid, authorized, refused, processing
+    // Compatibilidade com ambos formatos
+    if (transactionStatus === 'paid' || transactionStatus === 'authorized' || transactionStatus === 'success') {
       paymentStatus = 'paid';
-    } else if (transactionStatus === 'refused') {
+    } else if (transactionStatus === 'refused' || transactionStatus === 'failed' || transactionStatus === 'canceled') {
       paymentStatus = 'failed';
       // Atualizar pedido com status failed antes de lançar erro
       await prisma.order.update({
         where: { id: order.id },
         data: {
           paymentStatus: 'failed',
-          paymentTransactionId: pagarmeTransaction.id.toString(),
+          paymentTransactionId: pagarmeTransaction.id?.toString() || String(pagarmeTransaction.id),
         },
       });
       throw new Error(`Pagamento recusado pela Pagarme. Status: ${transactionStatus}`);
-    } else if (transactionStatus === 'processing') {
+    } else if (transactionStatus === 'processing' || transactionStatus === 'pending') {
       paymentStatus = 'pending';
     } else {
       paymentStatus = 'failed';
@@ -373,7 +377,7 @@ export class OrderService {
         where: { id: order.id },
         data: {
           paymentStatus: 'failed',
-          paymentTransactionId: pagarmeTransaction.id.toString(),
+          paymentTransactionId: pagarmeTransaction.id?.toString() || String(pagarmeTransaction.id),
         },
       });
       throw new Error(`Status de transação desconhecido: ${transactionStatus}`);
