@@ -353,13 +353,17 @@ export class OrderService {
     const transactionStatus = pagarmeTransaction.status;
     let paymentStatus = 'pending';
 
+    console.log('[OrderService] Status recebido da Pagarme:', transactionStatus);
+
     // Status possíveis na API v5: paid, pending, canceled, failed
     // Status possíveis na API v1 (legada): paid, authorized, refused, processing
     // Compatibilidade com ambos formatos
     if (transactionStatus === 'paid' || transactionStatus === 'authorized' || transactionStatus === 'success') {
       paymentStatus = 'paid';
+      console.log('[OrderService] ✅ Pagamento aprovado, status:', paymentStatus);
     } else if (transactionStatus === 'refused' || transactionStatus === 'failed' || transactionStatus === 'canceled') {
       paymentStatus = 'failed';
+      console.log('[OrderService] ❌ Pagamento recusado, status:', transactionStatus);
       // Atualizar pedido com status failed antes de lançar erro
       await prisma.order.update({
         where: { id: order.id },
@@ -368,11 +372,13 @@ export class OrderService {
           paymentTransactionId: pagarmeTransaction.id?.toString() || String(pagarmeTransaction.id),
         },
       });
-      throw new Error(`Pagamento recusado pela Pagarme. Status: ${transactionStatus}`);
-    } else if (transactionStatus === 'processing' || transactionStatus === 'pending') {
+      throw new Error(`Pagamento recusado pela Pagarme. Status: ${transactionStatus}. Nota: Para testes bem-sucedidos, use o cartão 4000000000000002. O cartão 4000000000000010 sempre retorna "failed" por design.`);
+    } else if (transactionStatus === 'processing' || transactionStatus === 'pending' || transactionStatus === 'waiting_payment') {
       paymentStatus = 'pending';
+      console.log('[OrderService] ⏳ Pagamento pendente, status:', paymentStatus);
     } else {
       paymentStatus = 'failed';
+      console.warn('[OrderService] ⚠️  Status desconhecido:', transactionStatus);
       await prisma.order.update({
         where: { id: order.id },
         data: {

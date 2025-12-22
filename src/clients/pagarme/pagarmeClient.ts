@@ -242,6 +242,22 @@ export async function createCreditCardTransaction(params: {
     const charge: any = order?.charges?.[0];
     const transaction: any = charge?.last_transaction || charge;
     
+    // Log detalhado da resposta para debug
+    console.log('[Pagarme] 📦 Resposta completa da API:', JSON.stringify({
+      orderId: order?.id,
+      orderStatus: order?.status,
+      chargesCount: order?.charges?.length || 0,
+      charge: charge ? {
+        id: charge.id,
+        status: charge.status,
+        amount: charge.amount,
+        lastTransaction: charge.last_transaction ? {
+          id: charge.last_transaction.id,
+          status: charge.last_transaction.status,
+        } : null,
+      } : null,
+    }, null, 2));
+    
     if (!transaction && !charge) {
       console.warn('[Pagarme] ⚠️  Resposta não contém charge/transação esperada:', JSON.stringify(order, null, 2));
       // Retornar a estrutura esperada
@@ -252,17 +268,21 @@ export async function createCreditCardTransaction(params: {
       };
     }
 
-    const transactionId = transaction?.id || charge?.id;
-    const transactionStatus = transaction?.status || charge?.status;
+    // Na API v5, o status pode estar em:
+    // 1. charge.status (mais comum)
+    // 2. charge.last_transaction.status (transação mais recente)
+    // 3. order.status (status geral do pedido)
+    const transactionId = transaction?.id || charge?.id || order?.id;
+    const transactionStatus = transaction?.status || charge?.status || order?.status || 'pending';
     
-    console.log('[Pagarme] ✅ Pedido criado com sucesso. Order ID:', order.id, 'Charge ID:', charge?.id, 'Transaction ID:', transactionId, 'Status:', transactionStatus);
+    console.log('[Pagarme] ✅ Pedido criado. Order ID:', order.id, 'Charge ID:', charge?.id, 'Transaction ID:', transactionId, 'Status:', transactionStatus);
     
     // Retornar no formato esperado pelo nosso código
     return {
       id: transactionId,
       status: transactionStatus,
       authorization_code: transaction?.acquirer_response_code || charge?.acquirer_response_code,
-      ...(transaction || charge),
+      ...(transaction || charge || order),
     };
   } catch (error: any) {
     // Se o erro já foi tratado acima (fetch error), apenas re-throw
