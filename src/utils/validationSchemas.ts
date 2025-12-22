@@ -256,32 +256,13 @@ export const createOrderSchema = Joi.object({
   notes: Joi.string().max(1000).optional(),
   paymentMethod: Joi.string().max(100).optional(),
   trackingNumber: Joi.string().max(100).optional(),
-  // Dados do pagamento (obrigatórios quando paymentMethod é 'credit_card')
+  // Dados do pagamento (obrigatórios quando paymentMethod é 'credit_card' - validado no controller)
   cardData: Joi.object({
     cardNumber: Joi.string().pattern(/^[\d\s]+$/).min(13).max(19).required(),
     cardHolderName: Joi.string().min(3).max(100).required(),
     cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
     cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
-  }).when('paymentMethod', {
-    is: 'credit_card',
-    then: Joi.required(),
-    otherwise: Joi.optional(),
-  }),
-}).custom((value, helpers) => {
-  // Validação customizada: se paymentMethod é credit_card, billingAddress deve ser objeto
-  if (value.paymentMethod === 'credit_card') {
-    if (!value.billingAddress) {
-      return helpers.error('any.custom', {
-        message: '"billingAddress" is required when paymentMethod is "credit_card"',
-      });
-    }
-    if (typeof value.billingAddress === 'string') {
-      return helpers.error('any.custom', {
-        message: '"billingAddress" must be an object when paymentMethod is "credit_card"',
-      });
-    }
-  }
-  return value;
+  }).optional(),
 });
 
 export const updateOrderSchema = Joi.object({

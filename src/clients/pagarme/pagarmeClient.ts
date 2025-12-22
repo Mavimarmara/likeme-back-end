@@ -158,8 +158,33 @@ export async function createCreditCardTransaction(params: {
   try {
     const transaction = await client.transactions.create(transactionData);
     return transaction;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao criar transação Pagarme:', error);
+    
+    // Verificar se é erro de autenticação (401)
+    if (error?.response?.status === 401 || error?.status === 401) {
+      const apiKey = config.pagarme?.apiKey?.trim();
+      const keyPreview = apiKey 
+        ? (apiKey.length > 20 ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4) : apiKey.substring(0, Math.min(15, apiKey.length)))
+        : 'NÃO CONFIGURADA';
+      
+      const errorMessage = `Erro de autenticação Pagarme (401). Verifique a chave da API.\n` +
+        `Chave atual: ${keyPreview}\n` +
+        `Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no ambiente com uma chave SECRETA (sk_test_* ou sk_live_*)\n` +
+        `A chave deve começar com 'sk_' para operações server-side.`;
+      
+      console.error('[Pagarme]', errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    // Verificar se tem detalhes do erro
+    if (error?.response?.errors) {
+      const errors = Array.isArray(error.response.errors) 
+        ? error.response.errors.map((e: any) => e.message || e).join(', ')
+        : JSON.stringify(error.response.errors);
+      throw new Error(`Erro Pagarme: ${errors}`);
+    }
+    
     throw error;
   }
 }

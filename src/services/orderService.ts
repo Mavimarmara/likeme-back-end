@@ -324,20 +324,29 @@ export class OrderService {
     }));
 
     // Criar transação no Pagarme
-    const pagarmeTransaction = await createCreditCardTransaction({
-      amount: amountInCents,
-      cardData,
-      customer: customerData,
-      billing: {
-        name: customerData.name,
-        address: billingAddress,
-      },
-      items: transactionItems,
-      metadata: {
-        orderId: order.id,
-        userId: orderWithUser.userId,
-      },
-    });
+    let pagarmeTransaction;
+    try {
+      pagarmeTransaction = await createCreditCardTransaction({
+        amount: amountInCents,
+        cardData,
+        customer: customerData,
+        billing: {
+          name: customerData.name,
+          address: billingAddress,
+        },
+        items: transactionItems,
+        metadata: {
+          orderId: order.id,
+          userId: orderWithUser.userId,
+        },
+      });
+    } catch (error: any) {
+      // Re-throw com mensagem mais clara
+      if (error.message && error.message.includes('autenticação') || error.message.includes('401')) {
+        throw new Error(`Erro ao processar pagamento: ${error.message}`);
+      }
+      throw error;
+    }
 
     // Verificar status da transação
     const transactionStatus = pagarmeTransaction.status;
