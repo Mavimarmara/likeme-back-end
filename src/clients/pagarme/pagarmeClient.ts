@@ -209,7 +209,7 @@ export async function createCreditCardTransaction(params: {
       body: JSON.stringify(transactionData),
     });
 
-    const responseData = await response.json();
+    const responseData: any = await response.json();
 
     if (!response.ok) {
       console.error('[Pagarme] ❌ Erro na resposta da API:', {
@@ -238,9 +238,9 @@ export async function createCreditCardTransaction(params: {
 
     // A resposta da API v5 retorna um Order com charges
     // Precisamos extrair a transação do order
-    const order = responseData;
-    const charge = order?.charges?.[0];
-    const transaction = charge?.last_transaction || charge;
+    const order: any = responseData;
+    const charge: any = order?.charges?.[0];
+    const transaction: any = charge?.last_transaction || charge;
     
     if (!transaction && !charge) {
       console.warn('[Pagarme] ⚠️  Resposta não contém charge/transação esperada:', JSON.stringify(order, null, 2));
@@ -275,60 +275,6 @@ export async function createCreditCardTransaction(params: {
     // Se for um erro de fetch, tratar aqui
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new Error(`Erro de conexão com Pagarme: ${error.message}`);
-    }
-    
-    throw error;
-      // Verificar se é erro de IP não autorizado
-      const errors = error?.response?.errors || [];
-      const ipError = errors.find((e: any) => 
-        e.type === 'action_forbidden' && 
-        (e.parameter_name === 'ip' || e.message?.includes('IP') || e.message?.includes('ip'))
-      );
-      
-      if (ipError) {
-        const errorMessage = `IP não autorizado pela Pagarme.\n` +
-          `A Pagarme bloqueia requisições de IPs não autorizados por segurança.\n` +
-          `Solução: Configure os IPs permitidos no dashboard Pagarme:\n` +
-          `1. Acesse: https://dashboard.pagar.me/\n` +
-          `2. Vá em: Configurações → API Keys\n` +
-          `3. Clique na sua chave (sk_test_*)\n` +
-          `4. Adicione os IPs do Vercel na lista de IPs permitidos\n` +
-          `   Ou desabilite a restrição de IP para ambiente de teste\n\n` +
-          `Nota: Para produção, recomendamos manter a restrição de IP ativada e configurar apenas os IPs do Vercel.`;
-        
-        console.error('[Pagarme] ❌ IP não autorizado:', errorMessage);
-        throw new Error(errorMessage);
-      }
-      
-      // Outros erros 401
-      const apiKey = config.pagarme?.apiKey?.trim();
-      const keyPreview = apiKey 
-        ? (apiKey.length > 20 ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4) : apiKey.substring(0, Math.min(15, apiKey.length)))
-        : 'NÃO CONFIGURADA';
-      
-      const keyType = apiKey?.startsWith('sk_test_') ? 'TEST' : apiKey?.startsWith('sk_live_') ? 'PRODUCTION' : 'INVÁLIDA';
-      
-      const errorMessage = `Erro de autenticação Pagarme (401). Verifique a chave da API.\n` +
-        `Chave atual: ${keyPreview} (${keyType})\n` +
-        `Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no ambiente do Vercel com uma chave SECRETA válida (sk_test_* ou sk_live_*)\n` +
-        `Certifique-se de que a chave está ativa no dashboard Pagarme.`;
-      
-      console.error('[Pagarme]', errorMessage);
-      
-      // Log adicional para debug
-      if (error?.response?.errors) {
-        console.error('[Pagarme] Detalhes do erro da API:', JSON.stringify(error.response.errors, null, 2));
-      }
-      
-      throw new Error(errorMessage);
-    }
-    
-    // Verificar se tem detalhes do erro
-    if (error?.response?.errors) {
-      const errors = Array.isArray(error.response.errors) 
-        ? error.response.errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
-        : JSON.stringify(error.response.errors);
-      throw new Error(`Erro Pagarme: ${errors}`);
     }
     
     throw error;
