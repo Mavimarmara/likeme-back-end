@@ -52,6 +52,16 @@ describe('OrderService', () => {
     });
     testDataTracker.add('personContact', emailContact.id);
 
+    // Criar CPF contact (OBRIGATÓRIO para Pagarme - tipo individual)
+    const cpfContact = await prisma.personContact.create({
+      data: {
+        personId: person.id,
+        type: 'cpf',
+        value: '12345678901', // CPF de teste válido
+      },
+    });
+    testDataTracker.add('personContact', cpfContact.id);
+
     testProduct = await prisma.product.create({
       data: {
         name: 'Test Product',

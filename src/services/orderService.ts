@@ -290,18 +290,21 @@ export class OrderService {
       country: 'br',
     };
 
-    // Buscar CPF se disponível
+    // Buscar CPF - OBRIGATÓRIO para Pagarme (tipo individual)
     const cpfContact = orderWithUser.user.person.contacts?.find(
       (contact: any) => contact.type === 'cpf' && !contact.deletedAt
     );
-    if (cpfContact?.value) {
-      customerData.documents = [
-        {
-          type: 'cpf',
-          number: cpfContact.value.replace(/\D/g, ''),
-        },
-      ];
+    
+    if (!cpfContact?.value) {
+      throw new Error('CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário.');
     }
+    
+    customerData.documents = [
+      {
+        type: 'cpf',
+        number: cpfContact.value.replace(/\D/g, ''),
+      },
+    ];
 
     // Buscar telefone se disponível
     const phoneContact = orderWithUser.user.person.contacts?.find(

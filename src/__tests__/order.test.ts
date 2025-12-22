@@ -59,6 +59,16 @@ const createTestToken = async (): Promise<string> => {
   });
   testDataTracker.add('personContact', emailContact.id);
 
+  // Criar CPF contact (OBRIGATÓRIO para Pagarme - tipo individual)
+  const cpfContact = await prisma.personContact.create({
+    data: {
+      personId: person.id,
+      type: 'cpf',
+      value: '12345678901', // CPF de teste válido
+    },
+  });
+  testDataTracker.add('personContact', cpfContact.id);
+
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
 };

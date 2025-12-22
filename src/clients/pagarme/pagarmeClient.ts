@@ -133,6 +133,12 @@ export async function createCreditCardTransaction(params: {
     throw new Error(`Chave Pagarme inválida. Deve começar com 'sk_' mas recebeu: ${apiKey.substring(0, 3)}`);
   }
 
+  // Validar CPF obrigatório para individual
+  const customerType = params.customer.type || 'individual';
+  if (customerType === 'individual' && (!params.customer.documents?.[0]?.number)) {
+    throw new Error('CPF é obrigatório para clientes do tipo individual na Pagarme');
+  }
+
   // Preparar dados do pedido (formato da API v5 - Orders)
   const transactionData: any = {
     items: params.items.map(item => ({
@@ -143,10 +149,9 @@ export async function createCreditCardTransaction(params: {
     customer: {
       name: params.customer.name,
       email: params.customer.email,
-      type: params.customer.type || 'individual',
-      ...(params.customer.documents?.[0]?.number && {
-        document: params.customer.documents[0].number.replace(/\D/g, ''), // Remove formatação do CPF
-      }),
+      type: customerType,
+      // CPF é obrigatório para individual, CNPJ para company
+      document: params.customer.documents?.[0]?.number?.replace(/\D/g, '') || '',
       ...(params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 && {
         phones: params.customer.phoneNumbers.map(phone => {
           const cleanPhone = phone.replace(/\D/g, ''); // Remove caracteres não numéricos
@@ -194,10 +199,35 @@ export async function createCreditCardTransaction(params: {
   // Criar Basic Auth conforme documentação: base64(sk_test_*:)
   const authString = Buffer.from(`${apiKey}:`).toString('base64');
 
+  // Log da requisição (sem dados sensíveis do cartão)
+  const logData = {
+    items: transactionData.items,
+    customer: {
+      name: transactionData.customer.name,
+      email: transactionData.customer.email,
+      type: transactionData.customer.type,
+      document: transactionData.customer.document ? `${transactionData.customer.document.substring(0, 3)}***` : 'NÃO FORNECIDO',
+      phones: transactionData.customer.phones,
+    },
+    payment_method: transactionData.payments[0].payment_method,
+    card: {
+      number: transactionData.payments[0].credit_card.card.number.substring(0, 4) + '****' + transactionData.payments[0].credit_card.card.number.substring(transactionData.payments[0].credit_card.card.number.length - 4),
+      holder_name: transactionData.payments[0].credit_card.card.holder_name,
+      exp_month: transactionData.payments[0].credit_card.card.exp_month,
+      exp_year: transactionData.payments[0].credit_card.card.exp_year,
+      billing_address: transactionData.payments[0].credit_card.card.billing_address,
+    },
+  };
+  console.log('[Pagarme] 📤 Enviando requisição completa:', JSON.stringify(logData, null, 2));
+
   try {
+    const requestBody = JSON.stringify(transactionData);
     console.log('[Pagarme] Criando pedido via REST API v5:', {
       items_count: transactionData.items.length,
       customer_email: params.customer.email,
+      customer_type: customerType,
+      has_document: !!transactionData.customer.document,
+      request_size: requestBody.length,
     });
     
     const response = await fetch('https://api.pagar.me/core/v5/orders', {
@@ -206,7 +236,7 @@ export async function createCreditCardTransaction(params: {
         'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(transactionData),
+      body: requestBody,
     });
 
     const responseData: any = await response.json();
@@ -216,6 +246,7 @@ export async function createCreditCardTransaction(params: {
         status: response.status,
         statusText: response.statusText,
         errors: responseData.errors || responseData,
+        full_response: JSON.stringify(responseData, null, 2),
       });
       
       // Verificar se é erro de IP não autorizado
