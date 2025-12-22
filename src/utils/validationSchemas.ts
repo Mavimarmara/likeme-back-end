@@ -236,27 +236,52 @@ export const createOrderSchema = Joi.object({
   status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').default('pending'),
   shippingCost: Joi.number().min(0).precision(2).default(0),
   tax: Joi.number().min(0).precision(2).default(0),
-  shippingAddress: Joi.string().max(500).optional(),
+  shippingAddress: Joi.alternatives().try(
+    Joi.string().max(500),
+    Joi.object()
+  ).optional(),
+  billingAddress: Joi.alternatives().try(
+    Joi.string().max(500),
+    Joi.object({
+      country: Joi.string().default('br'),
+      state: Joi.string().min(2).max(2).required(),
+      city: Joi.string().min(2).max(100).required(),
+      neighborhood: Joi.string().min(2).max(100).optional(),
+      street: Joi.string().min(2).max(200).required(),
+      streetNumber: Joi.string().min(1).max(20).required(),
+      zipcode: Joi.string().pattern(/^[\d-]+$/).min(8).max(10).required(),
+      complement: Joi.string().max(200).optional(),
+    })
+  ).optional(),
   notes: Joi.string().max(1000).optional(),
   paymentMethod: Joi.string().max(100).optional(),
   trackingNumber: Joi.string().max(100).optional(),
-  // Dados do pagamento (obrigatórios - pagamento será processado com Pagarme ao criar pedido)
+  // Dados do pagamento (obrigatórios quando paymentMethod é 'credit_card')
   cardData: Joi.object({
     cardNumber: Joi.string().pattern(/^[\d\s]+$/).min(13).max(19).required(),
     cardHolderName: Joi.string().min(3).max(100).required(),
     cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
     cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
-  }).required(),
-  billingAddress: Joi.object({
-    country: Joi.string().default('br'),
-    state: Joi.string().min(2).max(2).required(),
-    city: Joi.string().min(2).max(100).required(),
-    neighborhood: Joi.string().min(2).max(100).optional(),
-    street: Joi.string().min(2).max(200).required(),
-    streetNumber: Joi.string().min(1).max(20).required(),
-    zipcode: Joi.string().pattern(/^[\d-]+$/).min(8).max(10).required(),
-    complement: Joi.string().max(200).optional(),
-  }).required(),
+  }).when('paymentMethod', {
+    is: 'credit_card',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+}).custom((value, helpers) => {
+  // Validação customizada: se paymentMethod é credit_card, billingAddress deve ser objeto
+  if (value.paymentMethod === 'credit_card') {
+    if (!value.billingAddress) {
+      return helpers.error('any.custom', {
+        message: '"billingAddress" is required when paymentMethod is "credit_card"',
+      });
+    }
+    if (typeof value.billingAddress === 'string') {
+      return helpers.error('any.custom', {
+        message: '"billingAddress" must be an object when paymentMethod is "credit_card"',
+      });
+    }
+  }
+  return value;
 });
 
 export const updateOrderSchema = Joi.object({

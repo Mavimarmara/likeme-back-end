@@ -12,6 +12,18 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
+    // Validação adicional: se paymentMethod é credit_card, cardData e billingAddress (objeto) são obrigatórios
+    if (req.body.paymentMethod === 'credit_card') {
+      if (!req.body.cardData) {
+        sendError(res, 'cardData is required when paymentMethod is credit_card', 400);
+        return;
+      }
+      if (!req.body.billingAddress || typeof req.body.billingAddress === 'string') {
+        sendError(res, 'billingAddress must be an object when paymentMethod is credit_card', 400);
+        return;
+      }
+    }
+
     const orderData = {
       ...req.body,
       userId,

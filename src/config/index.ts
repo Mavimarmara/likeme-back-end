@@ -95,8 +95,9 @@ export const config = {
     };
   })(),
   pagarme: {
-    // Aceita PAGARME_API_KEY ou PAGARME_SECRET_API_KEY (ambos são válidos)
-    // A Pagarme usa apenas uma chave secreta (sk_*) para operações server-side
-    apiKey: process.env.PAGARME_API_KEY || process.env.PAGARME_SECRET_API_KEY || '',
+    // Prioriza PAGARME_SECRET_API_KEY (sk_*) para operações server-side
+    // A Pagarme usa apenas uma chave secreta (sk_*) para operações server-side no backend
+    // A chave pública (pk_*) é apenas para uso no frontend
+    apiKey: process.env.PAGARME_SECRET_API_KEY || process.env.PAGARME_API_KEY || '',
   },
 };
