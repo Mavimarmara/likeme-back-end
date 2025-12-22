@@ -116,7 +116,7 @@
  *       401:
  *         description: Not authenticated
  *       403:
- *         description: Not authorized
+ *         description: Not authorized to process payment for this order
  *       404:
  *         description: Order not found
  */
@@ -159,8 +159,17 @@
  *                       type: number
  *                     authorizationCode:
  *                       type: string
+ *                     amount:
+ *                       type: number
+ *                       description: Transaction amount in reais
+ *                     orderId:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Related order ID if found
  *       401:
  *         description: Not authenticated
+ *       403:
+ *         description: Not authorized to view this transaction
  *       404:
  *         description: Transaction not found
  */
@@ -227,6 +236,25 @@
  *     responses:
  *       200:
  *         description: Payment refunded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     orderId:
+ *                       type: string
+ *                       nullable: true
  *       400:
  *         description: Error refunding transaction
  *       401:

@@ -51,20 +51,37 @@ export class ProductService {
       deletedAt: null,
     };
 
+    // Se há busca junto com outros filtros, usar AND para combinar tudo
+    if (filters.search && filters.search.trim()) {
+      const searchConditions: Prisma.ProductWhereInput[] = [
+        { name: { contains: filters.search.trim(), mode: 'insensitive' as const } },
+        { description: { contains: filters.search.trim(), mode: 'insensitive' as const } },
+        { sku: { contains: filters.search.trim(), mode: 'insensitive' as const } },
+      ];
+
+      const andConditions: Prisma.ProductWhereInput[] = [
+        { deletedAt: null },
+        { OR: searchConditions },
+      ];
+
+      if (filters.category) {
+        andConditions.push({ category: filters.category });
+      }
+
+      if (filters.status) {
+        andConditions.push({ status: filters.status });
+      }
+
+      return { AND: andConditions };
+    }
+
+    // Se não há busca, usar condições diretas
     if (filters.category) {
       where.category = filters.category;
     }
 
     if (filters.status) {
       where.status = filters.status;
-    }
-
-    if (filters.search) {
-      where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
-        { sku: { contains: filters.search, mode: 'insensitive' } },
-      ];
     }
 
     return where;
@@ -109,6 +126,10 @@ export class ProductService {
       })
       .map((result: PromiseFulfilledResult<any>) => result.value);
 
+    // Nota: O total reflete a contagem no banco. Alguns produtos podem ser filtrados
+    // após o enriquecimento (se não conseguirem buscar dados da Amazon), então
+    // o número de produtos retornados pode ser menor que o total, mas isso é esperado
+    // e aceitável, pois esses produtos não deveriam ser exibidos mesmo.
     return { products: enrichedProducts, total };
   }
 

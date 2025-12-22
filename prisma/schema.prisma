@@ -52,17 +52,17 @@ model PersonContact {
 }
 
 model User {
-  id                    String    @id @default(uuid())
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-  deletedAt             DateTime? @map("deleted_at")
-  personId              String    @unique @map("person_id")
-  username              String?   @unique
-  password              String
-  salt                  String?
-  avatar                String?
-  isActive            Boolean  @default(true) @map("is_active")
-  socialPlusUserId    String?  @unique @map("social_plus_user_id")
+  id               String    @id @default(uuid())
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  personId         String    @unique @map("person_id")
+  username         String?   @unique
+  password         String
+  salt             String?
+  avatar           String?
+  isActive         Boolean   @default(true) @map("is_active")
+  socialPlusUserId String?   @unique @map("social_plus_user_id")
 
   // Relations
   person             Person                  @relation("PersonUser", fields: [personId], references: [id], onDelete: Cascade)
@@ -238,27 +238,27 @@ model CommunityMember {
 // ============================================
 
 model Product {
-  id              String    @id @default(uuid())
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-  name            String
-  description     String?
-  sku             String?   @unique
-  price           Decimal?  @db.Decimal(10, 2) // Optional when externalUrl is provided
-  cost            Decimal?  @db.Decimal(10, 2)
-  quantity        Int?      // Optional when externalUrl is provided (Available stock)
-  image           String?
-  category        String?   // amazon product, physical product, program
-  brand           String?
-  status          String    @default("active") // active, inactive, out_of_stock
-  weight          Decimal?  @db.Decimal(10, 3) // in kg
-  dimensions      String? // format: "LxHxW" (length x height x width)
-  externalUrl     String?   @map("external_url") // External URL for the product (e.g., Amazon product link)
-  
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  name        String
+  description String?
+  sku         String?   @unique
+  price       Decimal?  @db.Decimal(10, 2) // Optional when externalUrl is provided
+  cost        Decimal?  @db.Decimal(10, 2)
+  quantity    Int? // Optional when externalUrl is provided (Available stock)
+  image       String?
+  category    String? // amazon product, physical product, program
+  brand       String?
+  status      String    @default("active") // active, inactive, out_of_stock
+  weight      Decimal?  @db.Decimal(10, 3) // in kg
+  dimensions  String? // format: "LxHxW" (length x height x width)
+  externalUrl String?   @map("external_url") // External URL for the product (e.g., Amazon product link)
+
   // Relations
-  orderItems      OrderItem[]  @relation("ProductOrderItems")
-  ads             Ad[]         @relation("ProductAds")
+  orderItems OrderItem[] @relation("ProductOrderItems")
+  ads        Ad[]        @relation("ProductAds")
 
   @@index([sku])
   @@index([name])
@@ -270,26 +270,27 @@ model Product {
 }
 
 model Order {
-  id              String      @id @default(uuid())
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  deletedAt       DateTime?   @map("deleted_at")
-  userId          String      @map("user_id")
-  status          String      @default("pending") // pending, processing, shipped, delivered, cancelled
-  total           Decimal     @db.Decimal(10, 2)
-  subtotal        Decimal     @db.Decimal(10, 2)
-  shippingCost    Decimal     @default(0) @db.Decimal(10, 2) @map("shipping_cost")
-  tax             Decimal     @default(0) @db.Decimal(10, 2)
-  shippingAddress String?     @map("shipping_address")
-  billingAddress  String?     @map("billing_address")
-  notes           String?
-  paymentMethod   String?     @map("payment_method")
-  paymentStatus   String      @default("pending") @map("payment_status") // pending, paid, failed, refunded
-  trackingNumber  String?     @map("tracking_number")
-  
+  id                   String    @id @default(uuid())
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  deletedAt            DateTime? @map("deleted_at")
+  userId               String    @map("user_id")
+  status               String    @default("pending") // pending, processing, shipped, delivered, cancelled
+  total                Decimal   @db.Decimal(10, 2)
+  subtotal             Decimal   @db.Decimal(10, 2)
+  shippingCost         Decimal   @default(0) @map("shipping_cost") @db.Decimal(10, 2)
+  tax                  Decimal   @default(0) @db.Decimal(10, 2)
+  shippingAddress      String?   @map("shipping_address")
+  billingAddress       String?   @map("billing_address")
+  notes                String?
+  paymentMethod        String?   @map("payment_method")
+  paymentStatus        String    @default("pending") @map("payment_status") // pending, paid, failed, refunded
+  paymentTransactionId String?   @map("payment_transaction_id") // ID da transação Pagarme
+  trackingNumber       String?   @map("tracking_number")
+
   // Relations
-  user      User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
-  items     OrderItem[] @relation("OrderItems")
+  user  User        @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[] @relation("OrderItems")
 
   @@index([userId])
   @@index([status])
@@ -299,17 +300,17 @@ model Order {
 }
 
 model OrderItem {
-  id            String    @id @default(uuid())
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  deletedAt     DateTime? @map("deleted_at")
-  orderId       String    @map("order_id")
-  productId     String    @map("product_id")
-  quantity      Int
-  unitPrice     Decimal   @db.Decimal(10, 2) @map("unit_price") // Price at time of sale
-  discount      Decimal   @default(0) @db.Decimal(10, 2)
-  total         Decimal   @db.Decimal(10, 2)
-  
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  orderId   String    @map("order_id")
+  productId String    @map("product_id")
+  quantity  Int
+  unitPrice Decimal   @map("unit_price") @db.Decimal(10, 2) // Price at time of sale
+  discount  Decimal   @default(0) @db.Decimal(10, 2)
+  total     Decimal   @db.Decimal(10, 2)
+
   // Relations
   order   Order   @relation("OrderItems", fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation("ProductOrderItems", fields: [productId], references: [id])
@@ -320,22 +321,22 @@ model OrderItem {
 }
 
 model Advertiser {
-  id              String    @id @default(uuid())
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-  userId          String    @unique @map("user_id") // A user can be an advertiser
-  name            String
-  description     String?
-  logo            String?
-  contactEmail    String?   @map("contact_email")
-  contactPhone    String?   @map("contact_phone")
-  website         String?
-  status          String    @default("active") // active, inactive, suspended
-  
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  userId       String    @unique @map("user_id") // A user can be an advertiser
+  name         String
+  description  String?
+  logo         String?
+  contactEmail String?   @map("contact_email")
+  contactPhone String?   @map("contact_phone")
+  website      String?
+  status       String    @default("active") // active, inactive, suspended
+
   // Relations
-  user       User       @relation("UserAdvertiser", fields: [userId], references: [id], onDelete: Cascade)
-  ads        Ad[]       @relation("AdvertiserAds")
+  user User @relation("UserAdvertiser", fields: [userId], references: [id], onDelete: Cascade)
+  ads  Ad[] @relation("AdvertiserAds")
 
   @@index([userId])
   @@index([status])
@@ -343,17 +344,17 @@ model Advertiser {
 }
 
 model Ad {
-  id              String    @id @default(uuid())
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-  advertiserId    String?   @map("advertiser_id")
-  productId       String?   @map("product_id")
-  startDate       DateTime? @map("start_date")
-  endDate         DateTime? @map("end_date")
-  status          String    @default("active") // active, inactive, expired
-  targetAudience  String?   @map("target_audience")
-  
+  id             String    @id @default(uuid())
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  advertiserId   String?   @map("advertiser_id")
+  productId      String?   @map("product_id")
+  startDate      DateTime? @map("start_date")
+  endDate        DateTime? @map("end_date")
+  status         String    @default("active") // active, inactive, expired
+  targetAudience String?   @map("target_audience")
+
   // Relations
   advertiser Advertiser? @relation("AdvertiserAds", fields: [advertiserId], references: [id], onDelete: Cascade)
   product    Product?    @relation("ProductAds", fields: [productId], references: [id], onDelete: Cascade)
@@ -377,7 +378,7 @@ model Activity {
   deletedAt       DateTime? @map("deleted_at")
   userId          String    @map("user_id")
   name            String
-  type            String    // task, event
+  type            String // task, event
   startDate       DateTime  @map("start_date")
   startTime       String?   @map("start_time")
   endDate         DateTime? @map("end_date")
@@ -386,7 +387,7 @@ model Activity {
   description     String?
   reminderEnabled Boolean   @default(false) @map("reminder_enabled")
   reminderOffset  String?   @map("reminder_offset") // e.g., "5 min before", "10 min after"
-  
+
   // Relations
   user User @relation("UserActivities", fields: [userId], references: [id], onDelete: Cascade)
 

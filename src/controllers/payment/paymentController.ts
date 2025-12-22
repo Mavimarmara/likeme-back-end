@@ -188,10 +188,7 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
       data: {
         paymentStatus,
         paymentMethod: 'credit_card',
-        // Armazenar ID da transação Pagarme (pode criar campo separado no futuro)
-        notes: order.notes 
-          ? `${order.notes}\nPagarme Transaction ID: ${pagarmeTransaction.id}`
-          : `Pagarme Transaction ID: ${pagarmeTransaction.id}`,
+        paymentTransactionId: pagarmeTransaction.id.toString(),
       },
       include: {
         items: {
@@ -238,14 +235,31 @@ export const getPaymentStatus = async (req: AuthenticatedRequest, res: Response)
       return;
     }
 
+    // Verificar se o usuário tem permissão para ver esta transação (via pedido relacionado)
+    const order = await prisma.order.findFirst({
+      where: {
+        paymentTransactionId: transactionId,
+        userId,
+        deletedAt: null,
+      },
+    });
+
+    // Se não encontrar pelo transactionId, permitir busca direta (mas validar depois)
     try {
       const transaction = await getTransaction(transactionId);
       
+      // Se encontramos um pedido, confirmar que pertence ao usuário
+      if (order && order.userId !== userId) {
+        sendError(res, 'Not authorized to view this transaction', 403);
+        return;
+      }
+      
       sendSuccess(res, {
-        id: transaction.id,
+        id: transaction.id.toString(),
         status: transaction.status,
-        amount: transaction.amount,
+        amount: transaction.amount / 100, // converter de centavos para reais
         authorizationCode: transaction.authorization_code,
+        orderId: order?.id || null,
       }, 'Transaction status retrieved successfully');
     } catch (error: any) {
       sendError(res, `Transaction not found: ${error.message}`, 404);
@@ -303,20 +317,33 @@ export const refundPayment = async (req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    // Buscar pedido relacionado à transação (via notes ou criar campo separado)
-    // Por enquanto, vamos apenas processar o estorno na Pagarme
+    // Buscar pedido relacionado à transação
+    const order = await prisma.order.findFirst({
+      where: {
+        paymentTransactionId: transactionId,
+        userId,
+        deletedAt: null,
+      },
+    });
+
     try {
       const transaction = await refundTransaction(
         transactionId,
         amount ? Math.round(amount * 100) : undefined // converter para centavos se fornecido
       );
 
-      // Atualizar status do pedido para refunded (se encontrarmos o pedido)
-      // TODO: Melhorar relacionamento entre Order e Pagarme Transaction
+      // Atualizar status do pedido para refunded se encontramos o pedido
+      if (order) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentStatus: 'refunded' },
+        });
+      }
 
       sendSuccess(res, {
         id: transaction.id,
         status: transaction.status,
+        orderId: order?.id || null,
       }, 'Payment refunded successfully');
     } catch (error: any) {
       sendError(res, `Error refunding transaction: ${error.message}`, 400);

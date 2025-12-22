@@ -398,9 +398,10 @@ describe('Payment Endpoints', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.data.id).toBe(mockTransaction.id);
+      expect(response.body.data.id).toBe(mockTransaction.id.toString());
       expect(response.body.data.status).toBe(mockTransaction.status);
-      expect(response.body.data.amount).toBe(mockTransaction.amount);
+      // Amount é convertido de centavos para reais no endpoint
+      expect(response.body.data.amount).toBe(mockTransaction.amount / 100);
     });
 
     it('should return 404 if transaction not found', async () => {
