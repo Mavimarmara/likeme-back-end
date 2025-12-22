@@ -12,17 +12,37 @@ export async function getPagarmeClient() {
     return pagarmeClient;
   }
 
-  const apiKey = config.pagarme?.apiKey;
+  const apiKey = config.pagarme?.apiKey?.trim();
   
   if (!apiKey) {
-    throw new Error('PAGARME_API_KEY não configurada');
+    console.error('[Pagarme] PAGARME_API_KEY não configurada na variável de ambiente');
+    throw new Error('PAGARME_API_KEY não configurada. Configure a variável de ambiente PAGARME_API_KEY no arquivo .env');
   }
+
+  const keyPreview = apiKey.length > 20 
+    ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4)
+    : apiKey.substring(0, Math.min(apiKey.length, 15));
+  console.log('[Pagarme] Tentando conectar com API Key:', keyPreview);
+  console.log('[Pagarme] Tamanho da chave:', apiKey.length);
 
   try {
     pagarmeClient = await pagarme.client.connect({ api_key: apiKey });
+    console.log('[Pagarme] ✅ Cliente conectado com sucesso');
     return pagarmeClient;
-  } catch (error) {
-    console.error('Erro ao conectar com Pagarme:', error);
+  } catch (error: any) {
+    console.error('[Pagarme] ❌ Erro ao conectar:', error.message || error);
+    
+    if (error.message && error.message.includes('valid API key')) {
+      console.error('[Pagarme] ❌ A chave API fornecida não é válida para operações server-side');
+      console.error('[Pagarme] ⚠️  Você está usando uma chave PÚBLICA (pk_*), mas o backend precisa de uma chave SECRETA (sk_*)');
+      console.error('[Pagarme] Como obter:');
+      console.error('  1. Acesse: https://dashboard.pagar.me/');
+      console.error('  2. Vá em: Configurações → API Keys');
+      console.error('  3. Copie a chave SECRETA (sk_test_* para teste ou sk_live_* para produção)');
+      console.error('  4. Configure PAGARME_API_KEY no .env e no Vercel');
+      console.error('[Pagarme] Chave atual (primeiros 15 chars):', apiKey.substring(0, Math.min(15, apiKey.length)) + '...');
+    }
+    
     throw error;
   }
 }

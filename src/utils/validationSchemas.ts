@@ -240,7 +240,7 @@ export const createOrderSchema = Joi.object({
   billingAddress: Joi.string().max(500).optional(),
   notes: Joi.string().max(1000).optional(),
   paymentMethod: Joi.string().max(100).optional(),
-  paymentStatus: Joi.string().valid('pending', 'paid', 'failed', 'refunded').default('pending'),
+  // paymentStatus sempre será 'pending' ao criar - definido no service
   trackingNumber: Joi.string().max(100).optional(),
 });
 

@@ -152,7 +152,7 @@ export class OrderService {
         billingAddress: orderData.billingAddress,
         notes: orderData.notes,
         paymentMethod: orderData.paymentMethod,
-        paymentStatus: orderData.paymentStatus || 'pending',
+        paymentStatus: 'pending',
         trackingNumber: orderData.trackingNumber,
         items: {
           create: itemsWithPrice.map((item: any) => {
