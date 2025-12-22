@@ -16,12 +16,13 @@ export class ActivityService {
         name: activityData.name,
         type: activityData.type,
         startDate: activityData.startDate ? new Date(activityData.startDate) : new Date(),
-        startTime: activityData.startTime,
+        startTime: activityData.startTime || null,
         endDate: activityData.endDate ? new Date(activityData.endDate) : null,
-        endTime: activityData.endTime,
-        location: activityData.location,
+        endTime: activityData.endTime || null,
+        location: activityData.location || null,
+        description: activityData.description || null,
         reminderEnabled: activityData.reminderEnabled || false,
-        reminderOffset: activityData.reminderOffset,
+        reminderOffset: activityData.reminderOffset || null,
       },
     });
   }
@@ -116,9 +117,17 @@ export class ActivityService {
       updateData.endDate = updateData.endDate ? new Date(updateData.endDate) : null;
     }
 
+    // Normalizar strings vazias para null
+    const normalizedData: any = { ...updateData };
+    if (normalizedData.startTime === '') normalizedData.startTime = null;
+    if (normalizedData.endTime === '') normalizedData.endTime = null;
+    if (normalizedData.location === '') normalizedData.location = null;
+    if (normalizedData.description === '') normalizedData.description = null;
+    if (normalizedData.reminderOffset === '') normalizedData.reminderOffset = null;
+
     return prisma.activity.update({
       where: { id },
-      data: updateData,
+      data: normalizedData,
       include: {
         user: {
           include: {

@@ -3,16 +3,22 @@ import Joi from 'joi';
 
 export const validate = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req.body);
+    const { error, value } = schema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
     
     if (error) {
+      console.error('Validation error:', error.details);
+      console.error('Request body:', JSON.stringify(req.body, null, 2));
       return res.status(400).json({
         success: false,
         message: 'Dados inválidos',
-        error: error.details[0].message,
+        error: error.details.map(detail => detail.message).join(', '),
       });
     }
     
+    req.body = value;
     return next();
   };
 };
