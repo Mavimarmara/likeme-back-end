@@ -237,12 +237,27 @@ export const createOrderSchema = Joi.object({
   shippingCost: Joi.number().min(0).precision(2).default(0),
   tax: Joi.number().min(0).precision(2).default(0),
   shippingAddress: Joi.string().max(500).optional(),
-  billingAddress: Joi.string().max(500).optional(),
   notes: Joi.string().max(1000).optional(),
   paymentMethod: Joi.string().max(100).optional(),
-  // paymentStatus sempre será 'pending' ao criar - definido no service
   trackingNumber: Joi.string().max(100).optional(),
-});
+  // Dados do pagamento (obrigatórios - pagamento será processado com Pagarme ao criar pedido)
+  cardData: Joi.object({
+    cardNumber: Joi.string().pattern(/^[\d\s]+$/).min(13).max(19).required(),
+    cardHolderName: Joi.string().min(3).max(100).required(),
+    cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
+    cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
+  }).required(),
+  billingAddress: Joi.object({
+    country: Joi.string().default('br'),
+    state: Joi.string().min(2).max(2).required(),
+    city: Joi.string().min(2).max(100).required(),
+    neighborhood: Joi.string().min(2).max(100).optional(),
+    street: Joi.string().min(2).max(200).required(),
+    streetNumber: Joi.string().min(1).max(20).required(),
+    zipcode: Joi.string().pattern(/^[\d-]+$/).min(8).max(10).required(),
+    complement: Joi.string().max(200).optional(),
+  }).required(),
+}).and('cardData', 'billingAddress'); // Se cardData for fornecido, billingAddress também deve ser
 
 export const updateOrderSchema = Joi.object({
   status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').optional(),

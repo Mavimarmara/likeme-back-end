@@ -39,6 +39,19 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
     
+    // Erros relacionados a Pagarme
+    if (error.message && (
+      error.message.includes('Pagarme') ||
+      error.message.includes('transaction') ||
+      error.message.includes('payment') ||
+      error.message.includes('API key') ||
+      error.message.includes('card') ||
+      error.message.includes('billing')
+    )) {
+      sendError(res, `Erro ao processar pagamento: ${error.message}`, 400);
+      return;
+    }
+    
     sendError(res, 'Erro ao criar pedido');
   }
 };

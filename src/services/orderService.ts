@@ -2,6 +2,12 @@ import prisma from '@/config/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { Order, Prisma } from '@prisma/client';
 import { productService } from './productService';
+import {
+  createCreditCardTransaction,
+  CustomerData,
+  AddressData,
+  CreditCardData,
+} from '@/clients/pagarme/pagarmeClient';
 
 export class OrderAuthorizationError extends Error {
   constructor(message: string) {
@@ -23,11 +29,12 @@ export interface CreateOrderData {
   shippingCost?: number;
   tax?: number;
   shippingAddress?: string;
-  billingAddress?: string;
+  billingAddress?: any; // Objeto de endereço para Pagarme
   notes?: string;
   paymentMethod?: string;
   paymentStatus?: string;
   trackingNumber?: string;
+  cardData?: any; // Dados do cartão para Pagarme
 }
 
 export interface OrderQueryFilters {
@@ -140,6 +147,13 @@ export class OrderService {
     const tax = new Decimal(orderData.tax || 0);
     const total = subtotal.plus(shippingCost).plus(tax);
 
+    // Converter billingAddress para string se for objeto (para armazenar no banco)
+    const billingAddressString = orderData.billingAddress 
+      ? (typeof orderData.billingAddress === 'string' 
+          ? orderData.billingAddress 
+          : JSON.stringify(orderData.billingAddress))
+      : null;
+
     const order = await prisma.order.create({
       data: {
         userId: orderData.userId,
@@ -149,7 +163,7 @@ export class OrderService {
         tax,
         total,
         shippingAddress: orderData.shippingAddress,
-        billingAddress: orderData.billingAddress,
+        billingAddress: billingAddressString,
         notes: orderData.notes,
         paymentMethod: orderData.paymentMethod,
         paymentStatus: 'pending',
@@ -187,7 +201,184 @@ export class OrderService {
       await this.updateProductStock(item.productId, item.quantity);
     }
 
+    // Processar pagamento com Pagarme se cardData e billingAddress forem fornecidos
+    if (orderData.cardData && orderData.billingAddress) {
+      try {
+        await this.processPaymentForOrder(order, orderData.cardData, orderData.billingAddress);
+      } catch (error: any) {
+        // Se o pagamento falhar, atualizar status do pedido para failed
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentStatus: 'failed' },
+        });
+        // Reverter estoque dos produtos
+        for (const item of orderData.items) {
+          await this.updateProductStock(item.productId, -item.quantity);
+        }
+        throw error;
+      }
+      
+      // Buscar pedido atualizado com status de pagamento
+      const updatedOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          user: {
+            include: {
+              person: true,
+            },
+          },
+        },
+      });
+      
+      return updatedOrder as Order;
+    }
+
     return order;
+  }
+
+  private async processPaymentForOrder(
+    order: Order,
+    cardData: CreditCardData,
+    billingAddress: AddressData
+  ): Promise<void> {
+    // Buscar dados do usuário
+    const orderWithUser = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        user: {
+          include: {
+            person: {
+              include: {
+                contacts: true,
+              },
+            },
+          },
+        },
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!orderWithUser) {
+      throw new Error('Order not found');
+    }
+
+    // Buscar email do usuário
+    const emailContact = orderWithUser.user.person.contacts?.find(
+      (contact: any) => contact.type === 'email' && !contact.deletedAt
+    );
+    const email = emailContact?.value || '';
+
+    if (!email) {
+      throw new Error('User email not found');
+    }
+
+    // Preparar dados do cliente
+    const customerData: CustomerData = {
+      externalId: orderWithUser.userId,
+      name: `${orderWithUser.user.person.firstName} ${orderWithUser.user.person.lastName}`,
+      email,
+      type: 'individual',
+      country: 'br',
+    };
+
+    // Buscar CPF se disponível
+    const cpfContact = orderWithUser.user.person.contacts?.find(
+      (contact: any) => contact.type === 'cpf' && !contact.deletedAt
+    );
+    if (cpfContact?.value) {
+      customerData.documents = [
+        {
+          type: 'cpf',
+          number: cpfContact.value.replace(/\D/g, ''),
+        },
+      ];
+    }
+
+    // Buscar telefone se disponível
+    const phoneContact = orderWithUser.user.person.contacts?.find(
+      (contact: any) => (contact.type === 'phone' || contact.type === 'whatsapp') && !contact.deletedAt
+    );
+    if (phoneContact?.value) {
+      customerData.phoneNumbers = [phoneContact.value];
+    }
+
+    // Converter total para centavos
+    const amountInCents = Math.round(parseFloat(orderWithUser.total.toString()) * 100);
+
+    // Preparar itens da transação
+    const transactionItems = orderWithUser.items.map((item: any) => ({
+      id: item.id,
+      title: item.product.name,
+      unitPrice: Math.round(parseFloat(item.unitPrice.toString()) * 100),
+      quantity: item.quantity,
+      tangible: true,
+    }));
+
+    // Criar transação no Pagarme
+    const pagarmeTransaction = await createCreditCardTransaction({
+      amount: amountInCents,
+      cardData,
+      customer: customerData,
+      billing: {
+        name: customerData.name,
+        address: billingAddress,
+      },
+      items: transactionItems,
+      metadata: {
+        orderId: order.id,
+        userId: orderWithUser.userId,
+      },
+    });
+
+    // Verificar status da transação
+    const transactionStatus = pagarmeTransaction.status;
+    let paymentStatus = 'pending';
+
+    if (transactionStatus === 'paid' || transactionStatus === 'authorized') {
+      paymentStatus = 'paid';
+    } else if (transactionStatus === 'refused') {
+      paymentStatus = 'failed';
+      // Atualizar pedido com status failed antes de lançar erro
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: 'failed',
+          paymentTransactionId: pagarmeTransaction.id.toString(),
+        },
+      });
+      throw new Error(`Pagamento recusado pela Pagarme. Status: ${transactionStatus}`);
+    } else if (transactionStatus === 'processing') {
+      paymentStatus = 'pending';
+    } else {
+      paymentStatus = 'failed';
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: 'failed',
+          paymentTransactionId: pagarmeTransaction.id.toString(),
+        },
+      });
+      throw new Error(`Status de transação desconhecido: ${transactionStatus}`);
+    }
+
+    // Atualizar pedido com informações do pagamento
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paymentStatus,
+        paymentMethod: 'credit_card',
+        paymentTransactionId: pagarmeTransaction.id.toString(),
+      },
+    });
   }
 
   private buildWhereClause(filters: OrderQueryFilters): Prisma.OrderWhereInput {

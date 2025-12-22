@@ -4,6 +4,15 @@ import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
+// Mock do cliente Pagarme
+jest.mock('@/clients/pagarme/pagarmeClient', () => ({
+  getPagarmeClient: jest.fn(),
+  createCreditCardTransaction: jest.fn(),
+  getTransaction: jest.fn(),
+  captureTransaction: jest.fn(),
+  refundTransaction: jest.fn(),
+}));
+
 const testDataTracker = new TestDataTracker();
 
 afterAll(async () => {
@@ -17,6 +26,7 @@ describe('OrderService', () => {
   let testOrder: any;
 
   beforeEach(async () => {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const person = await prisma.person.create({
       data: { firstName: 'Test', lastName: 'User' },
     });
@@ -25,12 +35,22 @@ describe('OrderService', () => {
     testUser = await prisma.user.create({
       data: {
         personId: person.id,
-        username: `test${Date.now()}@example.com`,
+        username: `test-${uniqueId}@example.com`,
         password: 'hashed',
         isActive: true,
       },
     });
     testDataTracker.add('user', testUser.id);
+
+    // Criar email contact (necessário para processar pagamento)
+    const emailContact = await prisma.personContact.create({
+      data: {
+        personId: person.id,
+        type: 'email',
+        value: `test-${uniqueId}@example.com`,
+      },
+    });
+    testDataTracker.add('personContact', emailContact.id);
 
     testProduct = await prisma.product.create({
       data: {
@@ -66,7 +86,19 @@ describe('OrderService', () => {
   });
 
   describe('create', () => {
-    it('should create order', async () => {
+    const { createCreditCardTransaction } = require('@/clients/pagarme/pagarmeClient');
+
+    beforeEach(() => {
+      // Mock padrão: pagamento bem-sucedido
+      createCreditCardTransaction.mockClear();
+      createCreditCardTransaction.mockResolvedValue({
+        id: 'trans_test_123',
+        status: 'paid',
+        authorization_code: 'AUTH123',
+      });
+    });
+
+    it('should create order and process payment', async () => {
       const orderData = {
         userId: testUser.id,
         items: [
@@ -79,6 +111,20 @@ describe('OrderService', () => {
         status: 'pending' as const,
         shippingCost: 10,
         tax: 0,
+        cardData: {
+          cardNumber: '4111111111111111',
+          cardHolderName: 'Test User',
+          cardExpirationDate: '1225',
+          cardCvv: '123',
+        },
+        billingAddress: {
+          country: 'br',
+          state: 'SP',
+          city: 'São Paulo',
+          street: 'Av. Test',
+          streetNumber: '123',
+          zipcode: '01234567',
+        },
       };
 
       const order = await orderService.create(orderData);
@@ -87,8 +133,127 @@ describe('OrderService', () => {
       expect(order.userId).toBe(testUser.id);
       expect((order as any).items?.length).toBeGreaterThanOrEqual(1);
       expect(order.total.toString()).toBe('210');
+      expect(order.paymentStatus).toBe('paid');
+      expect((order as any).paymentTransactionId).toBeDefined();
+
+      // Verificar que createCreditCardTransaction foi chamado
+      expect(createCreditCardTransaction).toHaveBeenCalled();
 
       testDataTracker.add('order', order.id);
+      if ((order as any).items) {
+        (order as any).items.forEach((item: any) => {
+          if (item.id) testDataTracker.add('orderItem', item.id);
+        });
+      }
+    });
+
+    it('should revert stock when payment fails', async () => {
+      const initialQuantity = 15;
+      const product = await prisma.product.create({
+        data: {
+          name: 'Stock Revert Payment Test',
+          description: 'Test',
+          price: 50,
+          quantity: initialQuantity,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
+      // Mock para simular falha no pagamento
+      createCreditCardTransaction.mockRejectedValueOnce(new Error('Payment failed'));
+
+      const orderData = {
+        userId: testUser.id,
+        items: [
+          {
+            productId: product.id,
+            quantity: 3,
+            discount: 0,
+          },
+        ],
+        status: 'pending' as const,
+        shippingCost: 0,
+        tax: 0,
+        cardData: {
+          cardNumber: '4111111111111111',
+          cardHolderName: 'Test User',
+          cardExpirationDate: '1225',
+          cardCvv: '123',
+        },
+        billingAddress: {
+          country: 'br',
+          state: 'SP',
+          city: 'São Paulo',
+          street: 'Av. Test',
+          streetNumber: '123',
+          zipcode: '01234567',
+        },
+      };
+
+      await expect(orderService.create(orderData)).rejects.toThrow();
+
+      // Verificar que o estoque foi revertido
+      const updatedProduct = await prisma.product.findUnique({
+        where: { id: product.id },
+      });
+      expect(updatedProduct?.quantity).toBe(initialQuantity);
+    });
+
+    it('should handle refused transaction and revert stock', async () => {
+      const initialQuantity = 20;
+      const product = await prisma.product.create({
+        data: {
+          name: 'Refused Transaction Test',
+          description: 'Test',
+          price: 75,
+          quantity: initialQuantity,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
+      // Mock para retornar status refused
+      createCreditCardTransaction.mockResolvedValueOnce({
+        id: 'trans_refused_test',
+        status: 'refused',
+      });
+
+      const orderData = {
+        userId: testUser.id,
+        items: [
+          {
+            productId: product.id,
+            quantity: 4,
+            discount: 0,
+          },
+        ],
+        status: 'pending' as const,
+        shippingCost: 0,
+        tax: 0,
+        cardData: {
+          cardNumber: '4111111111111111',
+          cardHolderName: 'Test User',
+          cardExpirationDate: '1225',
+          cardCvv: '123',
+        },
+        billingAddress: {
+          country: 'br',
+          state: 'SP',
+          city: 'São Paulo',
+          street: 'Av. Test',
+          streetNumber: '123',
+          zipcode: '01234567',
+        },
+      };
+
+      await expect(orderService.create(orderData)).rejects.toThrow('Pagamento recusado');
+
+      // Verificar que o estoque foi revertido
+      const updatedProduct = await prisma.product.findUnique({
+        where: { id: product.id },
+      });
+      expect(updatedProduct?.quantity).toBe(initialQuantity);
     });
 
     it('should throw error when user not found', async () => {

@@ -275,7 +275,7 @@ describe('Ad Endpoints', () => {
       expect(response.body.data.product).toBeNull();
     });
 
-    it('should handle error when externalUrl fetch fails', async () => {
+    it('should return 404 when externalUrl fetch fails for Amazon products', async () => {
       const token = await getValidToken();
       const advertiser = await ensureTestAdvertiser();
       
@@ -308,10 +308,10 @@ describe('Ad Endpoints', () => {
         .get(`/api/ads/${adWithExternalUrl.id}`)
         .set('Authorization', `Bearer ${token}`);
 
-      // Deve retornar o ad mesmo se o fetch falhar (não quebra a requisição)
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.id).toBe(adWithExternalUrl.id);
+      // Quando não consegue buscar dados da Amazon para produto com externalUrl,
+      // retorna 404 (não mostra produto incompleto)
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
     });
 
     it('should return 404 if ad not found', async () => {
