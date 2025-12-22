@@ -62,10 +62,11 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
     };
 
     const { ads, total } = await adService.findAll(page, limit, filters);
-    const adsWithAmazonData = await adService.enrichAdsWithAmazonData(ads);
+    // findAll já faz o enriquecimento, não precisa chamar novamente
+    // const adsWithAmazonData = await adService.enrichAdsWithAmazonData(ads);
 
     sendSuccess(res, {
-      ads: adsWithAmazonData,
+      ads,
       pagination: {
         page,
         limit,

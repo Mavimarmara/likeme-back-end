@@ -303,9 +303,11 @@ export class AdService {
       return ad;
     }
 
+    // Timeout maior para getById (10 segundos) para garantir que os dados sejam carregados
     const amazonData = await this.enrichProductWithAmazonData(
       ad.product,
-      ad.product!.externalUrl!
+      ad.product!.externalUrl!,
+      10000
     );
 
     const mergedProduct = this.mergeAmazonDataWithProduct(ad.product, amazonData);
@@ -322,6 +324,7 @@ export class AdService {
   }
 
   async enrichAdsWithAmazonData(ads: AdWithRelations[]): Promise<AdWithRelations[]> {
+    // Para listagens, usar timeout padrão de 5 segundos para manter performance
     const enrichedResults = await Promise.allSettled(
       ads.map(async (ad) => {
         if (!this.isAmazonUrl(ad.product?.externalUrl)) {
@@ -330,7 +333,8 @@ export class AdService {
 
         const amazonData = await this.enrichProductWithAmazonData(
           ad.product,
-          ad.product!.externalUrl!
+          ad.product!.externalUrl!,
+          5000
         );
 
         const mergedProduct = this.mergeAmazonDataWithProduct(ad.product, amazonData);
