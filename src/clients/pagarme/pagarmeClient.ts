@@ -182,6 +182,29 @@ export async function createCreditCardTransaction(params: {
     
     // Verificar se é erro de autenticação (401)
     if (error?.response?.status === 401 || error?.status === 401) {
+      // Verificar se é erro de IP não autorizado
+      const errors = error?.response?.errors || [];
+      const ipError = errors.find((e: any) => 
+        e.type === 'action_forbidden' && 
+        (e.parameter_name === 'ip' || e.message?.includes('IP') || e.message?.includes('ip'))
+      );
+      
+      if (ipError) {
+        const errorMessage = `IP não autorizado pela Pagarme.\n` +
+          `A Pagarme bloqueia requisições de IPs não autorizados por segurança.\n` +
+          `Solução: Configure os IPs permitidos no dashboard Pagarme:\n` +
+          `1. Acesse: https://dashboard.pagar.me/\n` +
+          `2. Vá em: Configurações → API Keys\n` +
+          `3. Clique na sua chave (sk_test_*)\n` +
+          `4. Adicione os IPs do Vercel na lista de IPs permitidos\n` +
+          `   Ou desabilite a restrição de IP para ambiente de teste\n\n` +
+          `Nota: Para produção, recomendamos manter a restrição de IP ativada e configurar apenas os IPs do Vercel.`;
+        
+        console.error('[Pagarme] ❌ IP não autorizado:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      // Outros erros 401
       const apiKey = config.pagarme?.apiKey?.trim();
       const keyPreview = apiKey 
         ? (apiKey.length > 20 ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4) : apiKey.substring(0, Math.min(15, apiKey.length)))
