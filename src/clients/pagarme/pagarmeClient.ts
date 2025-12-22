@@ -110,7 +110,7 @@ export interface TransactionItem {
 }
 
 /**
- * Cria uma transação com cartão de crédito
+ * Cria uma transação com cartão de crédito usando REST API direto (conforme documentação oficial)
  */
 export async function createCreditCardTransaction(params: {
   amount: number; // em centavos
@@ -123,65 +123,161 @@ export async function createCreditCardTransaction(params: {
   items: TransactionItem[];
   metadata?: Record<string, any>;
 }): Promise<any> {
-  const client = await getPagarmeClient();
+  const apiKey = config.pagarme?.apiKey?.trim();
+  
+  if (!apiKey) {
+    throw new Error('PAGARME_API_KEY não configurada');
+  }
 
-  const transactionData = {
-    amount: params.amount,
-    payment_method: 'credit_card',
-    card_number: params.cardData.cardNumber.replace(/\s/g, ''), // Remove espaços
-    card_holder_name: params.cardData.cardHolderName,
-    card_expiration_date: params.cardData.cardExpirationDate,
-    card_cvv: params.cardData.cardCvv,
-    customer: {
-      external_id: params.customer.externalId,
-      name: params.customer.name,
-      type: params.customer.type || 'individual',
-      country: params.customer.country || 'br',
-      email: params.customer.email,
-      documents: params.customer.documents || [],
-      phone_numbers: params.customer.phoneNumbers || [],
-      birthday: params.customer.birthday,
-    },
-    billing: {
-      name: params.billing.name,
-      address: {
-        country: params.billing.address.country,
-        state: params.billing.address.state,
-        city: params.billing.address.city,
-        neighborhood: params.billing.address.neighborhood,
-        street: params.billing.address.street,
-        street_number: params.billing.address.streetNumber,
-        zipcode: params.billing.address.zipcode.replace(/\D/g, ''), // Remove caracteres não numéricos
-        complement: params.billing.address.complement,
-      },
-    },
+  if (!apiKey.startsWith('sk_')) {
+    throw new Error(`Chave Pagarme inválida. Deve começar com 'sk_' mas recebeu: ${apiKey.substring(0, 3)}`);
+  }
+
+  // Preparar dados do pedido (formato da API v5 - Orders)
+  const transactionData: any = {
     items: params.items.map(item => ({
-      id: item.id,
-      title: item.title,
-      unit_price: item.unitPrice,
+      amount: item.unitPrice, // em centavos por item
+      description: item.title,
       quantity: item.quantity,
-      tangible: item.tangible !== false, // Default true
     })),
-    metadata: params.metadata || {},
+    customer: {
+      name: params.customer.name,
+      email: params.customer.email,
+      type: params.customer.type || 'individual',
+      ...(params.customer.documents?.[0]?.number && {
+        document: params.customer.documents[0].number.replace(/\D/g, ''), // Remove formatação do CPF
+      }),
+      ...(params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 && {
+        phones: params.customer.phoneNumbers.map(phone => {
+          const cleanPhone = phone.replace(/\D/g, ''); // Remove caracteres não numéricos
+          // Assume formato brasileiro: +55 (XX) XXXXX-XXXX ou similar
+          const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
+          const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
+          return {
+            country_code: '55',
+            area_code: areaCode,
+            number: number,
+          };
+        }),
+      }),
+    },
+    payments: [
+      {
+        payment_method: 'credit_card',
+        credit_card: {
+          installments: 1,
+          statement_descriptor: 'LIKEME',
+          card: {
+            number: params.cardData.cardNumber.replace(/\s/g, ''),
+            holder_name: params.cardData.cardHolderName,
+            exp_month: params.cardData.cardExpirationDate.substring(0, 2),
+            exp_year: '20' + params.cardData.cardExpirationDate.substring(2, 4),
+            cvv: params.cardData.cardCvv,
+            billing_address: {
+              line_1: `${params.billing.address.street}, ${params.billing.address.streetNumber}${params.billing.address.complement ? ' - ' + params.billing.address.complement : ''}`,
+              zip_code: params.billing.address.zipcode.replace(/\D/g, ''),
+              city: params.billing.address.city,
+              state: params.billing.address.state,
+              country: params.billing.address.country?.toUpperCase() || 'BR',
+            },
+          },
+        },
+      },
+    ],
   };
 
+  // Adicionar metadata se fornecido
+  if (params.metadata && Object.keys(params.metadata).length > 0) {
+    transactionData.metadata = params.metadata;
+  }
+
+  // Criar Basic Auth conforme documentação: base64(sk_test_*:)
+  const authString = Buffer.from(`${apiKey}:`).toString('base64');
+
   try {
-    console.log('[Pagarme] Criando transação com dados:', {
-      amount: transactionData.amount,
-      payment_method: transactionData.payment_method,
-      customer_email: transactionData.customer.email,
+    console.log('[Pagarme] Criando pedido via REST API v5:', {
       items_count: transactionData.items.length,
+      customer_email: params.customer.email,
     });
     
-    const transaction = await client.transactions.create(transactionData);
-    console.log('[Pagarme] ✅ Transação criada com sucesso. ID:', transaction.id, 'Status:', transaction.status);
-    return transaction;
-  } catch (error: any) {
-    console.error('[Pagarme] ❌ Erro ao criar transação:', error);
-    console.error('[Pagarme] Erro completo:', JSON.stringify(error, null, 2));
+    const response = await fetch('https://api.pagar.me/core/v5/orders', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transactionData),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('[Pagarme] ❌ Erro na resposta da API:', {
+        status: response.status,
+        statusText: response.statusText,
+        errors: responseData.errors || responseData,
+      });
+      
+      // Verificar se é erro de IP não autorizado
+      const errors = responseData.errors || [];
+      const ipError = errors.find((e: any) => 
+        e.type === 'action_forbidden' && 
+        (e.parameter_name === 'ip' || e.message?.includes('IP') || e.message?.includes('ip'))
+      );
+      
+      if (ipError) {
+        throw new Error(`IP não autorizado pela Pagarme. Configure os IPs permitidos no dashboard Pagarme ou desabilite a restrição de IP.`);
+      }
+      
+      const errorMessages = Array.isArray(errors) 
+        ? errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
+        : JSON.stringify(responseData);
+      
+      throw new Error(`Erro Pagarme (${response.status}): ${errorMessages}`);
+    }
+
+    // A resposta da API v5 retorna um Order com charges
+    // Precisamos extrair a transação do order
+    const order = responseData;
+    const charge = order?.charges?.[0];
+    const transaction = charge?.last_transaction || charge;
     
-    // Verificar se é erro de autenticação (401)
-    if (error?.response?.status === 401 || error?.status === 401) {
+    if (!transaction && !charge) {
+      console.warn('[Pagarme] ⚠️  Resposta não contém charge/transação esperada:', JSON.stringify(order, null, 2));
+      // Retornar a estrutura esperada
+      return {
+        id: order.id,
+        status: 'pending',
+        ...order,
+      };
+    }
+
+    const transactionId = transaction?.id || charge?.id;
+    const transactionStatus = transaction?.status || charge?.status;
+    
+    console.log('[Pagarme] ✅ Pedido criado com sucesso. Order ID:', order.id, 'Charge ID:', charge?.id, 'Transaction ID:', transactionId, 'Status:', transactionStatus);
+    
+    // Retornar no formato esperado pelo nosso código
+    return {
+      id: transactionId,
+      status: transactionStatus,
+      authorization_code: transaction?.acquirer_response_code || charge?.acquirer_response_code,
+      ...(transaction || charge),
+    };
+  } catch (error: any) {
+    // Se o erro já foi tratado acima (fetch error), apenas re-throw
+    if (error.message && error.message.includes('Erro Pagarme')) {
+      throw error;
+    }
+    
+    console.error('[Pagarme] ❌ Erro ao criar transação:', error);
+    
+    // Se for um erro de fetch, tratar aqui
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Erro de conexão com Pagarme: ${error.message}`);
+    }
+    
+    throw error;
       // Verificar se é erro de IP não autorizado
       const errors = error?.response?.errors || [];
       const ipError = errors.find((e: any) => 
