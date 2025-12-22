@@ -8,21 +8,30 @@ let pagarmeClient: any = null;
  * Cliente para integração com Pagarme
  */
 export async function getPagarmeClient() {
-  if (pagarmeClient) {
-    return pagarmeClient;
-  }
+  // Sempre criar novo cliente para evitar problemas de autenticação
+  // (a biblioteca pode ter problemas com cache de autenticação)
+  pagarmeClient = null;
 
   const apiKey = config.pagarme?.apiKey?.trim();
   
   if (!apiKey) {
     console.error('[Pagarme] PAGARME_API_KEY não configurada na variável de ambiente');
-    throw new Error('PAGARME_API_KEY não configurada. Configure a variável de ambiente PAGARME_API_KEY no arquivo .env');
+    throw new Error('PAGARME_API_KEY não configurada. Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no ambiente (deve ser uma chave secreta sk_test_* ou sk_live_*)');
+  }
+
+  // Validar formato da chave
+  if (!apiKey.startsWith('sk_')) {
+    const keyPreview = apiKey.length > 20 
+      ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4)
+      : apiKey.substring(0, Math.min(apiKey.length, 15));
+    throw new Error(`Chave Pagarme inválida. O backend precisa de uma chave SECRETA (sk_test_* ou sk_live_*), mas recebeu: ${keyPreview}... (começa com '${apiKey.substring(0, 3)}')`);
   }
 
   const keyPreview = apiKey.length > 20 
     ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4)
     : apiKey.substring(0, Math.min(apiKey.length, 15));
-  console.log('[Pagarme] Tentando conectar com API Key:', keyPreview);
+  console.log('[Pagarme] Conectando com API Key:', keyPreview);
+  console.log('[Pagarme] Tipo da chave:', apiKey.startsWith('sk_test_') ? 'TEST (sk_test_*)' : apiKey.startsWith('sk_live_') ? 'PRODUCTION (sk_live_*)' : 'DESCONHECIDO');
   console.log('[Pagarme] Tamanho da chave:', apiKey.length);
 
   try {
@@ -31,6 +40,7 @@ export async function getPagarmeClient() {
     return pagarmeClient;
   } catch (error: any) {
     console.error('[Pagarme] ❌ Erro ao conectar:', error.message || error);
+    console.error('[Pagarme] Erro completo:', JSON.stringify(error, null, 2));
     
     if (error.message && error.message.includes('valid API key')) {
       console.error('[Pagarme] ❌ A chave API fornecida não é válida para operações server-side');
@@ -39,7 +49,7 @@ export async function getPagarmeClient() {
       console.error('  1. Acesse: https://dashboard.pagar.me/');
       console.error('  2. Vá em: Configurações → API Keys');
       console.error('  3. Copie a chave SECRETA (sk_test_* para teste ou sk_live_* para produção)');
-      console.error('  4. Configure PAGARME_API_KEY no .env e no Vercel');
+      console.error('  4. Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no Vercel');
       console.error('[Pagarme] Chave atual (primeiros 15 chars):', apiKey.substring(0, Math.min(15, apiKey.length)) + '...');
     }
     
@@ -156,10 +166,19 @@ export async function createCreditCardTransaction(params: {
   };
 
   try {
+    console.log('[Pagarme] Criando transação com dados:', {
+      amount: transactionData.amount,
+      payment_method: transactionData.payment_method,
+      customer_email: transactionData.customer.email,
+      items_count: transactionData.items.length,
+    });
+    
     const transaction = await client.transactions.create(transactionData);
+    console.log('[Pagarme] ✅ Transação criada com sucesso. ID:', transaction.id, 'Status:', transaction.status);
     return transaction;
   } catch (error: any) {
-    console.error('Erro ao criar transação Pagarme:', error);
+    console.error('[Pagarme] ❌ Erro ao criar transação:', error);
+    console.error('[Pagarme] Erro completo:', JSON.stringify(error, null, 2));
     
     // Verificar se é erro de autenticação (401)
     if (error?.response?.status === 401 || error?.status === 401) {
@@ -168,19 +187,27 @@ export async function createCreditCardTransaction(params: {
         ? (apiKey.length > 20 ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4) : apiKey.substring(0, Math.min(15, apiKey.length)))
         : 'NÃO CONFIGURADA';
       
+      const keyType = apiKey?.startsWith('sk_test_') ? 'TEST' : apiKey?.startsWith('sk_live_') ? 'PRODUCTION' : 'INVÁLIDA';
+      
       const errorMessage = `Erro de autenticação Pagarme (401). Verifique a chave da API.\n` +
-        `Chave atual: ${keyPreview}\n` +
-        `Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no ambiente com uma chave SECRETA (sk_test_* ou sk_live_*)\n` +
-        `A chave deve começar com 'sk_' para operações server-side.`;
+        `Chave atual: ${keyPreview} (${keyType})\n` +
+        `Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no ambiente do Vercel com uma chave SECRETA válida (sk_test_* ou sk_live_*)\n` +
+        `Certifique-se de que a chave está ativa no dashboard Pagarme.`;
       
       console.error('[Pagarme]', errorMessage);
+      
+      // Log adicional para debug
+      if (error?.response?.errors) {
+        console.error('[Pagarme] Detalhes do erro da API:', JSON.stringify(error.response.errors, null, 2));
+      }
+      
       throw new Error(errorMessage);
     }
     
     // Verificar se tem detalhes do erro
     if (error?.response?.errors) {
       const errors = Array.isArray(error.response.errors) 
-        ? error.response.errors.map((e: any) => e.message || e).join(', ')
+        ? error.response.errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
         : JSON.stringify(error.response.errors);
       throw new Error(`Erro Pagarme: ${errors}`);
     }
