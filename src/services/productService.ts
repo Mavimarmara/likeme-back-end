@@ -14,7 +14,7 @@ export interface UpdateStockOperation {
 }
 
 export class ProductService {
-  async findById(id: string): Promise<any> {
+  async findById(id: string): Promise<any | null> {
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
@@ -37,8 +37,10 @@ export class ProductService {
     }
 
     // Se o produto tem externalUrl, enriquecer com dados do link externo
+    // Se não conseguir, retornar null (produto não disponível)
     if (product.externalUrl) {
-      return await this.enrichProductWithExternalData(product);
+      const enriched = await this.enrichProductWithExternalData(product);
+      return enriched;
     }
 
     return product;
@@ -87,14 +89,25 @@ export class ProductService {
     ]);
 
     // Enriquecer produtos com externalUrl com dados do link externo
-    const enrichedProducts = await Promise.all(
-      products.map(async (product) => {
+    // Filtrar produtos que não conseguiram ser enriquecidos (retornam null)
+    const enrichedProductsResults = await Promise.allSettled(
+      products.map(async (product: any) => {
         if (product.externalUrl) {
           return await this.enrichProductWithExternalData(product);
         }
         return product;
       })
     );
+
+    const enrichedProducts = enrichedProductsResults
+      .filter((result: PromiseSettledResult<any>): result is PromiseFulfilledResult<any> => {
+        if (result.status === 'rejected') {
+          return false;
+        }
+        // Filtrar produtos que retornaram null (não conseguiram ser enriquecidos)
+        return result.value !== null;
+      })
+      .map((result: PromiseFulfilledResult<any>) => result.value);
 
     return { products: enrichedProducts, total };
   }
@@ -235,7 +248,7 @@ export class ProductService {
 
   private async enrichProductWithExternalData(
     product: Product
-  ): Promise<any> {
+  ): Promise<any | null> {
     if (!product.externalUrl) {
       return product;
     }
@@ -245,16 +258,31 @@ export class ProductService {
     }
 
     try {
-      const amazonData = await extractAmazonProductData(product.externalUrl);
+      // Timeout de 5 segundos para buscar dados da Amazon
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout fetching Amazon data')), 5000);
+      });
+
+      const amazonData = await Promise.race([
+        extractAmazonProductData(product.externalUrl),
+        timeoutPromise,
+      ]);
       
       if (!amazonData) {
-        return product;
+        console.warn(`No data retrieved for product ${product.id} from ${product.externalUrl}`);
+        return null;
+      }
+
+      // Verificar se o título é válido (não é o fallback "Produto Amazon")
+      if (amazonData.title === 'Produto Amazon' || !amazonData.title || amazonData.title.trim() === '') {
+        console.warn(`Invalid title retrieved for product ${product.id} from ${product.externalUrl}`);
+        return null;
       }
 
       // Mesclar dados do Amazon com o produto, priorizando dados do Amazon
       return {
         ...product,
-        name: amazonData.title || product.name || '',
+        name: amazonData.title,
         description: amazonData.description || product.description || '',
         price: amazonData.price ? parseFloat(amazonData.price.toString()) : product.price,
         image: amazonData.image || product.image || '',
@@ -268,9 +296,9 @@ export class ProductService {
         availability: amazonData.availability,
       };
     } catch (error: any) {
-      console.error('Error fetching external product data:', error);
-      // Se falhar ao buscar dados externos, retornar produto original
-      return product;
+      console.error(`Error fetching external product data for ${product.id}:`, error.message || error);
+      // Se falhar ao buscar dados externos, retornar null para não incluir na listagem
+      return null;
     }
   }
 }

@@ -1,6 +1,9 @@
 import { productService } from '@/services/productService';
 import prisma from '@/config/database';
 import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
+import { extractAmazonProductData } from '@/utils/amazonScraper';
+
+jest.mock('@/utils/amazonScraper');
 
 jest.setTimeout(30000);
 
@@ -15,6 +18,8 @@ describe('ProductService', () => {
   let testProduct: any;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+    
     testProduct = await prisma.product.create({
       data: {
         name: 'Test Product',
@@ -101,6 +106,93 @@ describe('ProductService', () => {
 
       expect(product).toBeNull();
     });
+
+    it('should enrich product with Amazon data when externalUrl is present', async () => {
+      const amazonUrl = 'https://www.amazon.com.br/dp/B08XYZ1234';
+      const mockAmazonData = {
+        asin: 'B08XYZ1234',
+        title: 'Amazon Product Title',
+        description: 'Amazon Product Description',
+        price: 99.99,
+        priceDisplay: 'R$ 99,99',
+        currency: 'BRL',
+        images: ['https://amazon.com/image1.jpg'],
+        image: 'https://amazon.com/image1.jpg',
+        rating: 4.5,
+        reviewCount: 1234,
+        brand: 'Amazon Brand',
+        url: amazonUrl,
+        availability: 'Available',
+      };
+
+      (extractAmazonProductData as jest.Mock).mockResolvedValue(mockAmazonData);
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'Original Product Name',
+          description: 'Original Description',
+          price: 50,
+          externalUrl: amazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const enrichedProduct = await productService.findById(externalProduct.id);
+
+      expect(enrichedProduct).toBeDefined();
+      expect(enrichedProduct?.name).toBe(mockAmazonData.title);
+      expect(enrichedProduct?.description).toBe(mockAmazonData.description);
+      expect(enrichedProduct?.price).toBe(mockAmazonData.price);
+      expect(enrichedProduct?.image).toBe(mockAmazonData.image);
+      expect(enrichedProduct?.asin).toBe(mockAmazonData.asin);
+      expect(enrichedProduct?.rating).toBe(mockAmazonData.rating);
+      expect(enrichedProduct?.reviewCount).toBe(mockAmazonData.reviewCount);
+      expect(extractAmazonProductData).toHaveBeenCalledWith(amazonUrl);
+    });
+
+    it('should return null if Amazon scraping fails', async () => {
+      const amazonUrl = 'https://www.amazon.com.br/dp/B08XYZ1234';
+
+      (extractAmazonProductData as jest.Mock).mockRejectedValue(new Error('Scraping failed'));
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'Original Product Name',
+          description: 'Original Description',
+          price: 50,
+          externalUrl: amazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const product = await productService.findById(externalProduct.id);
+
+      // Produto com externalUrl que falhou no scraping não deve ser retornado
+      expect(product).toBeNull();
+    });
+
+    it('should not enrich product if externalUrl is not Amazon', async () => {
+      const nonAmazonUrl = 'https://example.com/product';
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'Original Product Name',
+          description: 'Original Description',
+          price: 50,
+          externalUrl: nonAmazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const product = await productService.findById(externalProduct.id);
+
+      expect(product).toBeDefined();
+      expect(product?.name).toBe('Original Product Name');
+      expect(extractAmazonProductData).not.toHaveBeenCalled();
+    });
   });
 
   describe('findAll', () => {
@@ -138,6 +230,165 @@ describe('ProductService', () => {
       });
 
       expect(result.products.length).toBeGreaterThan(0);
+    });
+
+    it('should enrich products with Amazon data when externalUrl is present', async () => {
+      const amazonUrl = 'https://www.amazon.com.br/dp/B08XYZ5678';
+      const mockAmazonData = {
+        asin: 'B08XYZ5678',
+        title: 'Amazon Product Title 2',
+        description: 'Amazon Product Description 2',
+        price: 149.99,
+        priceDisplay: 'R$ 149,99',
+        currency: 'BRL',
+        images: ['https://amazon.com/image2.jpg'],
+        image: 'https://amazon.com/image2.jpg',
+        rating: 4.8,
+        reviewCount: 5678,
+        brand: 'Amazon Brand 2',
+        url: amazonUrl,
+        availability: 'Available',
+      };
+
+      (extractAmazonProductData as jest.Mock).mockResolvedValue(mockAmazonData);
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'Original Product Name 2',
+          description: 'Original Description 2',
+          price: 100,
+          externalUrl: amazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const result = await productService.findAll(1, 10, {});
+
+      const enrichedProduct = result.products.find(p => p.id === externalProduct.id);
+      expect(enrichedProduct).toBeDefined();
+      if (enrichedProduct) {
+        expect(enrichedProduct.name).toBe(mockAmazonData.title);
+        expect(enrichedProduct.description).toBe(mockAmazonData.description);
+        expect(enrichedProduct.price).toBe(mockAmazonData.price);
+        expect(enrichedProduct.asin).toBe(mockAmazonData.asin);
+      }
+    });
+
+    it('should exclude products from list if Amazon scraping fails', async () => {
+      const amazonUrl = 'https://www.amazon.com.br/dp/B08XYZ9999';
+
+      (extractAmazonProductData as jest.Mock).mockRejectedValue(new Error('Scraping failed'));
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'Original Product Name 3',
+          description: 'Original Description 3',
+          price: 100,
+          externalUrl: amazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const result = await productService.findAll(1, 10, {});
+
+      // Produto que falhou no scraping não deve aparecer na listagem
+      const failedProduct = result.products.find(p => p.id === externalProduct.id);
+      expect(failedProduct).toBeUndefined();
+    });
+
+    it('should exclude products with invalid title (Produto Amazon fallback)', async () => {
+      const amazonUrl = 'https://www.amazon.com.br/dp/B08XYZ0000';
+      const mockAmazonData = {
+        asin: 'B08XYZ0000',
+        title: 'Produto Amazon', // Título inválido (fallback)
+        description: 'Description',
+        price: 99.99,
+        priceDisplay: 'R$ 99,99',
+        currency: 'BRL',
+        images: [],
+        image: '',
+        rating: 0,
+        reviewCount: 0,
+        brand: '',
+        url: amazonUrl,
+        availability: 'Available',
+      };
+
+      (extractAmazonProductData as jest.Mock).mockResolvedValue(mockAmazonData);
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'Original Product Name 4',
+          description: 'Original Description 4',
+          price: 100,
+          externalUrl: amazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const result = await productService.findAll(1, 10, {});
+
+      // Produto com título inválido não deve aparecer na listagem
+      const invalidProduct = result.products.find(p => p.id === externalProduct.id);
+      expect(invalidProduct).toBeUndefined();
+    });
+
+    it('should handle mixed products (with and without externalUrl)', async () => {
+      const amazonUrl = 'https://www.amazon.com.br/dp/B08XYZ9999';
+      const mockAmazonData = {
+        asin: 'B08XYZ9999',
+        title: 'Amazon Product',
+        description: 'Amazon Description',
+        price: 79.99,
+        priceDisplay: 'R$ 79,99',
+        currency: 'BRL',
+        images: ['https://amazon.com/image.jpg'],
+        image: 'https://amazon.com/image.jpg',
+        rating: 4.0,
+        reviewCount: 999,
+        brand: 'Amazon Brand',
+        url: amazonUrl,
+        availability: 'Available',
+      };
+
+      (extractAmazonProductData as jest.Mock).mockResolvedValue(mockAmazonData);
+
+      const regularProduct = await prisma.product.create({
+        data: {
+          name: 'Regular Product',
+          description: 'Regular Description',
+          price: 30,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', regularProduct.id);
+
+      const externalProduct = await prisma.product.create({
+        data: {
+          name: 'External Product',
+          description: 'External Description',
+          price: 50,
+          externalUrl: amazonUrl,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', externalProduct.id);
+
+      const result = await productService.findAll(1, 10, {});
+
+      const regular = result.products.find(p => p.id === regularProduct.id);
+      const external = result.products.find(p => p.id === externalProduct.id);
+
+      expect(regular).toBeDefined();
+      expect(regular?.name).toBe('Regular Product');
+      expect(regular?.asin).toBeUndefined();
+
+      expect(external).toBeDefined();
+      expect(external?.name).toBe(mockAmazonData.title);
+      expect(external?.asin).toBe(mockAmazonData.asin);
     });
   });
 
