@@ -170,8 +170,8 @@ export async function createCreditCardTransaction(params: {
           card: {
             number: params.cardData.cardNumber.replace(/\s/g, ''),
             holder_name: params.cardData.cardHolderName,
-            exp_month: params.cardData.cardExpirationDate.substring(0, 2),
-            exp_year: '20' + params.cardData.cardExpirationDate.substring(2, 4),
+            exp_month: parseInt(params.cardData.cardExpirationDate.substring(0, 2), 10), // Remove zero à esquerda se existir (ex: 01 -> 1)
+            exp_year: parseInt('20' + params.cardData.cardExpirationDate.substring(2, 4), 10), // Garante 4 dígitos (YYYY)
             cvv: params.cardData.cardCvv,
             billing_address: {
               line_1: `${params.billing.address.street}, ${params.billing.address.streetNumber}${params.billing.address.complement ? ' - ' + params.billing.address.complement : ''}`,
