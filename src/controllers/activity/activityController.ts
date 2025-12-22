@@ -77,6 +77,11 @@ export const getAllActivities = async (req: AuthenticatedRequest, res: Response)
       filters.endDate = new Date(req.query.endDate as string);
     }
 
+    // Incluir atividades deletadas (skipadas) quando includeDeleted for true
+    if (req.query.includeDeleted === 'true' || req.query.includeDeleted === '1') {
+      filters.includeDeleted = true;
+    }
+
     const { activities, total } = await activityService.findAll(page, limit, filters);
 
     sendSuccess(res, {

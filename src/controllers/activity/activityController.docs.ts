@@ -177,6 +177,12 @@
  *           type: string
  *           format: date-time
  *         description: Filter activities ending before this date
+ *       - in: query
+ *         name: includeDeleted
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Include deleted (skipped) activities in the results
  *     responses:
  *       200:
  *         description: List of activities

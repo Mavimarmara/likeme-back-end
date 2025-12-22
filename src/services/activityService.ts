@@ -6,6 +6,7 @@ export interface ActivityQueryFilters {
   type?: string;
   startDate?: Date;
   endDate?: Date;
+  includeDeleted?: boolean;
 }
 
 export class ActivityService {
@@ -28,9 +29,12 @@ export class ActivityService {
   }
 
   private buildWhereClause(filters: ActivityQueryFilters): Prisma.ActivityWhereInput {
-    const where: Prisma.ActivityWhereInput = {
-      deletedAt: null,
-    };
+    const where: Prisma.ActivityWhereInput = {};
+
+    // Incluir atividades deletadas apenas se includeDeleted for true
+    if (!filters.includeDeleted) {
+      where.deletedAt = null;
+    }
 
     if (filters.userId) {
       where.userId = filters.userId;
