@@ -11,10 +11,21 @@ export const validate = (schema: Joi.ObjectSchema) => {
     if (error) {
       console.error('Validation error:', error.details);
       console.error('Request body:', JSON.stringify(req.body, null, 2));
+      
+      const errorMessages = error.details.map(detail => detail.message);
+      const errorMessage = errorMessages.length === 1
+        ? errorMessages[0]
+        : `Erros de validação: ${errorMessages.join('; ')}`;
+      
       return res.status(400).json({
         success: false,
-        message: 'Dados inválidos',
-        error: error.details.map(detail => detail.message).join(', '),
+        message: errorMessage,
+        error: errorMessages.join(', '),
+        details: error.details.map(detail => ({
+          message: detail.message,
+          path: detail.path,
+          type: detail.type,
+        })),
       });
     }
     
