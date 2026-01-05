@@ -90,18 +90,29 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
       country: 'br',
     };
 
-    // Buscar CPF se disponível
-    const cpfContact = order.user.person.contacts?.find(
-      (contact: any) => contact.type === 'cpf' && !contact.deletedAt
-    );
-    if (cpfContact?.value) {
-      customerData.documents = [
-        {
-          type: 'cpf',
-          number: cpfContact.value.replace(/\D/g, ''), // Remove caracteres não numéricos
-        },
-      ];
+    // Buscar CPF - OBRIGATÓRIO para Pagarme (tipo individual)
+    // Primeiro tenta buscar do campo nationalRegistration da Person
+    let cpf = order.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+    
+    // Se não encontrou no nationalRegistration, busca nos contacts
+    if (!cpf || cpf.length < 11) {
+      const cpfContact = order.user.person.contacts?.find(
+        (contact: any) => contact.type === 'cpf' && !contact.deletedAt
+      );
+      cpf = cpfContact?.value?.replace(/\D/g, '') || '';
     }
+    
+    if (!cpf || cpf.length < 11) {
+      sendError(res, 'CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário.', 400);
+      return;
+    }
+    
+    customerData.documents = [
+      {
+        type: 'cpf',
+        number: cpf,
+      },
+    ];
 
     // Buscar telefone se disponível
     const phoneContact = order.user.person.contacts?.find(
