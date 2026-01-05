@@ -340,13 +340,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       : null;
 
     // Calcular objectivesSelectedAt: true se houver objetivos selecionados
-    const objectivesSelectedAt = fullUser.personalObjectives && fullUser.personalObjectives.length > 0
-      ? fullUser.personalObjectives[0].createdAt
+    const personalObjectives = (fullUser as any).personalObjectives;
+    const objectivesSelectedAt = personalObjectives && personalObjectives.length > 0
+      ? personalObjectives[0].createdAt
       : null;
 
     const sessionToken = generateToken(fullUser.id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, personalObjectives: __, ...userWithoutPassword } = fullUser;
+    const { password: _, ...userWithoutPassword } = fullUser;
 
     // Sempre fazer login no Amity (social.plus)
     // Usar o userId do Auth0 (sub) como identificador no Amity

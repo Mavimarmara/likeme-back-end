@@ -98,6 +98,15 @@ export async function createCreditCardTransaction(params: {
     throw new Error('CPF é obrigatório para clientes do tipo individual na Pagarme');
   }
 
+  let validSplit = params.split;
+  if (validSplit && validSplit.length > 0) {
+    const validSplits = validSplit.filter(s => s.recipient_id && s.recipient_id.trim() !== '');
+    if (validSplits.length !== validSplit.length) {
+      console.warn(`[Pagarme] ⚠️  Alguns splits foram removidos por falta de recipient_id. Total válidos: ${validSplits.length}/${validSplit.length}`);
+      validSplit = validSplits.length > 0 ? validSplits : undefined;
+    }
+  }
+
   const transactionData: any = {
     items: params.items.map(item => ({
       amount: item.unitPrice,
@@ -143,17 +152,24 @@ export async function createCreditCardTransaction(params: {
             },
           },
         },
-        ...(params.split && params.split.length > 0 && {
-          split: params.split.map(splitItem => ({
-            type: splitItem.type,
-            amount: splitItem.amount,
-            recipient_id: splitItem.recipient_id,
-            options: {
-              charge_processing_fee: splitItem.options?.charge_processing_fee ?? false,
-              charge_remainder_fee: splitItem.options?.charge_remainder_fee ?? false,
-              liable: splitItem.options?.liable ?? false,
-            },
-          })),
+        ...(validSplit && validSplit.length > 0 && {
+          split: validSplit.map(splitItem => {
+            console.log('[Pagarme] Adicionando split:', {
+              type: splitItem.type,
+              amount: splitItem.amount,
+              recipient_id: splitItem.recipient_id?.substring(0, 20) + '...',
+            });
+            return {
+              type: splitItem.type,
+              amount: splitItem.amount,
+              recipient_id: splitItem.recipient_id,
+              options: {
+                charge_processing_fee: splitItem.options?.charge_processing_fee ?? false,
+                charge_remainder_fee: splitItem.options?.charge_remainder_fee ?? false,
+                liable: splitItem.options?.liable ?? false,
+              },
+            };
+          }),
         }),
       },
     ],
@@ -184,7 +200,8 @@ export async function createCreditCardTransaction(params: {
       billing_address: transactionData.payments[0].credit_card.card.billing_address,
     },
   };
-  console.log('[Pagarme] 📤 Enviando requisição completa:', JSON.stringify(logData, null, 2));
+    console.log('[Pagarme] 📤 Enviando requisição completa:', JSON.stringify(logData, null, 2));
+    console.log('[Pagarme] Split configurado:', validSplit ? `${validSplit.length} split(s)` : 'Nenhum split');
 
   try {
     const requestBody = JSON.stringify(transactionData);
@@ -194,6 +211,14 @@ export async function createCreditCardTransaction(params: {
       customer_type: customerType,
       has_document: !!transactionData.customer.document,
       request_size: requestBody.length,
+      has_split: !!(validSplit && validSplit.length > 0),
+      split_count: validSplit?.length || 0,
+    });
+    
+    console.log('[Pagarme] URL da requisição: https://api.pagar.me/core/v5/orders');
+    console.log('[Pagarme] Headers:', {
+      'Authorization': `Basic ${authString.substring(0, 20)}...`,
+      'Content-Type': 'application/json',
     });
     
     const response = await fetch('https://api.pagar.me/core/v5/orders', {
@@ -204,8 +229,18 @@ export async function createCreditCardTransaction(params: {
       },
       body: requestBody,
     });
+    
+    console.log('[Pagarme] Resposta recebida. Status:', response.status, response.statusText);
 
-    const responseData: any = await response.json();
+    const responseText = await response.text();
+    let responseData: any;
+    
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[Pagarme] ❌ Erro ao parsear resposta JSON:', responseText.substring(0, 500));
+      throw new Error(`Resposta inválida da Pagarme: ${responseText.substring(0, 200)}`);
+    }
 
     if (!response.ok) {
       console.error('[Pagarme] ❌ Erro na resposta da API:', {

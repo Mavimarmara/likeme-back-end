@@ -458,7 +458,7 @@
  *                       description: Token JWT do backend - use no Swagger Authorize
  *                     expiresIn:
  *                       type: string
- *                       description: Tempo de expiração do token (ex: "7d")
+ *                       description: "Tempo de expiração do token (ex: 7d)"
  *                     message:
  *                       type: string
  *       401:
@@ -530,7 +530,7 @@
  *                       description: Token JWT do backend - use no Swagger Authorize
  *                     expiresIn:
  *                       type: string
- *                       description: Tempo de expiração do token (ex: "7d")
+ *                       description: "Tempo de expiração do token (ex: 7d)"
  *                     message:
  *                       type: string
  *                       description: Instruções de uso

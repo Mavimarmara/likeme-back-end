@@ -10,6 +10,7 @@ import type {
   IndividualRecipientData,
   CorporationRecipientData,
 } from '@/interfaces/payment/payment';
+import prisma from '@/config/database';
 
 export const createIndividualRecipient = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -20,7 +21,50 @@ export const createIndividualRecipient = async (req: AuthenticatedRequest, res: 
       return;
     }
 
+    const document = recipientData.register_information.document.replace(/\D/g, '');
+
+    const existingRecipient = await prisma.pagarmeRecipient.findFirst({
+      where: {
+        document: document,
+        type: 'individual',
+        deletedAt: null,
+      },
+    });
+
+    if (existingRecipient) {
+      const recipientFromPagarme = await getRecipient(existingRecipient.recipientId);
+      sendSuccess(res, recipientFromPagarme, 'Recebedor pessoa física encontrado (já cadastrado)');
+      return;
+    }
+
     const recipient = await createRecipient(recipientData);
+
+    if (recipient && recipient.id) {
+      const transferSettings = recipient.transfer_settings || {};
+      const transferEnabled = transferSettings.transfer_enabled === true || transferSettings.transfer_enabled === 'true' || transferSettings.transfer_enabled === true;
+
+      try {
+        await prisma.pagarmeRecipient.create({
+          data: {
+            recipientId: recipient.id,
+            name: recipient.name || recipient.register_information?.name || '',
+            email: recipient.email || recipient.register_information?.email || '',
+            document: document,
+            type: recipient.type || 'individual',
+            status: recipient.status || 'active',
+            code: recipient.code || null,
+            paymentMode: recipient.payment_mode || null,
+            transferEnabled: transferEnabled,
+            transferInterval: transferSettings.transfer_interval || null,
+            transferDay: typeof transferSettings.transfer_day === 'number' ? transferSettings.transfer_day : null,
+            isDefault: false,
+          },
+        });
+        console.log('[RecipientController] Recipient salvo no banco:', recipient.id);
+      } catch (dbError: any) {
+        console.error('[RecipientController] Erro ao salvar recipient no banco:', dbError);
+      }
+    }
 
     sendSuccess(res, recipient, 'Recebedor pessoa física criado com sucesso', 201);
   } catch (error: any) {
@@ -43,7 +87,50 @@ export const createCorporationRecipient = async (req: AuthenticatedRequest, res:
       return;
     }
 
+    const document = recipientData.register_information.document.replace(/\D/g, '');
+
+    const existingRecipient = await prisma.pagarmeRecipient.findFirst({
+      where: {
+        document: document,
+        type: 'company',
+        deletedAt: null,
+      },
+    });
+
+    if (existingRecipient) {
+      const recipientFromPagarme = await getRecipient(existingRecipient.recipientId);
+      sendSuccess(res, recipientFromPagarme, 'Recebedor pessoa jurídica encontrado (já cadastrado)');
+      return;
+    }
+
     const recipient = await createRecipient(recipientData);
+
+    if (recipient && recipient.id) {
+      const transferSettings = recipient.transfer_settings || {};
+      const transferEnabled = transferSettings.transfer_enabled === true || transferSettings.transfer_enabled === 'true' || transferSettings.transfer_enabled === true;
+
+      try {
+        await prisma.pagarmeRecipient.create({
+          data: {
+            recipientId: recipient.id,
+            name: recipient.name || recipient.register_information?.company_name || '',
+            email: recipient.email || recipient.register_information?.email || '',
+            document: document,
+            type: recipient.type || 'company',
+            status: recipient.status || 'active',
+            code: recipient.code || null,
+            paymentMode: recipient.payment_mode || null,
+            transferEnabled: transferEnabled,
+            transferInterval: transferSettings.transfer_interval || null,
+            transferDay: typeof transferSettings.transfer_day === 'number' ? transferSettings.transfer_day : null,
+            isDefault: false,
+          },
+        });
+        console.log('[RecipientController] Recipient salvo no banco:', recipient.id);
+      } catch (dbError: any) {
+        console.error('[RecipientController] Erro ao salvar recipient no banco:', dbError);
+      }
+    }
 
     sendSuccess(res, recipient, 'Recebedor pessoa jurídica criado com sucesso', 201);
   } catch (error: any) {

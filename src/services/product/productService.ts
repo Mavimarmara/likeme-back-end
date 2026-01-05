@@ -5,6 +5,7 @@ import type {
   ProductQueryFilters,
   UpdateStockOperation,
 } from '@/interfaces/product/product';
+import { recipientService } from '@/services/payment/recipientService';
 
 export class ProductService {
   async findById(id: string): Promise<any | null> {
@@ -126,7 +127,7 @@ export class ProductService {
     return { products: enrichedProducts, total };
   }
 
-  async create(productData: any): Promise<Product> {
+  async create(productData: any, sellerId?: string): Promise<Product> {
     if (productData.sku) {
       const existingProduct = await prisma.product.findUnique({
         where: { sku: productData.sku },
@@ -134,6 +135,22 @@ export class ProductService {
 
       if (existingProduct) {
         throw new Error('SKU already in use');
+      }
+    }
+
+    if (sellerId) {
+      try {
+        const advertiser = await prisma.advertiser.findUnique({
+          where: { userId: sellerId },
+        });
+
+        if (advertiser) {
+          await recipientService.ensureAdvertiserHasRecipient(advertiser.id);
+        } else {
+          console.warn('[ProductService] Usuário não é um advertiser, recipient não será criado');
+        }
+      } catch (error: any) {
+        console.warn('[ProductService] Erro ao garantir recipient para advertiser:', error.message);
       }
     }
 
@@ -152,6 +169,7 @@ export class ProductService {
         weight: productData.weight,
         dimensions: productData.dimensions,
         externalUrl: productData.externalUrl,
+        sellerId: sellerId || null,
       },
     });
   }

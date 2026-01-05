@@ -4,9 +4,10 @@ import { sendSuccess, sendError } from '@/utils/response';
 import { productService } from '@/services/product/productService';
 import { PrismaErrorHandler } from '@/utils/errorHandlerHelper';
 
-export const createProduct = async (req: Request, res: Response): Promise<void> => {
+export const createProduct = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const product = await productService.create(req.body);
+    const sellerId = req.user?.id;
+    const product = await productService.create(req.body, sellerId);
     sendSuccess(res, product, 'Product created successfully', 201);
   } catch (error: any) {
     console.error('Create product error:', error);

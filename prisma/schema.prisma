@@ -74,6 +74,7 @@ model User {
   orders             Order[]                 @relation("UserOrders")
   advertiser         Advertiser?             @relation("UserAdvertiser")
   activities         Activity[]              @relation("UserActivities")
+  products           Product[]               @relation("UserProducts")
 
   @@index([personId])
   @@index([username])
@@ -255,8 +256,10 @@ model Product {
   weight      Decimal?  @db.Decimal(10, 3) // in kg
   dimensions  String? // format: "LxHxW" (length x height x width)
   externalUrl String?   @map("external_url") // External URL for the product (e.g., Amazon product link)
+  sellerId    String?   @map("seller_id") // User who sells this product
 
   // Relations
+  seller     User?       @relation("UserProducts", fields: [sellerId], references: [id])
   orderItems OrderItem[] @relation("ProductOrderItems")
   ads        Ad[]        @relation("ProductAds")
 
@@ -266,6 +269,7 @@ model Product {
   @@index([status])
   @@index([quantity])
   @@index([externalUrl])
+  @@index([sellerId])
   @@map("product")
 }
 
@@ -321,25 +325,28 @@ model OrderItem {
 }
 
 model Advertiser {
-  id           String    @id @default(uuid())
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
-  userId       String    @unique @map("user_id") // A user can be an advertiser
-  name         String
-  description  String?
-  logo         String?
-  contactEmail String?   @map("contact_email")
-  contactPhone String?   @map("contact_phone")
-  website      String?
-  status       String    @default("active") // active, inactive, suspended
+  id                 String    @id @default(uuid())
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  userId             String    @unique @map("user_id") // A user can be an advertiser
+  name               String
+  description        String?
+  logo               String?
+  contactEmail       String?   @map("contact_email")
+  contactPhone       String?   @map("contact_phone")
+  website            String?
+  status             String    @default("active") // active, inactive, suspended
+  pagarmeRecipientId String?   @unique @map("pagarme_recipient_id")
 
   // Relations
-  user User @relation("UserAdvertiser", fields: [userId], references: [id], onDelete: Cascade)
-  ads  Ad[] @relation("AdvertiserAds")
+  user             User              @relation("UserAdvertiser", fields: [userId], references: [id], onDelete: Cascade)
+  pagarmeRecipient PagarmeRecipient? @relation("AdvertiserPagarmeRecipient", fields: [pagarmeRecipientId], references: [recipientId])
+  ads              Ad[]              @relation("AdvertiserAds")
 
   @@index([userId])
   @@index([status])
+  @@index([pagarmeRecipientId])
   @@map("advertiser")
 }
 
@@ -396,4 +403,36 @@ model Activity {
   @@index([startDate])
   @@index([endDate])
   @@map("activity")
+}
+
+// ============================================
+// PAYMENT MODELS - Pagarme Recipients
+// ============================================
+
+model PagarmeRecipient {
+  id               String    @id @default(uuid())
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  recipientId      String    @unique @map("recipient_id")
+  name             String
+  email            String
+  document         String
+  type             String
+  status           String
+  code             String?   @unique
+  paymentMode      String?   @map("payment_mode")
+  transferEnabled  Boolean?  @default(true) @map("transfer_enabled")
+  transferInterval String?   @map("transfer_interval")
+  transferDay      Int?      @map("transfer_day")
+  isDefault        Boolean   @default(false) @map("is_default")
+
+  // Relations
+  advertisers Advertiser[] @relation("AdvertiserPagarmeRecipient")
+
+  @@index([recipientId])
+  @@index([code])
+  @@index([isDefault])
+  @@index([status])
+  @@map("pagarme_recipient")
 }

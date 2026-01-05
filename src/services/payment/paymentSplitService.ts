@@ -1,31 +1,42 @@
 import type { PaymentSplit } from '@/interfaces/payment/payment';
 import { config } from '@/config';
 import type { Order } from '@prisma/client';
+import prisma from '@/config/database';
 
 export class PaymentSplitService {
   async calculateSplit(order: Order): Promise<PaymentSplit[] | null> {
     const splitEnabled = this.isSplitEnabled();
     
+    console.log('[PaymentSplitService] Verificando split. Habilitado:', splitEnabled);
+    
     if (!splitEnabled) {
+      console.log('[PaymentSplitService] Split desabilitado via PAGARME_SPLIT_ENABLED');
       return null;
     }
 
-    const splitConfig = this.getSplitConfig();
+    const splitConfig = await this.getSplitConfig();
     
     if (!splitConfig || !splitConfig.recipientId) {
-      console.log('[PaymentSplitService] Split desabilitado ou não configurado');
+      console.log('[PaymentSplitService] Split desabilitado ou não configurado. Recipient ID não encontrado.');
       return null;
     }
+
+    console.log('[PaymentSplitService] Configuração de split encontrada:', {
+      recipientId: splitConfig.recipientId.substring(0, 20) + '...',
+      percentage: splitConfig.percentage,
+    });
 
     const split = this.calculateSplitAmount(order, splitConfig);
     
     if (!split || split.length === 0) {
+      console.log('[PaymentSplitService] Split calculado está vazio');
       return null;
     }
 
     console.log('[PaymentSplitService] Split calculado:', {
       splitsCount: split.length,
       totalPercentage: split.reduce((sum, s) => sum + (s.type === 'percentage' ? s.amount : 0), 0),
+      recipientIds: split.map(s => s.recipient_id.substring(0, 20) + '...'),
     });
 
     return split;
@@ -36,15 +47,28 @@ export class PaymentSplitService {
     return enabled;
   }
 
-  private getSplitConfig(): {
+  private async getSplitConfig(): Promise<{
     recipientId: string;
     percentage: number;
     chargeProcessingFee: boolean;
     chargeRemainderFee: boolean;
     liable: boolean;
-  } | null {
-    const recipientId = process.env.PAGARME_SPLIT_RECIPIENT_ID;
-    
+  } | null> {
+    let recipientId = process.env.PAGARME_SPLIT_RECIPIENT_ID;
+
+    if (!recipientId) {
+      const defaultRecipient = await prisma.pagarmeRecipient.findFirst({
+        where: {
+          isDefault: true,
+          deletedAt: null,
+        },
+      });
+
+      if (defaultRecipient) {
+        recipientId = defaultRecipient.recipientId;
+      }
+    }
+
     if (!recipientId) {
       return null;
     }

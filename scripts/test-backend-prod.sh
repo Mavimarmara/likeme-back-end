@@ -215,10 +215,12 @@ INDIVIDUAL_RECIPIENT_DATA='{
     "address": {
       "street": "Rua Teste",
       "street_number": "123",
+      "complementary": "",
       "neighborhood": "Centro",
       "city": "São Paulo",
       "state": "SP",
-      "zip_code": "01234567"
+      "zip_code": "01234567",
+      "reference_point": ""
     },
     "name": "João Silva",
     "email": "joao@example.com",
@@ -240,10 +242,11 @@ INDIVIDUAL_RECIPIENT_DATA='{
     "account_check_digit": "6",
     "type": "checking"
   },
-  "transfer_settings": {
-    "transfer_enabled": true,
-    "transfer_interval": "Daily"
-  }
+    "transfer_settings": {
+      "transfer_enabled": true,
+      "transfer_interval": "Daily",
+      "transfer_day": 1
+    }
 }'
 
 RECIPIENT_RESPONSE=$(curl -s -X POST \

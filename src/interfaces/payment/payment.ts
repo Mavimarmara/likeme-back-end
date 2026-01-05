@@ -59,13 +59,13 @@ export interface RecipientPhoneNumber {
 
 export interface RecipientAddress {
   street: string;
-  complementary?: string;
+  complementary: string;
   street_number: string;
   neighborhood: string;
   city: string;
   state: string;
   zip_code: string;
-  reference_point?: string;
+  reference_point: string;
 }
 
 export interface ManagingPartner {
