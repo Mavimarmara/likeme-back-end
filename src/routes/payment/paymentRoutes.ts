@@ -5,6 +5,12 @@ import {
   capturePayment,
   refundPayment,
 } from '@/controllers/payment/paymentController';
+import {
+  createIndividualRecipient,
+  createCorporationRecipient,
+  getRecipientById,
+  listAllRecipients,
+} from '@/controllers/payment/recipientController';
 import { authenticateToken } from '@/middleware/auth';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 import { validate, validateParams } from '@/middleware/validation';
@@ -13,15 +19,11 @@ import {
   transactionIdParamSchema,
   capturePaymentSchema,
   refundPaymentSchema,
+  recipientIdParamSchema,
 } from '@/utils/validationSchemas';
 
 const router = Router();
 
-/**
- * @route   POST /api/payment/process
- * @desc    Process payment for an order
- * @access  Private
- */
 router.post(
   '/process',
   generalRateLimiter,
@@ -30,11 +32,6 @@ router.post(
   processPayment
 );
 
-/**
- * @route   GET /api/payment/status/:transactionId
- * @desc    Get payment transaction status
- * @access  Private
- */
 router.get(
   '/status/:transactionId',
   generalRateLimiter,
@@ -43,11 +40,6 @@ router.get(
   getPaymentStatus
 );
 
-/**
- * @route   POST /api/payment/capture/:transactionId
- * @desc    Capture an authorized transaction
- * @access  Private
- */
 router.post(
   '/capture/:transactionId',
   generalRateLimiter,
@@ -57,11 +49,6 @@ router.post(
   capturePayment
 );
 
-/**
- * @route   POST /api/payment/refund/:transactionId
- * @desc    Refund a payment
- * @access  Private
- */
 router.post(
   '/refund/:transactionId',
   generalRateLimiter,
@@ -69,6 +56,35 @@ router.post(
   validateParams(transactionIdParamSchema),
   validate(refundPaymentSchema),
   refundPayment
+);
+
+router.post(
+  '/recipients/individual',
+  generalRateLimiter,
+  authenticateToken,
+  createIndividualRecipient
+);
+
+router.post(
+  '/recipients/corporation',
+  generalRateLimiter,
+  authenticateToken,
+  createCorporationRecipient
+);
+
+router.get(
+  '/recipients/:recipientId',
+  generalRateLimiter,
+  authenticateToken,
+  validateParams(recipientIdParamSchema),
+  getRecipientById
+);
+
+router.get(
+  '/recipients',
+  generalRateLimiter,
+  authenticateToken,
+  listAllRecipients
 );
 
 export default router;

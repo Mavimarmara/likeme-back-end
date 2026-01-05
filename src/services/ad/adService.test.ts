@@ -1,4 +1,4 @@
-import { adService } from '@/services/adService';
+import { adService } from '@/services/ad/adService';
 import prisma from '@/config/database';
 import { extractAmazonProductData } from '@/utils/amazonScraper';
 import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';

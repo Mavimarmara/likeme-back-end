@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendSuccess, sendError } from '@/utils/response';
-import { adService } from '@/services/adService';
+import { adService } from '@/services/ad/adService';
 
 export const createAd = async (req: Request, res: Response): Promise<void> => {
   try {

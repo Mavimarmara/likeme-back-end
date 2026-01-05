@@ -377,6 +377,10 @@ export const transactionIdParamSchema = Joi.object({
   transactionId: Joi.string().required(),
 });
 
+export const recipientIdParamSchema = Joi.object({
+  recipientId: Joi.string().required(),
+});
+
 export const capturePaymentSchema = Joi.object({
   amount: Joi.number().positive().optional(),
 });

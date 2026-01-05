@@ -1,7 +1,8 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendError, sendSuccess } from '@/utils/response';
-import { communityService, FeedFilterOptions, FeedOrderBy } from '@/services/communityService';
+import { communityService } from '@/services/community/communityService';
+import type { FeedFilterOptions, FeedOrderBy } from '@/interfaces/community/community';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;

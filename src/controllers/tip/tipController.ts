@@ -14,6 +14,12 @@ export const getTips = async (_req: Request, res: Response): Promise<void> => {
     sendSuccess(res, tips, 'Dicas carregadas com sucesso');
   } catch (error) {
     console.error('Erro ao buscar dicas:', error);
+    
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+      sendSuccess(res, [], 'Dicas carregadas com sucesso');
+      return;
+    }
+    
     sendError(res, 'Não foi possível carregar as dicas', 500);
   }
 };

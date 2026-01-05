@@ -1,17 +1,10 @@
 import prisma from '@/config/database';
 import type { Product, Prisma } from '@prisma/client';
 import { extractAmazonProductData } from '@/utils/amazonScraper';
-
-export interface ProductQueryFilters {
-  category?: string;
-  status?: string;
-  search?: string;
-}
-
-export interface UpdateStockOperation {
-  quantity: number;
-  operation: 'add' | 'subtract' | 'set';
-}
+import type {
+  ProductQueryFilters,
+  UpdateStockOperation,
+} from '@/interfaces/product/product';
 
 export class ProductService {
   async findById(id: string): Promise<any | null> {

@@ -1,46 +1,25 @@
 import prisma from '@/config/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { Order, Prisma } from '@prisma/client';
-import { productService } from './productService';
+import { productService } from '../product/productService';
 import {
   createCreditCardTransaction,
   CustomerData,
   AddressData,
   CreditCardData,
 } from '@/clients/pagarme/pagarmeClient';
+import { paymentSplitService } from '../payment/paymentSplitService';
+import type {
+  OrderItemInput,
+  CreateOrderData,
+  OrderQueryFilters,
+} from '@/interfaces/order/order';
 
 export class OrderAuthorizationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'OrderAuthorizationError';
   }
-}
-
-export interface OrderItemInput {
-  productId: string;
-  quantity: number;
-  discount?: number;
-}
-
-export interface CreateOrderData {
-  userId: string;
-  items: OrderItemInput[];
-  status?: string;
-  shippingCost?: number;
-  tax?: number;
-  shippingAddress?: string;
-  billingAddress?: any; // Objeto de endereço para Pagarme
-  notes?: string;
-  paymentMethod?: string;
-  paymentStatus?: string;
-  trackingNumber?: string;
-  cardData?: any; // Dados do cartão para Pagarme
-}
-
-export interface OrderQueryFilters {
-  userId?: string;
-  status?: string;
-  paymentStatus?: string;
 }
 
 export class OrderService {
@@ -326,6 +305,9 @@ export class OrderService {
       tangible: true,
     }));
 
+    // Calcular split de pagamento automaticamente (gerenciado pelo backend)
+    const paymentSplit = await paymentSplitService.calculateSplit(orderWithUser);
+
     // Criar transação no Pagarme
     let pagarmeTransaction;
     try {
@@ -342,6 +324,7 @@ export class OrderService {
           orderId: order.id,
           userId: orderWithUser.userId,
         },
+        ...(paymentSplit && paymentSplit.length > 0 && { split: paymentSplit }),
       });
     } catch (error: any) {
       // Re-throw com mensagem mais clara

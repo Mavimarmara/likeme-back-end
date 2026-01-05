@@ -1,25 +1,15 @@
 import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel, AmityReactionResponse, AmityPost } from '@/types/amity';
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
-import { userTokenService } from './userTokenService';
+import { userTokenService } from '../user/userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
 import prisma from '@/config/database';
+import type {
+  AddCommunitiesResult,
+  FeedOrderBy,
+  FeedFilterOptions,
+} from '@/interfaces/community/community';
 
-export interface AddCommunitiesResult {
-  added: number;
-  failed: number;
-  errors: string[];
-}
-
-export type FeedOrderBy = 'createdAt' | 'updatedAt' | 'reactionsCount';
-
-export interface FeedFilterOptions {
-  postTypes?: string[];
-  authorIds?: string[];
-  startDate?: Date;
-  endDate?: Date;
-  orderBy?: FeedOrderBy;
-  order?: 'asc' | 'desc';
-}
+export type { FeedOrderBy } from '@/interfaces/community/community';
 
 export class CommunityService {
   async getUserFeed(

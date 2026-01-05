@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendSuccess, sendError } from '@/utils/response';
-import { orderService, OrderAuthorizationError } from '@/services/orderService';
+import { orderService, OrderAuthorizationError } from '@/services/order/orderService';
 
 export const createOrder = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

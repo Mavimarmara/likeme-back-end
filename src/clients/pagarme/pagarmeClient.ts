@@ -1,15 +1,30 @@
 import { config } from '@/config';
+import type {
+  CreditCardData,
+  CustomerData,
+  AddressData,
+  TransactionItem,
+  PaymentSplit,
+  IndividualRecipientData,
+  CorporationRecipientData,
+} from '@/interfaces/payment/payment';
+
+export type {
+  CreditCardData,
+  CustomerData,
+  AddressData,
+  TransactionItem,
+  PaymentSplit,
+  IndividualRecipientData,
+  CorporationRecipientData,
+} from '@/interfaces/payment/payment';
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pagarme = require('pagarme');
 
 let pagarmeClient: any = null;
 
-/**
- * Cliente para integração com Pagarme
- */
 export async function getPagarmeClient() {
-  // Sempre criar novo cliente para evitar problemas de autenticação
-  // (a biblioteca pode ter problemas com cache de autenticação)
   pagarmeClient = null;
 
   const apiKey = config.pagarme?.apiKey?.trim();
@@ -19,7 +34,6 @@ export async function getPagarmeClient() {
     throw new Error('PAGARME_API_KEY não configurada. Configure PAGARME_SECRET_API_KEY ou PAGARME_API_KEY no ambiente (deve ser uma chave secreta sk_test_* ou sk_live_*)');
   }
 
-  // Validar formato da chave
   if (!apiKey.startsWith('sk_')) {
     const keyPreview = apiKey.length > 20 
       ? apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 4)
@@ -57,63 +71,8 @@ export async function getPagarmeClient() {
   }
 }
 
-/**
- * Interface para dados de cartão de crédito
- */
-export interface CreditCardData {
-  cardNumber: string;
-  cardHolderName: string;
-  cardExpirationDate: string; // MMYY format
-  cardCvv: string;
-}
-
-/**
- * Interface para dados do cliente
- */
-export interface CustomerData {
-  externalId: string; // ID do usuário no nosso sistema
-  name: string;
-  email: string;
-  type?: 'individual' | 'corporation';
-  country?: string; // 'br'
-  documents?: Array<{
-    type: 'cpf' | 'cnpj';
-    number: string;
-  }>;
-  phoneNumbers?: string[];
-  birthday?: string; // YYYY-MM-DD
-}
-
-/**
- * Interface para dados de endereço
- */
-export interface AddressData {
-  country: string; // 'br'
-  state: string; // UF
-  city: string;
-  neighborhood: string;
-  street: string;
-  streetNumber: string;
-  zipcode: string;
-  complement?: string;
-}
-
-/**
- * Interface para item de transação
- */
-export interface TransactionItem {
-  id: string;
-  title: string;
-  unitPrice: number; // em centavos
-  quantity: number;
-  tangible?: boolean;
-}
-
-/**
- * Cria uma transação com cartão de crédito usando REST API direto (conforme documentação oficial)
- */
 export async function createCreditCardTransaction(params: {
-  amount: number; // em centavos
+  amount: number;
   cardData: CreditCardData;
   customer: CustomerData;
   billing: {
@@ -122,6 +81,7 @@ export async function createCreditCardTransaction(params: {
   };
   items: TransactionItem[];
   metadata?: Record<string, any>;
+  split?: PaymentSplit[];
 }): Promise<any> {
   const apiKey = config.pagarme?.apiKey?.trim();
   
@@ -133,16 +93,14 @@ export async function createCreditCardTransaction(params: {
     throw new Error(`Chave Pagarme inválida. Deve começar com 'sk_' mas recebeu: ${apiKey.substring(0, 3)}`);
   }
 
-  // Validar CPF obrigatório para individual
   const customerType = params.customer.type || 'individual';
   if (customerType === 'individual' && (!params.customer.documents?.[0]?.number)) {
     throw new Error('CPF é obrigatório para clientes do tipo individual na Pagarme');
   }
 
-  // Preparar dados do pedido (formato da API v5 - Orders)
   const transactionData: any = {
     items: params.items.map(item => ({
-      amount: item.unitPrice, // em centavos por item
+      amount: item.unitPrice,
       description: item.title,
       quantity: item.quantity,
     })),
@@ -150,12 +108,10 @@ export async function createCreditCardTransaction(params: {
       name: params.customer.name,
       email: params.customer.email,
       type: customerType,
-      // CPF é obrigatório para individual, CNPJ para company
       document: params.customer.documents?.[0]?.number?.replace(/\D/g, '') || '',
       ...(params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 && {
         phones: params.customer.phoneNumbers.map(phone => {
-          const cleanPhone = phone.replace(/\D/g, ''); // Remove caracteres não numéricos
-          // Assume formato brasileiro: +55 (XX) XXXXX-XXXX ou similar
+          const cleanPhone = phone.replace(/\D/g, '');
           const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
           const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
           return {
@@ -175,8 +131,8 @@ export async function createCreditCardTransaction(params: {
           card: {
             number: params.cardData.cardNumber.replace(/\s/g, ''),
             holder_name: params.cardData.cardHolderName,
-            exp_month: parseInt(params.cardData.cardExpirationDate.substring(0, 2), 10), // Remove zero à esquerda se existir (ex: 01 -> 1)
-            exp_year: parseInt('20' + params.cardData.cardExpirationDate.substring(2, 4), 10), // Garante 4 dígitos (YYYY)
+            exp_month: parseInt(params.cardData.cardExpirationDate.substring(0, 2), 10),
+            exp_year: parseInt('20' + params.cardData.cardExpirationDate.substring(2, 4), 10),
             cvv: params.cardData.cardCvv,
             billing_address: {
               line_1: `${params.billing.address.street}, ${params.billing.address.streetNumber}${params.billing.address.complement ? ' - ' + params.billing.address.complement : ''}`,
@@ -187,16 +143,26 @@ export async function createCreditCardTransaction(params: {
             },
           },
         },
+        ...(params.split && params.split.length > 0 && {
+          split: params.split.map(splitItem => ({
+            type: splitItem.type,
+            amount: splitItem.amount,
+            recipient_id: splitItem.recipient_id,
+            options: {
+              charge_processing_fee: splitItem.options?.charge_processing_fee ?? false,
+              charge_remainder_fee: splitItem.options?.charge_remainder_fee ?? false,
+              liable: splitItem.options?.liable ?? false,
+            },
+          })),
+        }),
       },
     ],
   };
 
-  // Adicionar metadata se fornecido
   if (params.metadata && Object.keys(params.metadata).length > 0) {
     transactionData.metadata = params.metadata;
   }
 
-  // Criar Basic Auth conforme documentação: base64(sk_test_*:)
   const authString = Buffer.from(`${apiKey}:`).toString('base64');
 
   // Log da requisição (sem dados sensíveis do cartão)
@@ -249,7 +215,6 @@ export async function createCreditCardTransaction(params: {
         full_response: JSON.stringify(responseData, null, 2),
       });
       
-      // Verificar se é erro de IP não autorizado
       const errors = responseData.errors || [];
       const ipError = errors.find((e: any) => 
         e.type === 'action_forbidden' && 
@@ -267,8 +232,6 @@ export async function createCreditCardTransaction(params: {
       throw new Error(`Erro Pagarme (${response.status}): ${errorMessages}`);
     }
 
-    // A resposta da API v5 retorna um Order com charges
-    // Precisamos extrair a transação do order
     const order: any = responseData;
     const charge: any = order?.charges?.[0];
     const transaction: any = charge?.last_transaction || charge;
@@ -308,7 +271,6 @@ export async function createCreditCardTransaction(params: {
     
     console.log('[Pagarme] ✅ Pedido criado. Order ID:', order.id, 'Charge ID:', charge?.id, 'Transaction ID:', transactionId, 'Status:', transactionStatus);
     
-    // Retornar no formato esperado pelo nosso código
     return {
       id: transactionId,
       status: transactionStatus,
@@ -316,14 +278,12 @@ export async function createCreditCardTransaction(params: {
       ...(transaction || charge || order),
     };
   } catch (error: any) {
-    // Se o erro já foi tratado acima (fetch error), apenas re-throw
     if (error.message && error.message.includes('Erro Pagarme')) {
       throw error;
     }
     
     console.error('[Pagarme] ❌ Erro ao criar transação:', error);
     
-    // Se for um erro de fetch, tratar aqui
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new Error(`Erro de conexão com Pagarme: ${error.message}`);
     }
@@ -347,9 +307,6 @@ export async function getTransaction(transactionId: string): Promise<any> {
   }
 }
 
-/**
- * Captura uma transação (autorizada)
- */
 export async function captureTransaction(
   transactionId: string,
   amount?: number
@@ -369,9 +326,6 @@ export async function captureTransaction(
   }
 }
 
-/**
- * Estorna uma transação
- */
 export async function refundTransaction(
   transactionId: string,
   amount?: number
@@ -387,6 +341,183 @@ export async function refundTransaction(
     return transaction;
   } catch (error) {
     console.error('Erro ao estornar transação Pagarme:', error);
+    throw error;
+  }
+}
+
+export async function createRecipient(
+  recipientData: IndividualRecipientData | CorporationRecipientData
+): Promise<any> {
+  const apiKey = config.pagarme?.apiKey?.trim();
+  
+  if (!apiKey) {
+    throw new Error('PAGARME_API_KEY não configurada');
+  }
+
+  if (!apiKey.startsWith('sk_')) {
+    throw new Error(`Chave Pagarme inválida. Deve começar com 'sk_' mas recebeu: ${apiKey.substring(0, 3)}`);
+  }
+
+  const authString = Buffer.from(`${apiKey}:`).toString('base64');
+  const requestBody = JSON.stringify(recipientData);
+
+  console.log('[Pagarme] 📤 Criando recebedor:', {
+    type: recipientData.register_information.type,
+    document: recipientData.register_information.document.substring(0, 3) + '***',
+    email: recipientData.register_information.email,
+  });
+
+  try {
+    const response = await fetch('https://api.pagar.me/core/v5/recipients', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: requestBody,
+    });
+
+    const responseData: any = await response.json();
+
+    if (!response.ok) {
+      console.error('[Pagarme] ❌ Erro ao criar recebedor:', {
+        status: response.status,
+        statusText: response.statusText,
+        errors: responseData.errors || responseData,
+        full_response: JSON.stringify(responseData, null, 2),
+      });
+      
+      const errors = responseData.errors || [];
+      const errorMessages = Array.isArray(errors) 
+        ? errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
+        : JSON.stringify(responseData);
+      
+      throw new Error(`Erro ao criar recebedor na Pagarme (${response.status}): ${errorMessages}`);
+    }
+
+    console.log('[Pagarme] ✅ Recebedor criado com sucesso:', {
+      id: responseData.id,
+      name: responseData.name,
+      email: responseData.email,
+      status: responseData.status,
+    });
+
+    return responseData;
+  } catch (error: any) {
+    console.error('[Pagarme] ❌ Erro ao criar recebedor:', error);
+    
+    if (error.message && error.message.includes('Erro ao criar recebedor')) {
+      throw error;
+    }
+    
+    throw new Error(`Erro ao criar recebedor: ${error.message || 'Erro desconhecido'}`);
+  }
+}
+
+export async function getRecipient(recipientId: string): Promise<any> {
+  const apiKey = config.pagarme?.apiKey?.trim();
+  
+  if (!apiKey) {
+    throw new Error('PAGARME_API_KEY não configurada');
+  }
+
+  if (!apiKey.startsWith('sk_')) {
+    throw new Error(`Chave Pagarme inválida. Deve começar com 'sk_' mas recebeu: ${apiKey.substring(0, 3)}`);
+  }
+
+  const authString = Buffer.from(`${apiKey}:`).toString('base64');
+
+  try {
+    const response = await fetch(`https://api.pagar.me/core/v5/recipients/${recipientId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    const responseData: any = await response.json();
+
+    if (!response.ok) {
+      console.error('[Pagarme] ❌ Erro ao buscar recebedor:', {
+        status: response.status,
+        errors: responseData.errors || responseData,
+      });
+      
+      const errors = responseData.errors || [];
+      const errorMessages = Array.isArray(errors) 
+        ? errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
+        : JSON.stringify(responseData);
+      
+      throw new Error(`Erro ao buscar recebedor na Pagarme (${response.status}): ${errorMessages}`);
+    }
+
+    return responseData;
+  } catch (error: any) {
+    console.error('[Pagarme] ❌ Erro ao buscar recebedor:', error);
+    throw error;
+  }
+}
+
+export async function listRecipients(params?: {
+  page?: number;
+  size?: number;
+  code?: string;
+  status?: string;
+  created_since?: string;
+  created_until?: string;
+}): Promise<any> {
+  const apiKey = config.pagarme?.apiKey?.trim();
+  
+  if (!apiKey) {
+    throw new Error('PAGARME_API_KEY não configurada');
+  }
+
+  if (!apiKey.startsWith('sk_')) {
+    throw new Error(`Chave Pagarme inválida. Deve começar com 'sk_' mas recebeu: ${apiKey.substring(0, 3)}`);
+  }
+
+  const authString = Buffer.from(`${apiKey}:`).toString('base64');
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.size) queryParams.append('size', params.size.toString());
+  if (params?.code) queryParams.append('code', params.code);
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.created_since) queryParams.append('created_since', params.created_since);
+  if (params?.created_until) queryParams.append('created_until', params.created_until);
+
+  const queryString = queryParams.toString();
+  const url = `https://api.pagar.me/core/v5/recipients${queryString ? `?${queryString}` : ''}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    const responseData: any = await response.json();
+
+    if (!response.ok) {
+      console.error('[Pagarme] ❌ Erro ao listar recebedores:', {
+        status: response.status,
+        errors: responseData.errors || responseData,
+      });
+      
+      const errors = responseData.errors || [];
+      const errorMessages = Array.isArray(errors) 
+        ? errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
+        : JSON.stringify(responseData);
+      
+      throw new Error(`Erro ao listar recebedores na Pagarme (${response.status}): ${errorMessages}`);
+    }
+
+    return responseData;
+  } catch (error: any) {
+    console.error('[Pagarme] ❌ Erro ao listar recebedores:', error);
     throw error;
   }
 }

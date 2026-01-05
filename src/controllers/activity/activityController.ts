@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendSuccess, sendError } from '@/utils/response';
-import { activityService } from '@/services/activityService';
+import { activityService } from '@/services/activity/activityService';
 import { PrismaErrorHandler } from '@/utils/errorHandlerHelper';
 
 export const createActivity = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

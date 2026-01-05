@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendSuccess, sendError } from '@/utils/response';
-import { productService } from '@/services/productService';
+import { productService } from '@/services/product/productService';
 import { PrismaErrorHandler } from '@/utils/errorHandlerHelper';
 
 export const createProduct = async (req: Request, res: Response): Promise<void> => {

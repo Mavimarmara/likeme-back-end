@@ -12,6 +12,7 @@ import {
   AddressData,
   CreditCardData,
 } from '@/clients/pagarme/pagarmeClient';
+import { paymentSplitService } from '@/services/payment/paymentSplitService';
 
 /**
  * Processa pagamento de um pedido usando Pagarme
@@ -138,6 +139,9 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
+    // Calcular split de pagamento automaticamente (gerenciado pelo backend)
+    const paymentSplit = await paymentSplitService.calculateSplit(order);
+
     // Criar transação no Pagarme
     let pagarmeTransaction;
     try {
@@ -154,6 +158,7 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
           orderId: order.id,
           userId: userId,
         },
+        ...(paymentSplit && paymentSplit.length > 0 && { split: paymentSplit }),
       });
     } catch (error: any) {
       console.error('Pagarme transaction error:', error);

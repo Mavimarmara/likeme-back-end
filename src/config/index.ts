@@ -99,5 +99,14 @@ export const config = {
     // A Pagarme usa apenas uma chave secreta (sk_*) para operações server-side no backend
     // A chave pública (pk_*) é apenas para uso no frontend
     apiKey: process.env.PAGARME_SECRET_API_KEY || process.env.PAGARME_API_KEY || '',
+    // Configuração de split de pagamento
+    split: {
+      enabled: process.env.PAGARME_SPLIT_ENABLED === 'true',
+      recipientId: process.env.PAGARME_SPLIT_RECIPIENT_ID || '',
+      percentage: parseFloat(process.env.PAGARME_SPLIT_PERCENTAGE || '0'),
+      chargeProcessingFee: process.env.PAGARME_SPLIT_CHARGE_PROCESSING_FEE === 'true',
+      chargeRemainderFee: process.env.PAGARME_SPLIT_CHARGE_REMAINDER_FEE === 'true',
+      liable: process.env.PAGARME_SPLIT_LIABLE === 'true',
+    },
   },
 };

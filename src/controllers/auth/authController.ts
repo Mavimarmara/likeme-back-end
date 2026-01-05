@@ -5,8 +5,8 @@ import { hashPassword, generateToken } from '@/utils/auth';
 import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, AuthResponse, AuthenticatedRequest } from '@/types';
-import { userService } from '@/services/userService';
-import { communityService } from '@/services/communityService';
+import { userService } from '@/services/user/userService';
+import { communityService } from '@/services/community/communityService';
 import { loginToAmity } from '@/utils/amityClient';
 
 export const register = async (req: Request, res: Response): Promise<void> => {

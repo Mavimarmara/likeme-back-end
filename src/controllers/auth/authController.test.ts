@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../server';
+import app from '@/server';
 import prisma from '@/config/database';
 import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 

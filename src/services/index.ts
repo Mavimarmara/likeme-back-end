@@ -1,7 +1,8 @@
-export { adService, AdService } from './adService';
-export { productService, ProductService } from './productService';
-export { orderService, OrderService, OrderAuthorizationError } from './orderService';
-export { activityService, ActivityService } from './activityService';
-export { communityService, CommunityService } from './communityService';
-export { userService, UserService } from './userService';
-export { userTokenService } from './userTokenService';
+export { adService, AdService } from './ad/adService';
+export { productService, ProductService } from './product/productService';
+export { orderService, OrderService, OrderAuthorizationError } from './order/orderService';
+export { activityService, ActivityService } from './activity/activityService';
+export { communityService, CommunityService } from './community/communityService';
+export { userService, UserService } from './user/userService';
+export { userTokenService } from './user/userTokenService';
+export { paymentSplitService } from './payment/paymentSplitService';

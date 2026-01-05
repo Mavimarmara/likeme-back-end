@@ -1,4 +1,4 @@
-import { orderService, OrderAuthorizationError } from '@/services/orderService';
+import { orderService, OrderAuthorizationError } from '@/services/order/orderService';
 import prisma from '@/config/database';
 import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 

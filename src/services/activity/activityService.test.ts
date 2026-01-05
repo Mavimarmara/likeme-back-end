@@ -1,4 +1,4 @@
-import { activityService } from '@/services/activityService';
+import { activityService } from '@/services/activity/activityService';
 import prisma from '@/config/database';
 import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 
