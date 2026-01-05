@@ -212,6 +212,51 @@ describe('PersonContact Endpoints', () => {
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
     });
+
+    it('should validate that type field only accepts valid values (email, phone, whatsapp, other)', async () => {
+      const invalidTypes = ['cpf', 'cnpj', 'invalid', 'address', 'document'];
+      
+      for (const invalidType of invalidTypes) {
+        const contactData = {
+          personId: testPerson.id,
+          type: invalidType,
+          value: 'test-value',
+        };
+
+        const response = await request(app)
+          .post('/api/person-contacts')
+          .send(contactData)
+          .set('Authorization', `Bearer ${authToken}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+      }
+    });
+
+    it('should accept valid contact types (email, phone, whatsapp, other)', async () => {
+      const validTypes = ['email', 'phone', 'whatsapp', 'other'];
+      
+      for (const validType of validTypes) {
+        const contactData = {
+          personId: testPerson.id,
+          type: validType,
+          value: validType === 'email' ? `test${Date.now()}@example.com` : '+5511999999999',
+        };
+
+        const response = await request(app)
+          .post('/api/person-contacts')
+          .send(contactData)
+          .set('Authorization', `Bearer ${authToken}`);
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.type).toBe(validType);
+        
+        if (response.body.data?.id) {
+          testDataTracker.add('personContact', response.body.data.id);
+        }
+      }
+    });
   });
 
   describe('GET /api/person-contacts', () => {

@@ -28,7 +28,11 @@ describe('OrderService', () => {
   beforeEach(async () => {
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const person = await prisma.person.create({
-      data: { firstName: 'Test', lastName: 'User' },
+      data: {
+        firstName: 'Test',
+        lastName: 'User',
+        nationalRegistration: '12345678901', // CPF necessário para processar pagamentos
+      },
     });
     testDataTracker.add('person', person.id);
 
@@ -52,15 +56,7 @@ describe('OrderService', () => {
     });
     testDataTracker.add('personContact', emailContact.id);
 
-    // Criar CPF contact (OBRIGATÓRIO para Pagarme - tipo individual)
-    const cpfContact = await prisma.personContact.create({
-      data: {
-        personId: person.id,
-        type: 'cpf',
-        value: '12345678901', // CPF de teste válido
-      },
-    });
-    testDataTracker.add('personContact', cpfContact.id);
+    // CPF deve estar no campo nationalRegistration da Person, não em PersonContact
 
     testProduct = await prisma.product.create({
       data: {
@@ -587,164 +583,8 @@ describe('OrderService', () => {
       expect(callArgs.customer.documents[0].number).toBe('12345678901');
     });
 
-    it('should use CPF from PersonContact when nationalRegistration is not available', async () => {
-      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      const person = await prisma.person.create({
-        data: {
-          firstName: 'Test',
-          lastName: 'User',
-        },
-      });
-      testDataTracker.add('person', person.id);
-
-      const user = await prisma.user.create({
-        data: {
-          personId: person.id,
-          username: `test-${uniqueId}@example.com`,
-          password: 'hashed',
-          isActive: true,
-        },
-      });
-      testDataTracker.add('user', user.id);
-
-      await prisma.personContact.create({
-        data: {
-          personId: person.id,
-          type: 'email',
-          value: `test-${uniqueId}@example.com`,
-        },
-      });
-
-      const cpfContact = await prisma.personContact.create({
-        data: {
-          personId: person.id,
-          type: 'cpf',
-          value: '98765432100',
-        },
-      });
-      testDataTracker.add('personContact', cpfContact.id);
-
-      const product = await prisma.product.create({
-        data: {
-          name: 'Test Product',
-          description: 'Test',
-          price: 100,
-          quantity: 10,
-          status: 'active',
-        },
-      });
-      testDataTracker.add('product', product.id);
-
-      const orderData = {
-        userId: user.id,
-        items: [{ productId: product.id, quantity: 1, discount: 0 }],
-        status: 'pending' as const,
-        shippingCost: 0,
-        tax: 0,
-        cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
-        },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Test',
-          streetNumber: '123',
-          zipcode: '01234567',
-        },
-      };
-
-      await orderService.create(orderData);
-
-      expect(createCreditCardTransaction).toHaveBeenCalled();
-      const callArgs = createCreditCardTransaction.mock.calls[0][0];
-      expect(callArgs.customer.documents).toBeDefined();
-      expect(callArgs.customer.documents[0].number).toBe('98765432100');
-    });
-
-    it('should prioritize nationalRegistration over PersonContact when both are available', async () => {
-      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      const person = await prisma.person.create({
-        data: {
-          firstName: 'Test',
-          lastName: 'User',
-          nationalRegistration: '11122233344',
-        },
-      });
-      testDataTracker.add('person', person.id);
-
-      const user = await prisma.user.create({
-        data: {
-          personId: person.id,
-          username: `test-${uniqueId}@example.com`,
-          password: 'hashed',
-          isActive: true,
-        },
-      });
-      testDataTracker.add('user', user.id);
-
-      await prisma.personContact.create({
-        data: {
-          personId: person.id,
-          type: 'email',
-          value: `test-${uniqueId}@example.com`,
-        },
-      });
-
-      const cpfContact = await prisma.personContact.create({
-        data: {
-          personId: person.id,
-          type: 'cpf',
-          value: '99988877766',
-        },
-      });
-      testDataTracker.add('personContact', cpfContact.id);
-
-      const product = await prisma.product.create({
-        data: {
-          name: 'Test Product',
-          description: 'Test',
-          price: 100,
-          quantity: 10,
-          status: 'active',
-        },
-      });
-      testDataTracker.add('product', product.id);
-
-      const orderData = {
-        userId: user.id,
-        items: [{ productId: product.id, quantity: 1, discount: 0 }],
-        status: 'pending' as const,
-        shippingCost: 0,
-        tax: 0,
-        cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
-        },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Test',
-          streetNumber: '123',
-          zipcode: '01234567',
-        },
-      };
-
-      await orderService.create(orderData);
-
-      expect(createCreditCardTransaction).toHaveBeenCalled();
-      const callArgs = createCreditCardTransaction.mock.calls[0][0];
-      expect(callArgs.customer.documents).toBeDefined();
-      expect(callArgs.customer.documents[0].number).toBe('11122233344');
-    });
-
-    it('should throw error when CPF is not available in nationalRegistration or PersonContact', async () => {
+    it('should throw error when CPF is not available in nationalRegistration', async () => {
+      jest.setTimeout(60000);
       const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const person = await prisma.person.create({
         data: {
