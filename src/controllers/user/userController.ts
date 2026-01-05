@@ -43,7 +43,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         personId: userData.personId,
         username: userData.username || null,
         password: userData.password,
-        salt: userData.salt,
         avatar: userData.avatar,
         isActive: userData.isActive !== undefined ? userData.isActive : true,
       },
@@ -190,7 +189,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    const { password, salt, ...safeUpdateData } = updateData;
+    const { password, ...safeUpdateData } = updateData;
 
     const user = await prisma.user.update({
       where: { id },
@@ -247,7 +246,7 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response): Prom
 const filterSensitiveUserData = (user: any): any => {
   if (!user) return null;
   
-  const { password, salt, ...safeUser } = user;
+  const { password, ...safeUser } = user;
   return safeUser;
 };
 

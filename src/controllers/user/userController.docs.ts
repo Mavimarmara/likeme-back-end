@@ -22,8 +22,6 @@
  *                 type: string
  *               password:
  *                 type: string
- *               salt:
- *                 type: string
  *               avatar:
  *                 type: string
  *                 format: uri
@@ -157,8 +155,6 @@
  *               username:
  *                 type: string
  *               password:
- *                 type: string
- *               salt:
  *                 type: string
  *               avatar:
  *                 type: string

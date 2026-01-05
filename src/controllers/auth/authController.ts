@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '@/config/database';
 import { config } from '@/config';
-import { hashPassword, generateToken } from '@/utils/auth';
+import { generateToken } from '@/utils/auth';
 import { verifyAuth0Token, extractUserInfoFromToken } from '@/utils/auth0';
 import { sendSuccess, sendError } from '@/utils/response';
 import { CreateUserData, AuthResponse, AuthenticatedRequest } from '@/types';
@@ -35,8 +35,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       sendError(res, 'Email já cadastrado', 409);
       return;
     }
-
-    const hashedPassword = await hashPassword(userData.password);
 
     const person = await prisma.person.create({
       data: {
@@ -72,7 +70,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       username?: string;
     } = {
       personId: person.id,
-      password: hashedPassword,
+      password: '',
       avatar: userData.avatar,
     };
 
@@ -249,12 +247,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         },
       });
 
-      const randomPassword = await hashPassword(`auth0_${auth0User.sub}_${Date.now()}`);
-      
       user = await prisma.user.create({
         data: {
           personId: newPerson.id,
-          password: randomPassword,
+          password: '',
           avatar: auth0User.picture || userInfo.picture || undefined,
           isActive: true,
         },
@@ -296,7 +292,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         personId: true,
         username: true,
         password: true,
-        salt: true,
         avatar: true,
         isActive: true,
         socialPlusUserId: true,

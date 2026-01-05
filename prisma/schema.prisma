@@ -59,7 +59,6 @@ model User {
   personId         String    @unique @map("person_id")
   username         String?   @unique
   password         String
-  salt             String?
   avatar           String?
   isActive         Boolean   @default(true) @map("is_active")
   socialPlusUserId String?   @unique @map("social_plus_user_id")

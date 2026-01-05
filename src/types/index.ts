@@ -2,7 +2,7 @@ import { Request } from 'express';
 import { User } from '@prisma/client';
 
 export interface AuthenticatedRequest extends Request {
-  user?: User;
+  user?: Omit<User, 'salt'>;
 }
 
 export interface CreateUserData {
@@ -27,7 +27,7 @@ export interface UpdateUserData {
 }
 
 export interface AuthResponse {
-  user: Omit<User, 'password'>;
+  user: Omit<User, 'password' | 'salt'>;
   token: string;
   registerCompletedAt?: Date | null; // Data em que o registro foi completado (calculado)
   objectivesSelectedAt?: Date | null; // Data em que os objetivos foram selecionados (calculado)

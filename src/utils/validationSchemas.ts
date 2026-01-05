@@ -16,7 +16,6 @@ export const createUserCrudSchema = Joi.object({
   personId: Joi.string().required(),
   username: Joi.string().min(3).max(50).optional(),
   password: Joi.string().min(6).max(100).required(),
-  salt: Joi.string().optional(),
   avatar: Joi.string().uri().optional(),
   isActive: Joi.boolean().optional(),
 });
@@ -34,7 +33,6 @@ export const updateUserSchema = Joi.object({
 export const updateUserCrudSchema = Joi.object({
   username: Joi.string().min(3).max(50).optional(),
   password: Joi.string().min(6).max(100).optional(),
-  salt: Joi.string().optional(),
   avatar: Joi.string().uri().optional(),
   isActive: Joi.boolean().optional(),
 });
