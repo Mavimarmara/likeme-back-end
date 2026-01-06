@@ -203,14 +203,6 @@ export class RecipientService {
       },
       register_information: {
         phone_numbers: phoneNumbers,
-        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
-        company_name: companyName,
-        trading_name: `${companyName} ME`,
-        annual_revenue: 0,
-        corporation_type: 'ME',
-        founding_date: user.person.birthdate
-          ? `${user.person.birthdate.getFullYear()}-${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}-${String(user.person.birthdate.getDate()).padStart(2, '0')}`
-          : '2010-01-01',
         main_address: {
           street: 'Rua Não Informada',
           street_number: '0',
@@ -227,12 +219,12 @@ export class RecipientService {
             email: email,
             document: document,
             type: 'individual',
-            mother_name: '',
+            mother_name: 'Não informado',
             birthdate: user.person.birthdate
               ? `${String(user.person.birthdate.getDate()).padStart(2, '0')}/${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}/${user.person.birthdate.getFullYear()}`
               : '01/01/1990',
             monthly_income: 0,
-            professional_occupation: '',
+            professional_occupation: 'Não informado',
             self_declared_legal_representative: true,
             address: {
               street: 'Rua Não Informada',
@@ -247,6 +239,33 @@ export class RecipientService {
             phone_numbers: phoneNumbers,
           },
         ],
+        company_name: companyName,
+        trading_name: `${companyName} ME`,
+        email,
+        document,
+        type: 'corporation',
+        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
+        annual_revenue: 0,
+        corporation_type: 'ME',
+        founding_date: user.person.birthdate
+          ? `${user.person.birthdate.getFullYear()}-${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}-${String(user.person.birthdate.getDate()).padStart(2, '0')}`
+          : '2010-01-01',
+      },
+      default_bank_account: {
+        holder_name: companyName,
+        holder_type: 'individual',
+        holder_document: document,
+        bank: '341',
+        branch_number: '0001',
+        branch_check_digit: '0',
+        account_number: '00000000',
+        account_check_digit: '0',
+        type: 'checking',
+      },
+      transfer_settings: {
+        transfer_enabled: true,
+        transfer_interval: 'Weekly',
+        transfer_day: 1,
       },
     };
   }

@@ -559,11 +559,17 @@ export async function createRecipient(
   const authString = Buffer.from(`${apiKey}:`).toString('base64');
   const requestBody = JSON.stringify(recipientData);
 
+  const regInfo = recipientData.register_information;
+  const recipientType = 'type' in regInfo ? regInfo.type : ('type' in recipientData ? (recipientData as any).type : 'unknown');
+  const document = 'document' in regInfo ? regInfo.document : (recipientData as any).document || '';
+  const email = 'email' in regInfo ? regInfo.email : (recipientData as any).email || '';
+  const name = 'name' in regInfo ? regInfo.name : ('company_name' in regInfo ? regInfo.company_name : '');
+  
   console.log('[Pagarme] 📤 Criando recebedor:', {
-    type: recipientData.register_information.type,
-    document: recipientData.register_information.document.substring(0, 3) + '***',
-    email: recipientData.register_information.email,
-    name: recipientData.register_information.name || recipientData.register_information.company_name,
+    type: recipientType,
+    document: document.substring(0, 3) + '***',
+    email: email,
+    name: name,
   });
 
   try {
@@ -586,13 +592,13 @@ export async function createRecipient(
         errors: responseData.errors || responseData,
         full_response: JSON.stringify(responseData, null, 2),
         request_body_preview: JSON.stringify({
-          type: recipientData.register_information.type,
-          document: recipientData.register_information.document.substring(0, 3) + '***',
-          email: recipientData.register_information.email,
-          name: recipientData.register_information.name || recipientData.register_information.company_name,
+          type: recipientType,
+          document: document.substring(0, 3) + '***',
+          email: email,
+          name: name,
           has_bank_account: !!recipientData.default_bank_account,
           has_transfer_settings: !!recipientData.transfer_settings,
-          has_address: !!(recipientData.register_information as any).address || !!(recipientData.register_information as any).main_address,
+          has_address: !!(regInfo as any).address || !!(regInfo as any).main_address,
         }, null, 2),
       });
       
