@@ -178,8 +178,7 @@ export async function createCreditCardTransaction(params: {
       type: transactionData.customer.type,
       document: transactionData.customer.document ? `${transactionData.customer.document.substring(0, 3)}***` : 'NÃO FORNECIDO',
       phones: transactionData.customer.phones,
-      hasPhones: !!transactionData.customer.phones && transactionData.customer.phones.length > 0,
-      phonesCount: transactionData.customer.phones?.length || 0,
+      hasPhones: !!transactionData.customer.phones && (transactionData.customer.phones.mobile_phone || transactionData.customer.phones.home_phone),
     },
     payment_method: transactionData.payments[0].payment_method,
     card: {
@@ -194,7 +193,7 @@ export async function createCreditCardTransaction(params: {
     console.log('[Pagarme] Split configurado:', validSplit ? `${validSplit.length} split(s)` : 'Nenhum split');
 
   try {
-    // Preparar telefones - API v5 pode ter estrutura diferente
+    // Preparar telefones - API v5 espera objeto com home_phone e mobile_phone
     const phoneNumbers = params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 
       ? params.customer.phoneNumbers 
       : ['11999999999'];
@@ -203,16 +202,21 @@ export async function createCreditCardTransaction(params: {
     const areaCode = firstPhone.length >= 10 ? firstPhone.substring(0, 2) : '11';
     const number = firstPhone.length >= 10 ? firstPhone.substring(2) : firstPhone;
     
-    // API v5 pode esperar phones como objeto ou array - testando como objeto primeiro
+    // API v5 espera phones como objeto com home_phone e mobile_phone
     transactionData.customer.phones = {
       mobile_phone: {
         country_code: '55',
         area_code: areaCode,
         number: number,
       },
+      home_phone: {
+        country_code: '55',
+        area_code: areaCode,
+        number: number,
+      },
     };
     
-    console.log('[Pagarme] 📞 Telefone formatado como objeto:', JSON.stringify(transactionData.customer.phones, null, 2));
+    console.log('[Pagarme] 📞 Telefone formatado no formato correto:', JSON.stringify(transactionData.customer.phones, null, 2));
     
     const requestBody = JSON.stringify(transactionData);
     console.log('[Pagarme] Criando pedido via REST API v5:', {
@@ -220,8 +224,9 @@ export async function createCreditCardTransaction(params: {
       customer_email: params.customer.email,
       customer_type: customerType,
       has_document: !!transactionData.customer.document,
-      phones_count: Array.isArray(transactionData.customer.phones) ? transactionData.customer.phones.length : 0,
-      phones_is_array: Array.isArray(transactionData.customer.phones),
+      phones_is_object: typeof transactionData.customer.phones === 'object' && !Array.isArray(transactionData.customer.phones),
+      has_mobile_phone: !!transactionData.customer.phones?.mobile_phone,
+      has_home_phone: !!transactionData.customer.phones?.home_phone,
       request_size: requestBody.length,
       has_split: !!(validSplit && validSplit.length > 0),
       split_count: validSplit?.length || 0,
@@ -235,7 +240,7 @@ export async function createCreditCardTransaction(params: {
       document: transactionData.customer.document ? `${transactionData.customer.document.substring(0, 3)}***` : 'NÃO FORNECIDO',
       phones: transactionData.customer.phones,
       phones_type: typeof transactionData.customer.phones,
-      phones_is_array: Array.isArray(transactionData.customer.phones),
+      phones_is_object: typeof transactionData.customer.phones === 'object' && !Array.isArray(transactionData.customer.phones),
     }, null, 2));
     
     // Log do JSON completo que será enviado (sem dados sensíveis do cartão)
