@@ -50,7 +50,9 @@ echo ""
 
 # 2. CPF será enviado no cardData (não precisa atualizar no perfil)
 echo "2. CPF será enviado no cardData do pedido"
-echo "   CPF: 12345678901"
+# CPF válido para testes (11144477735 é um CPF válido com dígitos verificadores corretos)
+CPF_TEST="11144477735"
+echo "   CPF: $CPF_TEST"
 echo ""
 
 # 3. Criar produto de teste
@@ -75,7 +77,10 @@ echo ""
 
 # 4. Criar pedido com pagamento (testando diferentes cartões)
 echo "4. Criando pedido com pagamento..."
-CPF_TEST="12345678901"
+# CPF válido para testes (11144477735 é um CPF válido)
+if [ -z "$CPF_TEST" ]; then
+  CPF_TEST="11144477735"
+fi
 echo "   CPF no cardData: $CPF_TEST"
 
 # Garantir que CPF está presente e válido (11 dígitos)

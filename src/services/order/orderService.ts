@@ -392,12 +392,12 @@ export class OrderService {
 
     console.log('[OrderService] Status recebido da Pagarme:', transactionStatus);
 
-    // Status possíveis na API v5: paid, pending, canceled, failed
+    // Status possíveis na API v5: paid, pending, canceled, failed, captured
     // Status possíveis na API v1 (legada): paid, authorized, refused, processing
     // Compatibilidade com ambos formatos
-    if (transactionStatus === 'paid' || transactionStatus === 'authorized' || transactionStatus === 'success') {
+    if (transactionStatus === 'paid' || transactionStatus === 'authorized' || transactionStatus === 'success' || transactionStatus === 'captured') {
       paymentStatus = 'paid';
-      console.log('[OrderService] ✅ Pagamento aprovado, status:', paymentStatus);
+      console.log('[OrderService] ✅ Pagamento aprovado, status:', paymentStatus, '(transação:', transactionStatus, ')');
     } else if (transactionStatus === 'refused' || transactionStatus === 'failed' || transactionStatus === 'canceled') {
       paymentStatus = 'failed';
       console.log('[OrderService] ❌ Pagamento recusado, status:', transactionStatus);
