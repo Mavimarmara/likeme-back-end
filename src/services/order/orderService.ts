@@ -432,16 +432,9 @@ export class OrderService {
       paymentStatus = 'pending';
       console.log('[OrderService] ⏳ Pagamento pendente, status:', paymentStatus);
     } else {
-      paymentStatus = 'failed';
-      console.warn('[OrderService] ⚠️  Status desconhecido:', transactionStatus);
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          paymentStatus: 'failed',
-          paymentTransactionId: pagarmeTransaction.id?.toString() || String(pagarmeTransaction.id),
-        },
-      });
-      throw new Error(`Status de transação desconhecido: ${transactionStatus}`);
+      // Status desconhecido - não lançar erro, apenas logar e manter como pending
+      console.warn('[OrderService] ⚠️  Status de transação desconhecido:', transactionStatus);
+      paymentStatus = 'pending';
     }
 
     // Atualizar pedido com informações do pagamento
