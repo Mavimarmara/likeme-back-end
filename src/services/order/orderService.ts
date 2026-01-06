@@ -371,6 +371,23 @@ export class OrderService {
     } else if (transactionStatus === 'refused' || transactionStatus === 'failed' || transactionStatus === 'canceled') {
       paymentStatus = 'failed';
       console.log('[OrderService] ❌ Pagamento recusado, status:', transactionStatus);
+      
+      // Extrair mensagem de erro da transação se disponível
+      const transactionData = pagarmeTransaction as any;
+      const errorMessage = transactionData?.message || 
+                          transactionData?.gateway_response?.message ||
+                          transactionData?.gateway_response?.code ||
+                          transactionData?.gateway_response?.acquirer_message ||
+                          `Status: ${transactionStatus}`;
+      
+      console.error('[OrderService] Detalhes do erro:', {
+        transactionId: pagarmeTransaction.id,
+        status: transactionStatus,
+        errorMessage: errorMessage,
+        gatewayResponse: transactionData?.gateway_response,
+        fullTransaction: JSON.stringify(transactionData, null, 2),
+      });
+      
       // Atualizar pedido com status failed antes de lançar erro
       await prisma.order.update({
         where: { id: order.id },
@@ -379,10 +396,8 @@ export class OrderService {
           paymentTransactionId: pagarmeTransaction.id?.toString() || String(pagarmeTransaction.id),
         },
       });
-      const errorMessage = transactionStatus === 'failed' 
-        ? 'Pagamento recusado. Verifique os dados do cartão e tente novamente.'
-        : `Pagamento recusado. Status: ${transactionStatus}. Verifique os dados do cartão e tente novamente.`;
-      throw new Error(errorMessage);
+      
+      throw new Error(`Pagamento recusado pela Pagarme. ${errorMessage}`);
     } else if (transactionStatus === 'processing' || transactionStatus === 'pending' || transactionStatus === 'waiting_payment') {
       paymentStatus = 'pending';
       console.log('[OrderService] ⏳ Pagamento pendente, status:', paymentStatus);
