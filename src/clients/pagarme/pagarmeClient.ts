@@ -108,12 +108,22 @@ export async function createCreditCardTransaction(params: {
   }
 
   const transactionData: any = {
-    items: params.items.map((item, index) => ({
-      amount: item.unitPrice,
-      description: item.title,
-      quantity: item.quantity,
-      code: item.id || `ITEM_${index + 1}_${Date.now()}`, // Código obrigatório para API v5
-    })),
+    items: params.items.map((item, index) => {
+      const itemCode = item.code || item.id || `ITEM_${index + 1}_${Date.now()}`;
+      const itemData = {
+        amount: item.unitPrice,
+        description: item.title,
+        quantity: item.quantity,
+        code: itemCode, // Código obrigatório para API v5
+      };
+      console.log(`[Pagarme] 📦 Item ${index + 1}:`, {
+        code: itemCode,
+        description: item.title,
+        amount: item.unitPrice,
+        quantity: item.quantity,
+      });
+      return itemData;
+    }),
     customer: {
       name: params.customer.name,
       email: params.customer.email,
