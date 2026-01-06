@@ -584,14 +584,56 @@ export async function createRecipient(
         statusText: response.statusText,
         errors: responseData.errors || responseData,
         full_response: JSON.stringify(responseData, null, 2),
+        request_body_preview: JSON.stringify({
+          type: recipientData.register_information.type,
+          document: recipientData.register_information.document.substring(0, 3) + '***',
+          email: recipientData.register_information.email,
+          has_address: !!(recipientData.register_information as any).address || !!(recipientData.register_information as any).main_address,
+          has_bank_account: !!recipientData.default_bank_account,
+          has_transfer_settings: !!recipientData.transfer_settings,
+        }, null, 2),
       });
       
-      const errors = responseData.errors || [];
-      const errorMessages = Array.isArray(errors) 
-        ? errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
-        : JSON.stringify(responseData);
+      // Extrair mensagens de erro de forma mais detalhada
+      let errorMessages: string[] = [];
       
-      throw new Error(`Erro ao criar recebedor na Pagarme (${response.status}): ${errorMessages}`);
+      if (responseData.errors) {
+        if (Array.isArray(responseData.errors)) {
+          responseData.errors.forEach((e: any) => {
+            if (e.message) {
+              errorMessages.push(e.message);
+            } else if (typeof e === 'string') {
+              errorMessages.push(e);
+            } else {
+              errorMessages.push(JSON.stringify(e));
+            }
+          });
+        } else if (typeof responseData.errors === 'object') {
+          Object.keys(responseData.errors).forEach((key) => {
+            const errorValue = (responseData.errors as any)[key];
+            if (Array.isArray(errorValue)) {
+              errorValue.forEach((msg: any) => {
+                errorMessages.push(`${String(key)}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
+              });
+            } else if (typeof errorValue === 'string') {
+              errorMessages.push(`${String(key)}: ${errorValue}`);
+            } else {
+              errorMessages.push(`${String(key)}: ${JSON.stringify(errorValue)}`);
+            }
+          });
+        }
+      }
+      
+      if (responseData.message) {
+        errorMessages.push(responseData.message);
+      }
+      
+      if (errorMessages.length === 0) {
+        errorMessages.push(JSON.stringify(responseData));
+      }
+      
+      const finalMessage = errorMessages.join('; ');
+      throw new Error(`Erro ao criar recebedor na Pagarme (${response.status}): ${finalMessage}`);
     }
 
     console.log('[Pagarme] ✅ Recebedor criado com sucesso:', {
