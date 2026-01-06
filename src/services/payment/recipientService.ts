@@ -224,6 +224,7 @@ export class RecipientService {
         managing_partners: [
           {
             name: companyName,
+            email: email,
             document: document,
             type: 'individual',
             mother_name: '',
