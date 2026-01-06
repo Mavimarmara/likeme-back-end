@@ -232,7 +232,9 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
     const transactionStatus = pagarmeTransaction.status;
     let paymentStatus = 'pending';
 
-    if (transactionStatus === 'paid' || transactionStatus === 'authorized') {
+    // Status possíveis na API v5: paid, pending, canceled, failed, captured
+    // Status possíveis na API v1 (legada): paid, authorized, refused, processing
+    if (transactionStatus === 'paid' || transactionStatus === 'authorized' || transactionStatus === 'success' || transactionStatus === 'captured') {
       paymentStatus = 'paid';
     } else if (transactionStatus === 'refused' || transactionStatus === 'failed' || transactionStatus === 'canceled') {
       paymentStatus = 'failed';
