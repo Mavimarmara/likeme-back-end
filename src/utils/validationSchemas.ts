@@ -264,7 +264,7 @@ export const createOrderSchema = Joi.object({
     cardHolderName: Joi.string().min(3).max(100).required(),
     cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
     cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
-    cpf: Joi.string().pattern(/^[\d.-]+$/).optional(),
+    cpf: Joi.string().pattern(/^[\d.-]+$/).min(11).max(14).optional(),
   }).optional(),
 });
 
@@ -363,7 +363,7 @@ export const processPaymentSchema = Joi.object({
     cardHolderName: Joi.string().min(3).max(100).required(),
     cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
     cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
-    cpf: Joi.string().pattern(/^[\d.-]+$/).optional(),
+    cpf: Joi.string().pattern(/^[\d.-]+$/).min(11).max(14).optional(),
   }).required(),
   billingAddress: Joi.object({
     country: Joi.string().default('br'),

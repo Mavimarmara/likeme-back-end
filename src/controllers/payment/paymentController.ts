@@ -91,13 +91,29 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
     };
 
     // Buscar CPF - OBRIGATÓRIO para Pagarme (tipo individual)
-    // Prioriza CPF enviado no cardData, senão busca do campo nationalRegistration da Person
-    let cpf = cardData?.cpf?.replace(/\D/g, '') || '';
+    // GARANTE que CPF do cardData seja sempre usado quando presente
+    let cpf = '';
     
-    if (!cpf || cpf.length < 11) {
-      cpf = order.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+    // PRIORIDADE ABSOLUTA: CPF do cardData (enviado pelo frontend)
+    if (cardData?.cpf) {
+      cpf = cardData.cpf.replace(/\D/g, '');
+      if (cpf.length >= 11) {
+        console.log('[PaymentController] ✅ CPF do cardData será usado:', cpf.substring(0, 3) + '***' + cpf.substring(cpf.length - 2));
+      } else {
+        console.warn('[PaymentController] ⚠️  CPF do cardData inválido (menos de 11 dígitos), tentando fallback');
+        cpf = '';
+      }
     }
     
+    // Fallback: CPF do perfil do usuário (nationalRegistration)
+    if (!cpf || cpf.length < 11) {
+      cpf = order.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+      if (cpf && cpf.length >= 11) {
+        console.log('[PaymentController] ℹ️  Usando CPF do perfil do usuário (nationalRegistration)');
+      }
+    }
+    
+    // Validação final: CPF é obrigatório
     if (!cpf || cpf.length < 11) {
       sendError(res, 'CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário ou no formulário de pagamento.', 400);
       return;
