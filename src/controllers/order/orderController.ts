@@ -80,7 +80,9 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
     
-    sendError(res, 'Erro ao criar pedido');
+    // Se chegou aqui, é um erro não tratado - mostrar mensagem do erro se disponível
+    const errorMessage = error?.message || 'Erro ao criar pedido';
+    sendError(res, errorMessage, 500);
   }
 };
 
