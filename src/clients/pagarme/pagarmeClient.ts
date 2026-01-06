@@ -202,6 +202,19 @@ export async function createCreditCardTransaction(params: {
   };
     console.log('[Pagarme] 📤 Enviando requisição completa:', JSON.stringify(logData, null, 2));
     console.log('[Pagarme] Split configurado:', validSplit ? `${validSplit.length} split(s)` : 'Nenhum split');
+    if (validSplit && validSplit.length > 0) {
+      console.log('[Pagarme] 📊 Detalhes do Split que será enviado:');
+      validSplit.forEach((splitItem, index) => {
+        console.log(`[Pagarme]   Split ${index + 1}:`, {
+          type: splitItem.type,
+          amount: splitItem.amount,
+          recipient_id: splitItem.recipient_id?.substring(0, 20) + '...',
+          charge_processing_fee: splitItem.options?.charge_processing_fee ?? false,
+          charge_remainder_fee: splitItem.options?.charge_remainder_fee ?? false,
+          liable: splitItem.options?.liable ?? false,
+        });
+      });
+    }
 
   try {
     // Preparar telefones - API v5 espera objeto com home_phone e mobile_phone
