@@ -322,16 +322,16 @@ export async function createCreditCardTransaction(params: {
       
       // Se errors for um objeto (não array), extrair mensagens de cada propriedade
       if (responseData.errors && typeof responseData.errors === 'object' && !Array.isArray(responseData.errors)) {
-        Object.keys(responseData.errors).forEach((key: string) => {
-          const errorValue = responseData.errors[key];
+        Object.keys(responseData.errors).forEach((key) => {
+          const errorValue = (responseData.errors as any)[key];
           if (Array.isArray(errorValue)) {
             errorValue.forEach((msg: any) => {
-              errorMessages.push(`${key}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
+              errorMessages.push(`${String(key)}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
             });
           } else if (typeof errorValue === 'string') {
-            errorMessages.push(`${key}: ${errorValue}`);
+            errorMessages.push(`${String(key)}: ${errorValue}`);
           } else {
-            errorMessages.push(`${key}: ${JSON.stringify(errorValue)}`);
+            errorMessages.push(`${String(key)}: ${JSON.stringify(errorValue)}`);
           }
         });
       } else if (Array.isArray(errors) && errors.length > 0) {
