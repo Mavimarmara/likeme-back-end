@@ -57,6 +57,7 @@ export class RecipientService {
       const recipient = await createRecipient(recipientData);
 
       if (recipient && recipient.id) {
+        console.log('[RecipientService] ✅ Recipient criado com sucesso na Pagarme:', recipient.id);
         const transferSettings = recipient.transfer_settings || {};
         const transferEnabled = transferSettings.transfer_enabled === true || transferSettings.transfer_enabled === 'true';
 
@@ -85,7 +86,15 @@ export class RecipientService {
         return recipient.id;
       }
     } catch (error: any) {
-      console.error('[RecipientService] Erro ao criar recipient:', error);
+      console.error('[RecipientService] ❌ Erro ao criar recipient:', error);
+      
+      // Se for erro de permissão, logar informação útil
+      if (error.message && error.message.includes('not allowed to create a recipient')) {
+        console.error('[RecipientService] ⚠️  ATENÇÃO: Conta Pagarme não tem permissão para criar recipients.');
+        console.error('[RecipientService] ⚠️  É necessário habilitar Marketplace/Recipients na conta Pagarme.');
+        console.error('[RecipientService] ⚠️  Entre em contato com suporte@pagarme.com para habilitar esta funcionalidade.');
+      }
+      
       throw error;
     }
 

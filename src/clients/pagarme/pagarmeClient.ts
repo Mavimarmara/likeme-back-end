@@ -633,6 +633,12 @@ export async function createRecipient(
       }
       
       const finalMessage = errorMessages.join('; ');
+      
+      // Verificar se é erro de permissão específico
+      if (response.status === 412 && finalMessage.includes('not allowed to create a recipient')) {
+        throw new Error(`Conta Pagarme não tem permissão para criar recipients. É necessário habilitar a funcionalidade de Marketplace/Recipients na conta Pagarme. Entre em contato com o suporte da Pagarme para habilitar esta funcionalidade.`);
+      }
+      
       throw new Error(`Erro ao criar recebedor na Pagarme (${response.status}): ${finalMessage}`);
     }
 
