@@ -4,220 +4,242 @@
 
 ```mermaid
 graph TB
-    subgraph "Frontend"
-        APP[React Native App]
+    subgraph Frontend["📱 Frontend"]
+        APP["React Native App"]
     end
 
-    subgraph "Backend API"
-        SERVER[Express Server]
+    subgraph Backend["⚙️ Backend API"]
+        SERVER["Express Server"]
         
-        subgraph "Routes Layer"
-            AUTH_ROUTES[Auth Routes]
-            USER_ROUTES[User Routes]
-            PRODUCT_ROUTES[Product Routes]
-            ORDER_ROUTES[Order Routes]
-            PAYMENT_ROUTES[Payment Routes]
-            ACTIVITY_ROUTES[Activity Routes]
-            COMMUNITY_ROUTES[Community Routes]
+        subgraph Routes["🛣️ Routes Layer"]
+            AUTH_R["Auth"]
+            USER_R["User"]
+            PRODUCT_R["Product"]
+            ORDER_R["Order"]
+            PAYMENT_R["Payment"]
+            ACTIVITY_R["Activity"]
+            COMMUNITY_R["Community"]
         end
         
-        subgraph "Controllers Layer"
-            AUTH_CTRL[Auth Controller]
-            USER_CTRL[User Controller]
-            PRODUCT_CTRL[Product Controller]
-            ORDER_CTRL[Order Controller]
-            PAYMENT_CTRL[Payment Controller]
-            ACTIVITY_CTRL[Activity Controller]
-            COMMUNITY_CTRL[Community Controller]
+        subgraph Controllers["🎮 Controllers"]
+            AUTH_C["Auth Controller"]
+            USER_C["User Controller"]
+            PRODUCT_C["Product Controller"]
+            ORDER_C["Order Controller"]
+            PAYMENT_C["Payment Controller"]
+            ACTIVITY_C["Activity Controller"]
+            COMMUNITY_C["Community Controller"]
         end
         
-        subgraph "Services Layer"
-            USER_SVC[User Service]
-            PRODUCT_SVC[Product Service]
-            ORDER_SVC[Order Service]
-            PAYMENT_SVC[Payment Service]
-            PAYMENT_SPLIT[Payment Split Service]
-            RECIPIENT_SVC[Recipient Service]
-            ACTIVITY_SVC[Activity Service]
-            COMMUNITY_SVC[Community Service]
+        subgraph Services["🔧 Services"]
+            USER_S["User Service"]
+            PRODUCT_S["Product Service"]
+            ORDER_S["Order Service"]
+            PAYMENT_S["Payment Service"]
+            PAYMENT_SPLIT["Payment Split"]
+            RECIPIENT_S["Recipient Service"]
+            ACTIVITY_S["Activity Service"]
+            COMMUNITY_S["Community Service"]
         end
         
-        subgraph "External Clients"
-            PAGARME[Pagarme Client]
-            AUTH0[Auth0]
-            SOCIAL_PLUS[Social.plus SDK]
-            AMAZON[Amazon Client]
-            CLOUDINARY[Cloudinary]
+        subgraph External["🌐 External APIs"]
+            PAGARME["Pagarme"]
+            AUTH0["Auth0"]
+            SOCIAL_PLUS["Social.plus"]
+            AMAZON["Amazon"]
+            CLOUDINARY["Cloudinary"]
         end
         
-        subgraph "Database"
-            PRISMA[Prisma ORM]
-            POSTGRES[(PostgreSQL)]
+        subgraph Database["💾 Database"]
+            PRISMA["Prisma ORM"]
+            POSTGRES[("PostgreSQL")]
         end
         
-        subgraph "Middleware"
-            AUTH_MW[Auth Middleware]
-            VALIDATION_MW[Validation Middleware]
-            ERROR_MW[Error Handler]
-            RATE_LIMIT[Rate Limiter]
+        subgraph Middleware["🛡️ Middleware"]
+            AUTH_MW["Auth"]
+            VALIDATION_MW["Validation"]
+            ERROR_MW["Error Handler"]
+            RATE_LIMIT["Rate Limiter"]
         end
     end
 
     APP -->|HTTPS| SERVER
-    SERVER --> AUTH_ROUTES
-    SERVER --> USER_ROUTES
-    SERVER --> PRODUCT_ROUTES
-    SERVER --> ORDER_ROUTES
-    SERVER --> PAYMENT_ROUTES
-    SERVER --> ACTIVITY_ROUTES
-    SERVER --> COMMUNITY_ROUTES
     
-    AUTH_ROUTES --> AUTH_MW
-    AUTH_ROUTES --> AUTH_CTRL
-    USER_ROUTES --> AUTH_MW
-    USER_ROUTES --> USER_CTRL
-    PRODUCT_ROUTES --> AUTH_MW
-    PRODUCT_ROUTES --> PRODUCT_CTRL
-    ORDER_ROUTES --> AUTH_MW
-    ORDER_ROUTES --> ORDER_CTRL
-    PAYMENT_ROUTES --> AUTH_MW
-    PAYMENT_ROUTES --> PAYMENT_CTRL
-    ACTIVITY_ROUTES --> AUTH_MW
-    ACTIVITY_ROUTES --> ACTIVITY_CTRL
-    COMMUNITY_ROUTES --> AUTH_MW
-    COMMUNITY_ROUTES --> COMMUNITY_CTRL
+    SERVER --> Routes
+    Routes --> Middleware
+    Routes --> Controllers
+    Controllers --> Services
+    Services --> Database
+    Services --> External
     
-    AUTH_CTRL --> AUTH0
-    AUTH_CTRL --> USER_SVC
-    USER_CTRL --> USER_SVC
-    PRODUCT_CTRL --> PRODUCT_SVC
-    ORDER_CTRL --> ORDER_SVC
-    PAYMENT_CTRL --> PAYMENT_SVC
-    ACTIVITY_CTRL --> ACTIVITY_SVC
-    COMMUNITY_CTRL --> COMMUNITY_SVC
+    AUTH_R --> AUTH_C
+    USER_R --> USER_C
+    PRODUCT_R --> PRODUCT_C
+    ORDER_R --> ORDER_C
+    PAYMENT_R --> PAYMENT_C
+    ACTIVITY_R --> ACTIVITY_C
+    COMMUNITY_R --> COMMUNITY_C
     
-    ORDER_SVC --> PAYMENT_SVC
-    ORDER_SVC --> PRODUCT_SVC
-    PAYMENT_SVC --> PAYMENT_SPLIT
-    PAYMENT_SVC --> PAGARME
-    PAYMENT_SVC --> RECIPIENT_SVC
-    RECIPIENT_SVC --> PAGARME
-    COMMUNITY_SVC --> SOCIAL_PLUS
+    AUTH_C --> AUTH0
+    AUTH_C --> USER_S
+    USER_C --> USER_S
+    PRODUCT_C --> PRODUCT_S
+    ORDER_C --> ORDER_S
+    PAYMENT_C --> PAYMENT_S
+    ACTIVITY_C --> ACTIVITY_S
+    COMMUNITY_C --> COMMUNITY_S
     
-    USER_SVC --> PRISMA
-    PRODUCT_SVC --> PRISMA
-    ORDER_SVC --> PRISMA
-    PAYMENT_SVC --> PRISMA
-    ACTIVITY_SVC --> PRISMA
-    COMMUNITY_SVC --> PRISMA
+    ORDER_S --> PAYMENT_S
+    ORDER_S --> PRODUCT_S
+    PAYMENT_S --> PAYMENT_SPLIT
+    PAYMENT_S --> PAGARME
+    PAYMENT_S --> RECIPIENT_S
+    RECIPIENT_S --> PAGARME
+    COMMUNITY_S --> SOCIAL_PLUS
+    
+    USER_S --> PRISMA
+    PRODUCT_S --> PRISMA
+    ORDER_S --> PRISMA
+    PAYMENT_S --> PRISMA
+    ACTIVITY_S --> PRISMA
+    COMMUNITY_S --> PRISMA
     
     PRISMA --> POSTGRES
     
     AUTH_MW --> AUTH0
-    VALIDATION_MW --> SERVER
-    ERROR_MW --> SERVER
-    RATE_LIMIT --> SERVER
+    
+    classDef frontend fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef database fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    
+    class APP frontend
+    class SERVER,Routes,Controllers,Services,Middleware backend
+    class PAGARME,AUTH0,SOCIAL_PLUS,AMAZON,CLOUDINARY external
+    class PRISMA,POSTGRES database
 ```
 
 ## Fluxo de Pagamento
 
 ```mermaid
 sequenceDiagram
-    participant App as React Native App
-    participant API as Backend API
-    participant OrderSvc as Order Service
-    participant PaymentSvc as Payment Service
-    participant SplitSvc as Payment Split Service
-    participant Pagarme as Pagarme API
-    participant DB as PostgreSQL
+    autonumber
+    participant App as 📱 React Native App
+    participant API as ⚙️ Backend API
+    participant OrderSvc as 🛒 Order Service
+    participant PaymentSvc as 💳 Payment Service
+    participant SplitSvc as 🔀 Payment Split Service
+    participant Pagarme as 🌐 Pagarme API
+    participant DB as 💾 PostgreSQL
 
-    App->>API: POST /api/orders (com cardData)
-    API->>OrderSvc: createOrder()
-    OrderSvc->>DB: Criar Order
-    OrderSvc->>PaymentSvc: processPaymentForOrder()
-    PaymentSvc->>SplitSvc: calculateSplit()
-    SplitSvc-->>PaymentSvc: splitRules[]
-    PaymentSvc->>Pagarme: createCreditCardTransaction (com split)
-    Pagarme-->>PaymentSvc: transaction (status: captured/paid)
-    PaymentSvc->>DB: Atualizar Order (paymentStatus)
-    PaymentSvc-->>OrderSvc: paymentResult
-    OrderSvc-->>API: orderCreated
-    API-->>App: Order Response
+    App->>+API: POST /api/orders<br/>(com cardData)
+    API->>+OrderSvc: createOrder()
+    OrderSvc->>+DB: Criar Order
+    DB-->>-OrderSvc: Order criado
+    OrderSvc->>+PaymentSvc: processPaymentForOrder()
+    PaymentSvc->>+SplitSvc: calculateSplit()
+    SplitSvc-->>-PaymentSvc: splitRules[]
+    PaymentSvc->>+Pagarme: createCreditCardTransaction<br/>(com split)
+    Pagarme-->>-PaymentSvc: transaction<br/>(status: captured/paid)
+    PaymentSvc->>+DB: Atualizar Order<br/>(paymentStatus)
+    DB-->>-PaymentSvc: Order atualizado
+    PaymentSvc-->>-OrderSvc: paymentResult
+    OrderSvc-->>-API: orderCreated
+    API-->>-App: Order Response
 ```
 
 ## Modelo de Dados Principal
 
 ```mermaid
 erDiagram
-    Person ||--o| User : "has"
-    Person ||--o{ PersonContact : "has"
-    User ||--o{ Order : "creates"
-    User ||--o| Advertiser : "can be"
-    User ||--o{ Activity : "creates"
-    User ||--o{ Product : "sells"
-    Advertiser ||--o{ Product : "owns"
-    Order ||--o{ OrderItem : "contains"
-    OrderItem }o--|| Product : "references"
-    Order ||--o| Payment : "has"
-    Advertiser ||--o| PagarmeRecipient : "has"
-    User ||--o{ UserPersonalObjective : "has"
-    UserPersonalObjective }o--|| PersonalObjective : "references"
-    User ||--o{ CommunityMember : "belongs to"
-    CommunityMember }o--|| Community : "references"
+    Person ||--o| User : "tem"
+    Person ||--o{ PersonContact : "tem"
+    User ||--o{ Order : "cria"
+    User ||--o| Advertiser : "pode ser"
+    User ||--o{ Activity : "cria"
+    User ||--o{ Product : "vende"
+    Advertiser ||--o{ Product : "possui"
+    Order ||--o{ OrderItem : "contém"
+    OrderItem }o--|| Product : "referencia"
+    Advertiser ||--o| PagarmeRecipient : "tem"
+    User ||--o{ UserPersonalObjective : "tem"
+    UserPersonalObjective }o--|| PersonalObjective : "referencia"
+    User ||--o{ CommunityMember : "pertence a"
+    CommunityMember }o--|| Community : "referencia"
 
     Person {
-        string id PK
+        uuid id PK
         string firstName
         string lastName
-        string nationalRegistration
-        datetime birthdate
+        string nationalRegistration "CPF"
+        date birthdate
+        datetime createdAt
     }
     
     User {
-        string id PK
-        string personId FK
+        uuid id PK
+        uuid personId FK
         string username
         string socialPlusUserId
         boolean isActive
+        datetime createdAt
     }
     
     Product {
-        string id PK
-        string sellerId FK
+        uuid id PK
+        uuid sellerId FK
         string name
         decimal price
         int quantity
         string status
+        string sku
     }
     
     Order {
-        string id PK
-        string userId FK
+        uuid id PK
+        uuid userId FK
         string status
         string paymentStatus
         string paymentTransactionId
         decimal totalAmount
+        datetime createdAt
     }
     
     OrderItem {
-        string id PK
-        string orderId FK
-        string productId FK
+        uuid id PK
+        uuid orderId FK
+        uuid productId FK
         int quantity
         decimal unitPrice
     }
     
     Advertiser {
-        string id PK
-        string userId FK
+        uuid id PK
+        uuid userId FK
         string pagarmeRecipientId
     }
     
     PagarmeRecipient {
-        string id PK
+        uuid id PK
         string recipientId
         string document
+        string type "individual|company"
+    }
+    
+    Activity {
+        uuid id PK
+        uuid userId FK
+        string title
+        string description
+        datetime createdAt
+    }
+    
+    Community {
+        uuid id PK
+        uuid createdBy FK
+        string name
         string type
+        string socialPlusCommunityId
     }
 ```
 
@@ -225,55 +247,59 @@ erDiagram
 
 ```mermaid
 sequenceDiagram
-    participant App as React Native App
-    participant API as Backend API
-    participant Auth0 as Auth0
-    participant DB as PostgreSQL
+    autonumber
+    participant App as 📱 React Native App
+    participant API as ⚙️ Backend API
+    participant Auth0 as 🔐 Auth0
+    participant DB as 💾 PostgreSQL
 
-    App->>Auth0: Login (OAuth)
-    Auth0-->>App: idToken
-    App->>API: POST /api/auth/login (idToken)
-    API->>Auth0: Verify idToken
-    Auth0-->>API: User Info
-    API->>DB: Find/Create User
-    DB-->>API: User
-    API->>DB: Create JWT Token
-    API-->>App: JWT Token + User Data
+    Note over App,Auth0: Login Inicial
+    App->>+Auth0: Login (OAuth)
+    Auth0-->>-App: idToken
     
-    Note over App,API: Subsequent Requests
-    App->>API: Request (Bearer JWT)
+    App->>+API: POST /api/auth/login<br/>(idToken)
+    API->>+Auth0: Verify idToken
+    Auth0-->>-API: User Info
+    API->>+DB: Find/Create User
+    DB-->>-API: User
+    API->>API: Create JWT Token
+    API-->>-App: JWT Token + User Data
+    
+    Note over App,API: Requisições Subsequentes
+    App->>+API: Request<br/>(Bearer JWT)
     API->>API: Validate JWT
-    API->>DB: Get User
-    API-->>App: Response
+    API->>+DB: Get User
+    DB-->>-API: User
+    API-->>-App: Response
 ```
 
 ## Estrutura de Módulos
 
 ```mermaid
-graph LR
-    subgraph "Core Modules"
-        AUTH[Authentication]
-        USER[User Management]
-        PERSON[Person Management]
+graph TD
+    subgraph Core["🔐 Core Modules"]
+        AUTH["🔑 Authentication"]
+        USER["👤 User Management"]
+        PERSON["👥 Person Management"]
     end
     
-    subgraph "Marketplace Modules"
-        PRODUCT[Products]
-        ORDER[Orders]
-        PAYMENT[Payments]
-        ADVERTISER[Advertisers]
+    subgraph Marketplace["🛒 Marketplace Modules"]
+        PRODUCT["📦 Products"]
+        ORDER["🛍️ Orders"]
+        PAYMENT["💳 Payments"]
+        ADVERTISER["📢 Advertisers"]
     end
     
-    subgraph "Wellness Modules"
-        ACTIVITY[Activities]
-        OBJECTIVE[Objectives]
-        TIP[Tips]
-        COMMUNITY[Communities]
+    subgraph Wellness["💚 Wellness Modules"]
+        ACTIVITY["🏃 Activities"]
+        OBJECTIVE["🎯 Objectives"]
+        TIP["💡 Tips"]
+        COMMUNITY["👥 Communities"]
     end
     
-    subgraph "Content Modules"
-        AD[Ads]
-        AMAZON[Amazon Integration]
+    subgraph Content["📰 Content Modules"]
+        AD["📺 Ads"]
+        AMAZON["🛒 Amazon Integration"]
     end
     
     AUTH --> USER
@@ -285,5 +311,15 @@ graph LR
     USER --> ACTIVITY
     USER --> OBJECTIVE
     USER --> COMMUNITY
+    
+    classDef core fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    classDef marketplace fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef wellness fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef content fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class AUTH,USER,PERSON core
+    class PRODUCT,ORDER,PAYMENT,ADVERTISER marketplace
+    class ACTIVITY,OBJECTIVE,TIP,COMMUNITY wellness
+    class AD,AMAZON content
 ```
 
