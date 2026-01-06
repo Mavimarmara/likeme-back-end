@@ -118,17 +118,19 @@ export async function createCreditCardTransaction(params: {
       email: params.customer.email,
       type: customerType,
       document: params.customer.documents?.[0]?.number?.replace(/\D/g, '') || '',
-      ...(params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 && {
-        phones: params.customer.phoneNumbers.map(phone => {
-          const cleanPhone = phone.replace(/\D/g, '');
-          const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
-          const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
-          return {
-            country_code: '55',
-            area_code: areaCode,
-            number: number,
-          };
-        }),
+      // Telefone é OBRIGATÓRIO para Pagarme - sempre incluir
+      phones: (params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 
+        ? params.customer.phoneNumbers 
+        : ['11999999999'] // Telefone padrão se não fornecido
+      ).map(phone => {
+        const cleanPhone = phone.replace(/\D/g, '');
+        const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
+        const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
+        return {
+          country_code: '55',
+          area_code: areaCode,
+          number: number,
+        };
       }),
     },
     payments: [

@@ -306,12 +306,18 @@ export class OrderService {
       },
     ];
 
-    // Buscar telefone se disponível
+    // Buscar telefone - OBRIGATÓRIO para Pagarme
     const phoneContact = orderWithUser.user.person.contacts?.find(
       (contact: any) => (contact.type === 'phone' || contact.type === 'whatsapp') && !contact.deletedAt
     );
+    
     if (phoneContact?.value) {
       customerData.phoneNumbers = [phoneContact.value];
+    } else {
+      // Se não houver telefone cadastrado, usar telefone padrão para evitar erro da Pagarme
+      // A Pagarme exige pelo menos um telefone do cliente
+      console.warn('[OrderService] ⚠️  Telefone não encontrado no perfil do usuário. Usando telefone padrão.');
+      customerData.phoneNumbers = ['11999999999']; // Telefone padrão (11 99999-9999)
     }
 
     // Converter total para centavos
