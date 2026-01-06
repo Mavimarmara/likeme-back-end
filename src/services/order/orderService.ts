@@ -192,6 +192,8 @@ export class OrderService {
           where: { id: order.id },
           data: { paymentStatus: 'failed' },
         });
+        // Re-throw o erro para que o controller possa tratá-lo
+        throw error;
         // Reverter estoque dos produtos
         for (const item of orderData.items) {
           await this.updateProductStock(item.productId, -item.quantity);
