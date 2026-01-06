@@ -25,3 +25,16 @@ export interface OrderQueryFilters {
   paymentStatus?: string;
 }
 
+export interface CartItemValidation {
+  productId: string;
+  valid: boolean;
+  reason?: 'not_found' | 'out_of_stock' | 'insufficient_stock' | 'external_url' | 'no_price' | 'inactive';
+  availableQuantity?: number;
+  requestedQuantity?: number;
+}
+
+export interface ValidateCartItemsResponse {
+  validItems: OrderItemInput[];
+  invalidItems: CartItemValidation[];
+}
+

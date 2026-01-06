@@ -91,11 +91,15 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
     };
 
     // Buscar CPF - OBRIGATÓRIO para Pagarme (tipo individual)
-    // CPF deve estar no campo nationalRegistration da Person
-    const cpf = order.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+    // Prioriza CPF enviado no cardData, senão busca do campo nationalRegistration da Person
+    let cpf = cardData?.cpf?.replace(/\D/g, '') || '';
     
     if (!cpf || cpf.length < 11) {
-      sendError(res, 'CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário.', 400);
+      cpf = order.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+    }
+    
+    if (!cpf || cpf.length < 11) {
+      sendError(res, 'CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário ou no formulário de pagamento.', 400);
       return;
     }
     
@@ -186,8 +190,21 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
 
     if (transactionStatus === 'paid' || transactionStatus === 'authorized') {
       paymentStatus = 'paid';
-    } else if (transactionStatus === 'refused' || transactionStatus === 'processing') {
+    } else if (transactionStatus === 'refused' || transactionStatus === 'failed' || transactionStatus === 'canceled') {
       paymentStatus = 'failed';
+      
+      // Retornar erro quando o pagamento é recusado
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { paymentStatus: 'failed' },
+      });
+
+      sendError(
+        res,
+        `Pagamento recusado pela Pagarme. Status: ${transactionStatus}`,
+        400
+      );
+      return;
     }
 
     // Atualizar pedido com informações do pagamento

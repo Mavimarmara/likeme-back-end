@@ -228,6 +228,10 @@ export const orderItemSchema = Joi.object({
   discount: Joi.number().min(0).precision(2).default(0),
 });
 
+export const validateCartItemsSchema = Joi.object({
+  items: Joi.array().items(orderItemSchema).min(1).required(),
+});
+
 export const createOrderSchema = Joi.object({
   userId: Joi.string().optional(),
   items: Joi.array().items(orderItemSchema).min(1).required(),
@@ -260,6 +264,7 @@ export const createOrderSchema = Joi.object({
     cardHolderName: Joi.string().min(3).max(100).required(),
     cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
     cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
+    cpf: Joi.string().pattern(/^[\d.-]+$/).optional(),
   }).optional(),
 });
 
@@ -358,6 +363,7 @@ export const processPaymentSchema = Joi.object({
     cardHolderName: Joi.string().min(3).max(100).required(),
     cardExpirationDate: Joi.string().pattern(/^\d{4}$/).length(4).required(),
     cardCvv: Joi.string().pattern(/^\d+$/).min(3).max(4).required(),
+    cpf: Joi.string().pattern(/^[\d.-]+$/).optional(),
   }).required(),
   billingAddress: Joi.object({
     country: Joi.string().default('br'),

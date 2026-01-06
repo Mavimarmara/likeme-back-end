@@ -6,11 +6,13 @@ import {
   updateOrder,
   deleteOrder,
   cancelOrder,
+  validateCartItems,
 } from '@/controllers/order/orderController';
 import {
   createOrderSchema,
   updateOrderSchema,
   idParamSchema,
+  validateCartItemsSchema,
 } from '@/utils/validationSchemas';
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';
@@ -21,6 +23,7 @@ const router = Router();
 router.use(authenticateToken);
 router.use(requireAuth);
 
+router.post('/validate-cart', generalRateLimiter, validate(validateCartItemsSchema), validateCartItems);
 router.post('/', generalRateLimiter, validate(createOrderSchema), createOrder);
 router.get('/', generalRateLimiter, getAllOrders);
 router.get('/:id', generalRateLimiter, validateParams(idParamSchema), getOrderById);

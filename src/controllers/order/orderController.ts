@@ -199,3 +199,20 @@ export const cancelOrder = async (req: AuthenticatedRequest, res: Response): Pro
     sendError(res, 'Error cancelling order');
   }
 };
+
+export const validateCartItems = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      sendError(res, 'Items array is required', 400);
+      return;
+    }
+
+    const validation = await orderService.validateCartItems(items);
+    sendSuccess(res, validation, 'Cart items validated successfully');
+  } catch (error: any) {
+    console.error('Validate cart items error:', error);
+    sendError(res, 'Erro ao validar itens do carrinho');
+  }
+};

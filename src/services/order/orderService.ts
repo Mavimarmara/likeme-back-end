@@ -13,6 +13,8 @@ import type {
   OrderItemInput,
   CreateOrderData,
   OrderQueryFilters,
+  CartItemValidation,
+  ValidateCartItemsResponse,
 } from '@/interfaces/order/order';
 
 export class OrderAuthorizationError extends Error {
@@ -270,11 +272,15 @@ export class OrderService {
     };
 
     // Buscar CPF - OBRIGATÓRIO para Pagarme (tipo individual)
-    // CPF deve estar no campo nationalRegistration da Person
-    const cpf = orderWithUser.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+    // Prioriza CPF enviado no cardData, senão busca do campo nationalRegistration da Person
+    let cpf = cardData?.cpf?.replace(/\D/g, '') || '';
     
     if (!cpf || cpf.length < 11) {
-      throw new Error('CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário.');
+      cpf = orderWithUser.user.person.nationalRegistration?.replace(/\D/g, '') || '';
+    }
+    
+    if (!cpf || cpf.length < 11) {
+      throw new Error('CPF do cliente é obrigatório para processar pagamentos. Por favor, adicione o CPF no perfil do usuário ou no formulário de pagamento.');
     }
     
     customerData.documents = [
@@ -559,6 +565,74 @@ export class OrderService {
     });
 
     return updatedOrder as Order;
+  }
+
+  async validateCartItems(items: OrderItemInput[]): Promise<ValidateCartItemsResponse> {
+    const validItems: OrderItemInput[] = [];
+    const invalidItems: CartItemValidation[] = [];
+
+    for (const item of items) {
+      const validation: CartItemValidation = {
+        productId: item.productId,
+        valid: false,
+        requestedQuantity: item.quantity,
+      };
+
+      try {
+        const product = await productService.findById(item.productId);
+
+        if (!product) {
+          validation.reason = 'not_found';
+          invalidItems.push(validation);
+          continue;
+        }
+
+        if (product.status !== 'active') {
+          validation.reason = 'inactive';
+          invalidItems.push(validation);
+          continue;
+        }
+
+        if (product.externalUrl) {
+          validation.reason = 'external_url';
+          invalidItems.push(validation);
+          continue;
+        }
+
+        if (product.price === null || product.price === undefined) {
+          validation.reason = 'no_price';
+          invalidItems.push(validation);
+          continue;
+        }
+
+        const availableQuantity = product.quantity ?? 0;
+
+        if (availableQuantity === 0) {
+          validation.reason = 'out_of_stock';
+          validation.availableQuantity = 0;
+          invalidItems.push(validation);
+          continue;
+        }
+
+        if (availableQuantity < item.quantity) {
+          validation.reason = 'insufficient_stock';
+          validation.availableQuantity = availableQuantity;
+          invalidItems.push(validation);
+          continue;
+        }
+
+        validation.valid = true;
+        validItems.push(item);
+      } catch (error) {
+        validation.reason = 'not_found';
+        invalidItems.push(validation);
+      }
+    }
+
+    return {
+      validItems,
+      invalidItems,
+    };
   }
 }
 

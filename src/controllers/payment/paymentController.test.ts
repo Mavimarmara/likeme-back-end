@@ -90,6 +90,14 @@ describe('Payment Endpoints', () => {
       },
     });
 
+    // Garantir que o usuário tem CPF no nationalRegistration
+    if (testUser?.person) {
+      await prisma.person.update({
+        where: { id: testUser.person.id },
+        data: { nationalRegistration: '12345678901' },
+      });
+    }
+
     // Criar produto de teste
     testProduct = await prisma.product.create({
       data: {
@@ -154,6 +162,7 @@ describe('Payment Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901', // CPF para o teste
         },
         billingAddress: {
           country: 'br',
@@ -300,7 +309,11 @@ describe('Payment Endpoints', () => {
     });
 
     it('should handle Pagarme transaction error', async () => {
-      createCreditCardTransaction.mockRejectedValue(new Error('Transaction refused'));
+      // Mock para retornar status 'refused' ao invés de lançar erro
+      createCreditCardTransaction.mockResolvedValue({
+        id: 'trans_refused',
+        status: 'refused',
+      });
 
       const paymentData = {
         orderId: testOrder.id,
@@ -309,6 +322,7 @@ describe('Payment Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901', // CPF para o teste
         },
         billingAddress: {
           country: 'br',
@@ -527,6 +541,239 @@ describe('Payment Endpoints', () => {
         .post('/api/payment/refund/trans_123456');
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe('CPF handling', () => {
+    it('should use CPF from cardData when provided', async () => {
+      const { createCreditCardTransaction } = require('@/clients/pagarme/pagarmeClient');
+      createCreditCardTransaction.mockClear();
+      createCreditCardTransaction.mockResolvedValue({
+        id: 'trans_test_cpf',
+        status: 'paid',
+      });
+
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(authToken, process.env.JWT_SECRET || 'test-secret') as { userId: string };
+      const authenticatedUser = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { person: true },
+      });
+
+      const product = await prisma.product.create({
+        data: {
+          name: 'Test Product',
+          description: 'Test',
+          price: 100,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
+      const order = await prisma.order.create({
+        data: {
+          userId: authenticatedUser!.id,
+          status: 'pending',
+          subtotal: 100,
+          shippingCost: 0,
+          tax: 0,
+          total: 100,
+          items: {
+            create: {
+              productId: product.id,
+              quantity: 1,
+              unitPrice: 100,
+              discount: 0,
+              total: 100,
+            },
+          },
+        },
+      });
+      testDataTracker.add('order', order.id);
+
+      const response = await request(app)
+        .post('/api/payment/process')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          orderId: order.id,
+          cardData: {
+            cardNumber: '4111111111111111',
+            cardHolderName: 'Test User',
+            cardExpirationDate: '1225',
+            cardCvv: '123',
+            cpf: '12345678901', // CPF enviado pelo frontend
+          },
+          billingAddress: {
+            country: 'br',
+            state: 'SP',
+            city: 'São Paulo',
+            street: 'Av. Test',
+            streetNumber: '123',
+            zipcode: '01234567',
+          },
+        });
+
+      expect(response.status).toBe(200);
+      expect(createCreditCardTransaction).toHaveBeenCalled();
+      const callArgs = createCreditCardTransaction.mock.calls[0][0];
+      expect(callArgs.customer.documents).toBeDefined();
+      expect(callArgs.customer.documents[0].number).toBe('12345678901');
+    });
+
+    it('should fallback to nationalRegistration when CPF not in cardData', async () => {
+      const { createCreditCardTransaction } = require('@/clients/pagarme/pagarmeClient');
+      createCreditCardTransaction.mockClear();
+      createCreditCardTransaction.mockResolvedValue({
+        id: 'trans_test_fallback',
+        status: 'paid',
+      });
+
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(authToken, process.env.JWT_SECRET || 'test-secret') as { userId: string };
+      const authenticatedUser = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { person: true },
+      });
+
+      // Atualizar person com nationalRegistration
+      await prisma.person.update({
+        where: { id: authenticatedUser!.personId },
+        data: { nationalRegistration: '98765432100' },
+      });
+
+      const product = await prisma.product.create({
+        data: {
+          name: 'Test Product',
+          description: 'Test',
+          price: 100,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
+      const order = await prisma.order.create({
+        data: {
+          userId: authenticatedUser!.id,
+          status: 'pending',
+          subtotal: 100,
+          shippingCost: 0,
+          tax: 0,
+          total: 100,
+          items: {
+            create: {
+              productId: product.id,
+              quantity: 1,
+              unitPrice: 100,
+              discount: 0,
+              total: 100,
+            },
+          },
+        },
+      });
+      testDataTracker.add('order', order.id);
+
+      const response = await request(app)
+        .post('/api/payment/process')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          orderId: order.id,
+          cardData: {
+            cardNumber: '4111111111111111',
+            cardHolderName: 'Test User',
+            cardExpirationDate: '1225',
+            cardCvv: '123',
+            // CPF não fornecido - deve usar nationalRegistration
+          },
+          billingAddress: {
+            country: 'br',
+            state: 'SP',
+            city: 'São Paulo',
+            street: 'Av. Test',
+            streetNumber: '123',
+            zipcode: '01234567',
+          },
+        });
+
+      expect(response.status).toBe(200);
+      expect(createCreditCardTransaction).toHaveBeenCalled();
+      const callArgs = createCreditCardTransaction.mock.calls[0][0];
+      expect(callArgs.customer.documents).toBeDefined();
+      expect(callArgs.customer.documents[0].number).toBe('98765432100');
+    });
+
+    it('should return error when CPF is not available in nationalRegistration or cardData', async () => {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(authToken, process.env.JWT_SECRET || 'test-secret') as { userId: string };
+      const authenticatedUser = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { person: true },
+      });
+
+      // Garantir que não tem nationalRegistration
+      await prisma.person.update({
+        where: { id: authenticatedUser!.personId },
+        data: { nationalRegistration: null },
+      });
+
+      const product = await prisma.product.create({
+        data: {
+          name: 'Test Product',
+          description: 'Test',
+          price: 100,
+          quantity: 10,
+          status: 'active',
+        },
+      });
+      testDataTracker.add('product', product.id);
+
+      const order = await prisma.order.create({
+        data: {
+          userId: authenticatedUser!.id,
+          status: 'pending',
+          subtotal: 100,
+          shippingCost: 0,
+          tax: 0,
+          total: 100,
+          items: {
+            create: {
+              productId: product.id,
+              quantity: 1,
+              unitPrice: 100,
+              discount: 0,
+              total: 100,
+            },
+          },
+        },
+      });
+      testDataTracker.add('order', order.id);
+
+      const response = await request(app)
+        .post('/api/payment/process')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          orderId: order.id,
+          cardData: {
+            cardNumber: '4111111111111111',
+            cardHolderName: 'Test User',
+            cardExpirationDate: '1225',
+            cardCvv: '123',
+            // CPF não fornecido e não existe em nationalRegistration
+          },
+          billingAddress: {
+            country: 'br',
+            state: 'SP',
+            city: 'São Paulo',
+            street: 'Av. Test',
+            streetNumber: '123',
+            zipcode: '01234567',
+          },
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('CPF do cliente é obrigatório');
     });
   });
 });

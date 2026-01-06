@@ -3,6 +3,7 @@ export interface CreditCardData {
   cardHolderName: string;
   cardExpirationDate: string;
   cardCvv: string;
+  cpf?: string; // CPF opcional - se não fornecido, busca do nationalRegistration
 }
 
 export interface CustomerData {
