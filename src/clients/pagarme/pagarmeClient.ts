@@ -192,6 +192,8 @@ export async function createCreditCardTransaction(params: {
       type: transactionData.customer.type,
       document: transactionData.customer.document ? `${transactionData.customer.document.substring(0, 3)}***` : 'NÃO FORNECIDO',
       phones: transactionData.customer.phones,
+      hasPhones: !!transactionData.customer.phones && transactionData.customer.phones.length > 0,
+      phonesCount: transactionData.customer.phones?.length || 0,
     },
     payment_method: transactionData.payments[0].payment_method,
     card: {
