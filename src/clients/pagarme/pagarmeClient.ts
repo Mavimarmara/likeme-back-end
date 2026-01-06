@@ -560,10 +560,10 @@ export async function createRecipient(
   const requestBody = JSON.stringify(recipientData);
 
   console.log('[Pagarme] 📤 Criando recebedor:', {
-    type: recipientData.type,
-    document: recipientData.document.substring(0, 3) + '***',
-    email: recipientData.email,
-    name: recipientData.name,
+    type: recipientData.register_information.type,
+    document: recipientData.register_information.document.substring(0, 3) + '***',
+    email: recipientData.register_information.email,
+    name: recipientData.register_information.name || recipientData.register_information.company_name,
   });
 
   try {
@@ -586,13 +586,13 @@ export async function createRecipient(
         errors: responseData.errors || responseData,
         full_response: JSON.stringify(responseData, null, 2),
         request_body_preview: JSON.stringify({
-          type: recipientData.type,
-          document: recipientData.document.substring(0, 3) + '***',
-          email: recipientData.email,
-          name: recipientData.name,
+          type: recipientData.register_information.type,
+          document: recipientData.register_information.document.substring(0, 3) + '***',
+          email: recipientData.register_information.email,
+          name: recipientData.register_information.name || recipientData.register_information.company_name,
           has_bank_account: !!recipientData.default_bank_account,
           has_transfer_settings: !!recipientData.transfer_settings,
-          has_register_information: !!recipientData.register_information,
+          has_address: !!(recipientData.register_information as any).address || !!(recipientData.register_information as any).main_address,
         }, null, 2),
       });
       

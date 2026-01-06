@@ -111,25 +111,23 @@ export interface AutomaticAnticipationSettings {
 }
 
 export interface IndividualRecipientData {
-  name: string;
-  email: string;
-  description?: string;
-  document: string;
-  type: 'individual';
+  register_information: {
+    phone_numbers: RecipientPhoneNumber[];
+    address: RecipientAddress;
+    name: string;
+    email: string;
+    document: string;
+    type: 'individual';
+    site_url?: string;
+    mother_name: string;
+    birthdate: string;
+    monthly_income: number;
+    professional_occupation: string;
+  };
   default_bank_account: DefaultBankAccount;
   transfer_settings: TransferSettings;
   automatic_anticipation_settings?: AutomaticAnticipationSettings;
-  metadata?: Record<string, any>;
   code?: string;
-  register_information?: {
-    phone_numbers?: RecipientPhoneNumber[];
-    address?: RecipientAddress;
-    site_url?: string;
-    mother_name?: string;
-    birthdate?: string;
-    monthly_income?: number;
-    professional_occupation?: string;
-  };
 }
 
 export interface CorporationRecipientData {

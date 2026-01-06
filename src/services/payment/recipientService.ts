@@ -119,11 +119,30 @@ export class RecipientService {
       : [];
 
     return {
-      name: fullName,
-      email,
-      description: `Recebedor: ${fullName}`,
-      document,
-      type: 'individual',
+      register_information: {
+        phone_numbers: phoneNumbers,
+        address: {
+          street: 'Rua Não Informada',
+          street_number: '0',
+          complementary: 'Não informado',
+          neighborhood: 'Centro',
+          city: 'São Paulo',
+          state: 'SP',
+          zip_code: '01000000',
+          reference_point: 'Não informado',
+        },
+        name: fullName,
+        email,
+        document,
+        type: 'individual',
+        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
+        mother_name: 'Não informado',
+        birthdate: user.person.birthdate
+          ? `${String(user.person.birthdate.getDate()).padStart(2, '0')}/${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}/${user.person.birthdate.getFullYear()}`
+          : '01/01/1990',
+        monthly_income: 0,
+        professional_occupation: 'Não informado',
+      },
       default_bank_account: {
         holder_name: fullName,
         holder_type: 'individual',
@@ -140,26 +159,6 @@ export class RecipientService {
         transfer_interval: 'Weekly',
         transfer_day: 1,
       },
-      register_information: {
-        phone_numbers: phoneNumbers,
-        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
-        mother_name: '',
-        birthdate: user.person.birthdate
-          ? `${String(user.person.birthdate.getDate()).padStart(2, '0')}/${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}/${user.person.birthdate.getFullYear()}`
-          : '01/01/1990',
-        monthly_income: 0,
-        professional_occupation: '',
-        address: {
-          street: 'Rua Não Informada',
-          street_number: '0',
-          complementary: 'Não informado',
-          neighborhood: 'Centro',
-          city: 'São Paulo',
-          state: 'SP',
-          zip_code: '01000000',
-          reference_point: 'Não informado',
-        },
-      },
     };
   }
 
@@ -169,6 +168,7 @@ export class RecipientService {
     phone: string | undefined,
     document: string
   ): CorporationRecipientData {
+    const companyName = `${user.person.firstName} ${user.person.lastName}`;
     const phoneNumbers = phone
       ? [
           {
