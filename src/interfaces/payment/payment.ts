@@ -4,6 +4,7 @@ export interface CreditCardData {
   cardExpirationDate: string;
   cardCvv: string;
   cpf?: string; // CPF opcional - se não fornecido, busca do nationalRegistration
+  phone?: string; // Telefone opcional - se não fornecido, busca dos contacts ou usa padrão
 }
 
 export interface CustomerData {

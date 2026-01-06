@@ -127,16 +127,37 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
     ];
 
     // Buscar telefone - OBRIGATÓRIO para Pagarme
-    const phoneContact = order.user.person.contacts?.find(
-      (contact: any) => (contact.type === 'phone' || contact.type === 'whatsapp') && !contact.deletedAt
-    );
+    // PRIORIDADE: Telefone do cardData (enviado pelo frontend)
+    let phoneNumber = '';
+    if (cardData?.phone) {
+      phoneNumber = cardData.phone.replace(/\D/g, '');
+      if (phoneNumber.length >= 10) {
+        console.log('[PaymentController] ✅ Telefone do cardData será usado:', phoneNumber.substring(0, 2) + '****' + phoneNumber.substring(phoneNumber.length - 4));
+        customerData.phoneNumbers = [phoneNumber];
+      } else {
+        console.warn('[PaymentController] ⚠️  Telefone do cardData inválido (menos de 10 dígitos), tentando fallback');
+        phoneNumber = '';
+      }
+    }
     
-    if (phoneContact?.value) {
-      customerData.phoneNumbers = [phoneContact.value];
-    } else {
-      // Se não houver telefone cadastrado, usar telefone padrão para evitar erro da Pagarme
-      // A Pagarme exige pelo menos um telefone do cliente
-      console.warn('[PaymentController] ⚠️  Telefone não encontrado no perfil do usuário. Usando telefone padrão.');
+    // Fallback: Telefone do perfil do usuário
+    if (!phoneNumber || phoneNumber.length < 10) {
+      const phoneContact = order.user.person.contacts?.find(
+        (contact: any) => (contact.type === 'phone' || contact.type === 'whatsapp') && !contact.deletedAt
+      );
+      
+      if (phoneContact?.value) {
+        phoneNumber = phoneContact.value.replace(/\D/g, '');
+        if (phoneNumber.length >= 10) {
+          console.log('[PaymentController] ℹ️  Usando telefone do perfil do usuário');
+          customerData.phoneNumbers = [phoneNumber];
+        }
+      }
+    }
+    
+    // Se ainda não houver telefone válido, usar telefone padrão
+    if (!phoneNumber || phoneNumber.length < 10) {
+      console.warn('[PaymentController] ⚠️  Telefone não encontrado. Usando telefone padrão.');
       customerData.phoneNumbers = ['11999999999']; // Telefone padrão (11 99999-9999)
     }
 
