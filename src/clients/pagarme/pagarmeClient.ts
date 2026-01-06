@@ -118,20 +118,36 @@ export async function createCreditCardTransaction(params: {
       email: params.customer.email,
       type: customerType,
       document: params.customer.documents?.[0]?.number?.replace(/\D/g, '') || '',
-      // Telefone é OBRIGATÓRIO para Pagarme - sempre incluir
-      phones: (params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 
-        ? params.customer.phoneNumbers 
-        : ['11999999999'] // Telefone padrão se não fornecido
-      ).map(phone => {
-        const cleanPhone = phone.replace(/\D/g, '');
-        const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
-        const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
-        return {
-          country_code: '55',
-          area_code: areaCode,
-          number: number,
-        };
-      }),
+      // Telefone é OBRIGATÓRIO para Pagarme - sempre incluir como array
+      phones: (() => {
+        const phoneNumbers = params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 
+          ? params.customer.phoneNumbers 
+          : ['11999999999']; // Telefone padrão se não fornecido
+        
+        const phonesArray = phoneNumbers.map(phone => {
+          const cleanPhone = phone.replace(/\D/g, '');
+          const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
+          const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
+          return {
+            country_code: '55',
+            area_code: areaCode,
+            number: number,
+          };
+        });
+        
+        // Garantir que sempre retorne um array válido
+        if (!Array.isArray(phonesArray) || phonesArray.length === 0) {
+          console.warn('[Pagarme] ⚠️  Array de telefones vazio, usando telefone padrão');
+          return [{
+            country_code: '55',
+            area_code: '11',
+            number: '999999999',
+          }];
+        }
+        
+        console.log('[Pagarme] 📞 Telefones formatados:', JSON.stringify(phonesArray, null, 2));
+        return phonesArray;
+      })(),
     },
     payments: [
       {
@@ -208,16 +224,39 @@ export async function createCreditCardTransaction(params: {
     console.log('[Pagarme] Split configurado:', validSplit ? `${validSplit.length} split(s)` : 'Nenhum split');
 
   try {
+    // Garantir que phones seja sempre um array antes de serializar
+    if (!Array.isArray(transactionData.customer.phones)) {
+      console.error('[Pagarme] ❌ ERRO: phones não é um array!', typeof transactionData.customer.phones, transactionData.customer.phones);
+      transactionData.customer.phones = [{
+        country_code: '55',
+        area_code: '11',
+        number: '999999999',
+      }];
+    }
+    
     const requestBody = JSON.stringify(transactionData);
     console.log('[Pagarme] Criando pedido via REST API v5:', {
       items_count: transactionData.items.length,
       customer_email: params.customer.email,
       customer_type: customerType,
       has_document: !!transactionData.customer.document,
+      phones_count: Array.isArray(transactionData.customer.phones) ? transactionData.customer.phones.length : 0,
+      phones_is_array: Array.isArray(transactionData.customer.phones),
       request_size: requestBody.length,
       has_split: !!(validSplit && validSplit.length > 0),
       split_count: validSplit?.length || 0,
     });
+    
+    // Log do customer completo para debug
+    console.log('[Pagarme] 📋 Customer completo antes de enviar:', JSON.stringify({
+      name: transactionData.customer.name,
+      email: transactionData.customer.email,
+      type: transactionData.customer.type,
+      document: transactionData.customer.document ? `${transactionData.customer.document.substring(0, 3)}***` : 'NÃO FORNECIDO',
+      phones: transactionData.customer.phones,
+      phones_type: typeof transactionData.customer.phones,
+      phones_is_array: Array.isArray(transactionData.customer.phones),
+    }, null, 2));
     
     console.log('[Pagarme] URL da requisição: https://api.pagar.me/core/v5/orders');
     console.log('[Pagarme] Headers:', {
