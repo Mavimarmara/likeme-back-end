@@ -363,7 +363,10 @@ export class OrderService {
           paymentTransactionId: pagarmeTransaction.id?.toString() || String(pagarmeTransaction.id),
         },
       });
-      throw new Error(`Pagamento recusado pela Pagarme. Status: ${transactionStatus}. Nota: Para testes bem-sucedidos, use o cartão 4000000000000002. O cartão 4000000000000010 sempre retorna "failed" por design.`);
+      const errorMessage = transactionStatus === 'failed' 
+        ? 'Pagamento recusado. Verifique os dados do cartão e tente novamente.'
+        : `Pagamento recusado. Status: ${transactionStatus}. Verifique os dados do cartão e tente novamente.`;
+      throw new Error(errorMessage);
     } else if (transactionStatus === 'processing' || transactionStatus === 'pending' || transactionStatus === 'waiting_payment') {
       paymentStatus = 'pending';
       console.log('[OrderService] ⏳ Pagamento pendente, status:', paymentStatus);
