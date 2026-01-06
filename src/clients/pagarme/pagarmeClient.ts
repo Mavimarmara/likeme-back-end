@@ -247,7 +247,17 @@ export async function createCreditCardTransaction(params: {
     }
 
     if (!response.ok) {
-      const errors = responseData.errors || [];
+      // Garantir que errors seja sempre um array
+      let errors: any[] = [];
+      if (Array.isArray(responseData.errors)) {
+        errors = responseData.errors;
+      } else if (responseData.errors && typeof responseData.errors === 'object') {
+        // Se errors for um objeto, converter para array
+        errors = [responseData.errors];
+      } else if (responseData.errors) {
+        errors = [responseData.errors];
+      }
+      
       const fullErrorDetails = {
         status: response.status,
         statusText: response.statusText,
@@ -257,14 +267,16 @@ export async function createCreditCardTransaction(params: {
       
       console.error('[Pagarme] ❌ Erro na resposta da API:', JSON.stringify(fullErrorDetails, null, 2));
       
-      // Verificar erro de IP
-      const ipError = errors.find((e: any) => 
-        e.type === 'action_forbidden' && 
-        (e.parameter_name === 'ip' || e.message?.includes('IP') || e.message?.includes('ip'))
-      );
-      
-      if (ipError) {
-        throw new Error(`IP não autorizado pela Pagarme. Configure os IPs permitidos no dashboard Pagarme ou desabilite a restrição de IP.`);
+      // Verificar erro de IP (só se errors for array)
+      if (Array.isArray(errors) && errors.length > 0) {
+        const ipError = errors.find((e: any) => 
+          e.type === 'action_forbidden' && 
+          (e.parameter_name === 'ip' || e.message?.includes('IP') || e.message?.includes('ip'))
+        );
+        
+        if (ipError) {
+          throw new Error(`IP não autorizado pela Pagarme. Configure os IPs permitidos no dashboard Pagarme ou desabilite a restrição de IP.`);
+        }
       }
       
       // Extrair mensagens de erro de forma mais detalhada
