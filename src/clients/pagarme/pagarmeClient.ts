@@ -310,19 +310,6 @@ export async function createCreditCardTransaction(params: {
       } : null,
     }, null, 2));
     
-    // Se o status for refused/failed, logar detalhes do erro
-    const transactionStatus = transaction?.status || charge?.status || order?.status;
-    if (transactionStatus === 'refused' || transactionStatus === 'failed') {
-      console.error('[Pagarme] ❌ Transação recusada. Detalhes:', {
-        transactionId: transaction?.id,
-        chargeId: charge?.id,
-        status: transactionStatus,
-        message: transaction?.message || charge?.message,
-        gateway_response: transaction?.gateway_response || charge?.gateway_response,
-        errors: transaction?.errors || charge?.errors,
-      });
-    }
-    
     if (!transaction && !charge) {
       console.warn('[Pagarme] ⚠️  Resposta não contém charge/transação esperada:', JSON.stringify(order, null, 2));
       // Retornar a estrutura esperada
@@ -339,6 +326,18 @@ export async function createCreditCardTransaction(params: {
     // 3. order.status (status geral do pedido)
     const transactionId = transaction?.id || charge?.id || order?.id;
     const transactionStatus = transaction?.status || charge?.status || order?.status || 'pending';
+    
+    // Se o status for refused/failed, logar detalhes do erro
+    if (transactionStatus === 'refused' || transactionStatus === 'failed') {
+      console.error('[Pagarme] ❌ Transação recusada. Detalhes:', {
+        transactionId: transaction?.id,
+        chargeId: charge?.id,
+        status: transactionStatus,
+        message: transaction?.message || charge?.message,
+        gateway_response: transaction?.gateway_response || charge?.gateway_response,
+        errors: transaction?.errors || charge?.errors,
+      });
+    }
     
     console.log('[Pagarme] ✅ Pedido criado. Order ID:', order.id, 'Charge ID:', charge?.id, 'Transaction ID:', transactionId, 'Status:', transactionStatus);
     
