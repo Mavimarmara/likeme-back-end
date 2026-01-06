@@ -118,36 +118,6 @@ export async function createCreditCardTransaction(params: {
       email: params.customer.email,
       type: customerType,
       document: params.customer.documents?.[0]?.number?.replace(/\D/g, '') || '',
-      // Telefone é OBRIGATÓRIO para Pagarme - sempre incluir como array
-      phones: (() => {
-        const phoneNumbers = params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 
-          ? params.customer.phoneNumbers 
-          : ['11999999999']; // Telefone padrão se não fornecido
-        
-        const phonesArray = phoneNumbers.map(phone => {
-          const cleanPhone = phone.replace(/\D/g, '');
-          const areaCode = cleanPhone.length >= 10 ? cleanPhone.substring(0, 2) : '11';
-          const number = cleanPhone.length >= 10 ? cleanPhone.substring(2) : cleanPhone;
-          return {
-            country_code: '55',
-            area_code: areaCode,
-            number: number,
-          };
-        });
-        
-        // Garantir que sempre retorne um array válido
-        if (!Array.isArray(phonesArray) || phonesArray.length === 0) {
-          console.warn('[Pagarme] ⚠️  Array de telefones vazio, usando telefone padrão');
-          return [{
-            country_code: '55',
-            area_code: '11',
-            number: '999999999',
-          }];
-        }
-        
-        console.log('[Pagarme] 📞 Telefones formatados:', JSON.stringify(phonesArray, null, 2));
-        return phonesArray;
-      })(),
     },
     payments: [
       {
@@ -224,15 +194,25 @@ export async function createCreditCardTransaction(params: {
     console.log('[Pagarme] Split configurado:', validSplit ? `${validSplit.length} split(s)` : 'Nenhum split');
 
   try {
-    // Garantir que phones seja sempre um array antes de serializar
-    if (!Array.isArray(transactionData.customer.phones)) {
-      console.error('[Pagarme] ❌ ERRO: phones não é um array!', typeof transactionData.customer.phones, transactionData.customer.phones);
-      transactionData.customer.phones = [{
+    // Preparar telefones - API v5 pode ter estrutura diferente
+    const phoneNumbers = params.customer.phoneNumbers && params.customer.phoneNumbers.length > 0 
+      ? params.customer.phoneNumbers 
+      : ['11999999999'];
+    
+    const firstPhone = phoneNumbers[0].replace(/\D/g, '');
+    const areaCode = firstPhone.length >= 10 ? firstPhone.substring(0, 2) : '11';
+    const number = firstPhone.length >= 10 ? firstPhone.substring(2) : firstPhone;
+    
+    // API v5 pode esperar phones como objeto ou array - testando como objeto primeiro
+    transactionData.customer.phones = {
+      mobile_phone: {
         country_code: '55',
-        area_code: '11',
-        number: '999999999',
-      }];
-    }
+        area_code: areaCode,
+        number: number,
+      },
+    };
+    
+    console.log('[Pagarme] 📞 Telefone formatado como objeto:', JSON.stringify(transactionData.customer.phones, null, 2));
     
     const requestBody = JSON.stringify(transactionData);
     console.log('[Pagarme] Criando pedido via REST API v5:', {
