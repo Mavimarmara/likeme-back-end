@@ -38,6 +38,7 @@ export interface TransactionItem {
   unitPrice: number;
   quantity: number;
   tangible?: boolean;
+  code?: string; // Código do item (obrigatório na API v5)
 }
 
 export interface SplitOptions {

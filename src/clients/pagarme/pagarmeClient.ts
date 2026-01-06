@@ -108,10 +108,11 @@ export async function createCreditCardTransaction(params: {
   }
 
   const transactionData: any = {
-    items: params.items.map(item => ({
+    items: params.items.map((item, index) => ({
       amount: item.unitPrice,
       description: item.title,
       quantity: item.quantity,
+      code: item.id || `ITEM_${index + 1}_${Date.now()}`, // Código obrigatório para API v5
     })),
     customer: {
       name: params.customer.name,
@@ -318,25 +319,50 @@ export async function createCreditCardTransaction(params: {
       
       // Extrair mensagens de erro de forma mais detalhada
       let errorMessages: string[] = [];
-      if (Array.isArray(errors) && errors.length > 0) {
+      
+      // Se errors for um objeto (não array), extrair mensagens de cada propriedade
+      if (responseData.errors && typeof responseData.errors === 'object' && !Array.isArray(responseData.errors)) {
+        Object.keys(responseData.errors).forEach((key: string) => {
+          const errorValue = responseData.errors[key];
+          if (Array.isArray(errorValue)) {
+            errorValue.forEach((msg: any) => {
+              errorMessages.push(`${key}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
+            });
+          } else if (typeof errorValue === 'string') {
+            errorMessages.push(`${key}: ${errorValue}`);
+          } else {
+            errorMessages.push(`${key}: ${JSON.stringify(errorValue)}`);
+          }
+        });
+      } else if (Array.isArray(errors) && errors.length > 0) {
         errors.forEach((e: any) => {
           if (e.message) {
             errorMessages.push(e.message);
           } else if (e.parameter_name && e.message) {
             errorMessages.push(`${e.parameter_name}: ${e.message}`);
+          } else if (typeof e === 'string') {
+            errorMessages.push(e);
           } else {
             errorMessages.push(JSON.stringify(e));
           }
         });
-      } else if (responseData.message) {
+      }
+      
+      // Se não encontrou mensagens nos errors, tentar responseData.message
+      if (errorMessages.length === 0 && responseData.message) {
         errorMessages.push(responseData.message);
-      } else {
+      }
+      
+      // Se ainda não encontrou, usar o responseData completo
+      if (errorMessages.length === 0) {
         errorMessages.push(JSON.stringify(responseData));
       }
       
       const finalMessage = errorMessages.length > 0 
         ? errorMessages.join('; ')
         : `Erro desconhecido da Pagarme (${response.status})`;
+      
+      console.error('[Pagarme] 📋 Mensagens de erro extraídas:', errorMessages);
       
       throw new Error(`Pagamento recusado pela Pagarme. Status: ${response.status}. ${finalMessage}`);
     }

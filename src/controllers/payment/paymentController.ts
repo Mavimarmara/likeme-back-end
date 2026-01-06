@@ -173,6 +173,7 @@ export const processPayment = async (req: AuthenticatedRequest, res: Response): 
       unitPrice: Math.round(parseFloat(item.unitPrice.toString()) * 100),
       quantity: item.quantity,
       tangible: true,
+      code: item.product.sku || item.product.id || item.id, // Código obrigatório para API v5
     }));
 
     // Validar dados do cartão
