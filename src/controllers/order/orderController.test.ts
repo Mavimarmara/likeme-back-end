@@ -131,6 +131,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -189,6 +190,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -250,6 +252,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -292,6 +295,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -355,6 +359,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -412,6 +417,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -473,6 +479,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -545,6 +552,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -591,6 +599,7 @@ describe('Order Endpoints', () => {
           cardHolderName: 'Test User',
           cardExpirationDate: '1225',
           cardCvv: '123',
+          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
