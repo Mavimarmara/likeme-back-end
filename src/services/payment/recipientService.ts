@@ -107,6 +107,7 @@ export class RecipientService {
     phone: string | undefined,
     document: string
   ): IndividualRecipientData {
+    const fullName = `${user.person.firstName} ${user.person.lastName}`;
     const phoneNumbers = phone
       ? [
           {
@@ -118,13 +119,30 @@ export class RecipientService {
       : [];
 
     return {
+      name: fullName,
+      email,
+      description: `Recebedor: ${fullName}`,
+      document,
+      type: 'individual',
+      default_bank_account: {
+        holder_name: fullName,
+        holder_type: 'individual',
+        holder_document: document,
+        bank: '341',
+        branch_number: '0001',
+        branch_check_digit: '0',
+        account_number: '00000000',
+        account_check_digit: '0',
+        type: 'checking',
+      },
+      transfer_settings: {
+        transfer_enabled: true,
+        transfer_interval: 'Weekly',
+        transfer_day: 1,
+      },
       register_information: {
-        email,
-        document,
-        type: 'individual',
-        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
         phone_numbers: phoneNumbers,
-        name: `${user.person.firstName} ${user.person.lastName}`,
+        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
         mother_name: '',
         birthdate: user.person.birthdate
           ? `${String(user.person.birthdate.getDate()).padStart(2, '0')}/${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}/${user.person.birthdate.getFullYear()}`
@@ -141,22 +159,6 @@ export class RecipientService {
           zip_code: '01000000',
           reference_point: 'Não informado',
         },
-      },
-      default_bank_account: {
-        holder_name: `${user.person.firstName} ${user.person.lastName}`,
-        holder_type: 'individual',
-        holder_document: document,
-        bank: '341',
-        branch_number: '0001',
-        branch_check_digit: '0',
-        account_number: '00000000',
-        account_check_digit: '0',
-        type: 'checking',
-      },
-      transfer_settings: {
-        transfer_enabled: true,
-        transfer_interval: 'Weekly',
-        transfer_day: 1,
       },
     };
   }
@@ -178,58 +180,13 @@ export class RecipientService {
       : [];
 
     return {
-      register_information: {
-        email,
-        document,
-        type: 'corporation',
-        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
-        phone_numbers: phoneNumbers,
-        company_name: `${user.person.firstName} ${user.person.lastName}`,
-        trading_name: `${user.person.firstName} ${user.person.lastName} ME`,
-        annual_revenue: 0,
-        corporation_type: 'ME',
-        founding_date: user.person.birthdate
-          ? `${user.person.birthdate.getFullYear()}-${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}-${String(user.person.birthdate.getDate()).padStart(2, '0')}`
-          : '2010-01-01',
-        main_address: {
-          street: '',
-          street_number: '0',
-          complementary: '',
-          neighborhood: '',
-          city: '',
-          state: '',
-          zip_code: '00000000',
-          reference_point: '',
-        },
-        managing_partners: [
-          {
-            name: `${user.person.firstName} ${user.person.lastName}`,
-            email,
-            document: document,
-            type: 'individual',
-            mother_name: '',
-            birthdate: user.person.birthdate
-              ? `${String(user.person.birthdate.getDate()).padStart(2, '0')}/${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}/${user.person.birthdate.getFullYear()}`
-              : '01/01/1990',
-            monthly_income: 0,
-            professional_occupation: '',
-            self_declared_legal_representative: true,
-            address: {
-              street: '',
-              street_number: '0',
-              complementary: '',
-              neighborhood: '',
-              city: '',
-              state: '',
-              zip_code: '00000000',
-              reference_point: '',
-            },
-            phone_numbers: phoneNumbers,
-          },
-        ],
-      },
+      name: companyName,
+      email,
+      description: `Recebedor: ${companyName}`,
+      document,
+      type: 'company',
       default_bank_account: {
-        holder_name: `${user.person.firstName} ${user.person.lastName}`,
+        holder_name: companyName,
         holder_type: 'individual',
         holder_document: document,
         bank: '341',
@@ -243,6 +200,52 @@ export class RecipientService {
         transfer_enabled: true,
         transfer_interval: 'Weekly',
         transfer_day: 1,
+      },
+      register_information: {
+        phone_numbers: phoneNumbers,
+        site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
+        company_name: companyName,
+        trading_name: `${companyName} ME`,
+        annual_revenue: 0,
+        corporation_type: 'ME',
+        founding_date: user.person.birthdate
+          ? `${user.person.birthdate.getFullYear()}-${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}-${String(user.person.birthdate.getDate()).padStart(2, '0')}`
+          : '2010-01-01',
+        main_address: {
+          street: 'Rua Não Informada',
+          street_number: '0',
+          complementary: 'Não informado',
+          neighborhood: 'Centro',
+          city: 'São Paulo',
+          state: 'SP',
+          zip_code: '01000000',
+          reference_point: 'Não informado',
+        },
+        managing_partners: [
+          {
+            name: companyName,
+            document: document,
+            type: 'individual',
+            mother_name: '',
+            birthdate: user.person.birthdate
+              ? `${String(user.person.birthdate.getDate()).padStart(2, '0')}/${String(user.person.birthdate.getMonth() + 1).padStart(2, '0')}/${user.person.birthdate.getFullYear()}`
+              : '01/01/1990',
+            monthly_income: 0,
+            professional_occupation: '',
+            self_declared_legal_representative: true,
+            address: {
+              street: 'Rua Não Informada',
+              street_number: '0',
+              complementary: 'Não informado',
+              neighborhood: 'Centro',
+              city: 'São Paulo',
+              state: 'SP',
+              zip_code: '01000000',
+              reference_point: 'Não informado',
+            },
+            phone_numbers: phoneNumbers,
+          },
+        ],
       },
     };
   }

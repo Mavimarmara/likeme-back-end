@@ -560,43 +560,21 @@ export async function createRecipient(
   const requestBody = JSON.stringify(recipientData);
 
   console.log('[Pagarme] 📤 Criando recebedor:', {
-    type: recipientData.register_information.type,
-    document: recipientData.register_information.document.substring(0, 3) + '***',
-    email: recipientData.register_information.email,
-    api_version: process.env.PAGARME_API_VERSION || 'v5',
+    type: recipientData.type,
+    document: recipientData.document.substring(0, 3) + '***',
+    email: recipientData.email,
+    name: recipientData.name,
   });
 
   try {
-    // Tentar API v5 primeiro, se falhar com 412 (permissão), pode ser que precise usar v1
-    // A documentação mostra v1, mas v5 é mais recente
-    const apiVersion = process.env.PAGARME_API_VERSION || 'v5';
-    const apiUrl = apiVersion === 'v1' 
-      ? 'https://api.pagar.me/1/recipients'
-      : 'https://api.pagar.me/core/v5/recipients';
-    
-    console.log('[Pagarme] Usando API:', apiVersion, 'URL:', apiUrl);
-    
-    // Para API v1, pode precisar incluir api_key no body
-    let requestBodyToSend = requestBody;
-    if (apiVersion === 'v1') {
-      const recipientDataV1 = JSON.parse(requestBody);
-      recipientDataV1.api_key = apiKey;
-      // Converter estrutura v5 para v1 se necessário
-      if (recipientDataV1.default_bank_account) {
-        recipientDataV1.bank_account = recipientDataV1.default_bank_account;
-        delete recipientDataV1.default_bank_account;
-      }
-      requestBodyToSend = JSON.stringify(recipientDataV1);
-    }
-    
-    const response = await fetch(apiUrl, {
+    const response = await fetch('https://api.pagar.me/core/v5/recipients', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: requestBodyToSend,
+      body: requestBody,
     });
 
     const responseData: any = await response.json();
@@ -608,12 +586,13 @@ export async function createRecipient(
         errors: responseData.errors || responseData,
         full_response: JSON.stringify(responseData, null, 2),
         request_body_preview: JSON.stringify({
-          type: recipientData.register_information.type,
-          document: recipientData.register_information.document.substring(0, 3) + '***',
-          email: recipientData.register_information.email,
-          has_address: !!(recipientData.register_information as any).address || !!(recipientData.register_information as any).main_address,
+          type: recipientData.type,
+          document: recipientData.document.substring(0, 3) + '***',
+          email: recipientData.email,
+          name: recipientData.name,
           has_bank_account: !!recipientData.default_bank_account,
           has_transfer_settings: !!recipientData.transfer_settings,
+          has_register_information: !!recipientData.register_information,
         }, null, 2),
       });
       

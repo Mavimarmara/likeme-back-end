@@ -16,12 +16,12 @@ export const createIndividualRecipient = async (req: AuthenticatedRequest, res: 
   try {
     const recipientData: IndividualRecipientData = req.body;
 
-    if (!recipientData.register_information || !recipientData.default_bank_account) {
-      sendError(res, 'Dados do recebedor incompletos', 400);
+    if (!recipientData.name || !recipientData.email || !recipientData.document || !recipientData.default_bank_account) {
+      sendError(res, 'Dados do recebedor incompletos. Campos obrigatórios: name, email, document, default_bank_account', 400);
       return;
     }
 
-    const document = recipientData.register_information.document.replace(/\D/g, '');
+    const document = recipientData.document.replace(/\D/g, '');
 
     const existingRecipient = await prisma.pagarmeRecipient.findFirst({
       where: {
@@ -77,17 +77,17 @@ export const createCorporationRecipient = async (req: AuthenticatedRequest, res:
   try {
     const recipientData: CorporationRecipientData = req.body;
 
-    if (!recipientData.register_information || !recipientData.default_bank_account) {
-      sendError(res, 'Dados do recebedor incompletos', 400);
+    if (!recipientData.name || !recipientData.email || !recipientData.document || !recipientData.default_bank_account) {
+      sendError(res, 'Dados do recebedor incompletos. Campos obrigatórios: name, email, document, default_bank_account', 400);
       return;
     }
 
-    if (!recipientData.register_information.managing_partners || recipientData.register_information.managing_partners.length === 0) {
+    if (recipientData.register_information && recipientData.register_information.managing_partners && recipientData.register_information.managing_partners.length === 0) {
       sendError(res, 'Pelo menos um sócio administrador é obrigatório para pessoa jurídica', 400);
       return;
     }
 
-    const document = recipientData.register_information.document.replace(/\D/g, '');
+    const document = recipientData.document.replace(/\D/g, '');
 
     const existingRecipient = await prisma.pagarmeRecipient.findFirst({
       where: {
