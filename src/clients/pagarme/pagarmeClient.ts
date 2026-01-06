@@ -243,14 +243,17 @@ export async function createCreditCardTransaction(params: {
     }
 
     if (!response.ok) {
-      console.error('[Pagarme] ❌ Erro na resposta da API:', {
+      const errors = responseData.errors || [];
+      const fullErrorDetails = {
         status: response.status,
         statusText: response.statusText,
-        errors: responseData.errors || responseData,
-        full_response: JSON.stringify(responseData, null, 2),
-      });
+        errors: errors,
+        full_response: responseData,
+      };
       
-      const errors = responseData.errors || [];
+      console.error('[Pagarme] ❌ Erro na resposta da API:', JSON.stringify(fullErrorDetails, null, 2));
+      
+      // Verificar erro de IP
       const ipError = errors.find((e: any) => 
         e.type === 'action_forbidden' && 
         (e.parameter_name === 'ip' || e.message?.includes('IP') || e.message?.includes('ip'))
@@ -260,11 +263,29 @@ export async function createCreditCardTransaction(params: {
         throw new Error(`IP não autorizado pela Pagarme. Configure os IPs permitidos no dashboard Pagarme ou desabilite a restrição de IP.`);
       }
       
-      const errorMessages = Array.isArray(errors) 
-        ? errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
-        : JSON.stringify(responseData);
+      // Extrair mensagens de erro de forma mais detalhada
+      let errorMessages: string[] = [];
+      if (Array.isArray(errors) && errors.length > 0) {
+        errors.forEach((e: any) => {
+          if (e.message) {
+            errorMessages.push(e.message);
+          } else if (e.parameter_name && e.message) {
+            errorMessages.push(`${e.parameter_name}: ${e.message}`);
+          } else {
+            errorMessages.push(JSON.stringify(e));
+          }
+        });
+      } else if (responseData.message) {
+        errorMessages.push(responseData.message);
+      } else {
+        errorMessages.push(JSON.stringify(responseData));
+      }
       
-      throw new Error(`Erro Pagarme (${response.status}): ${errorMessages}`);
+      const finalMessage = errorMessages.length > 0 
+        ? errorMessages.join('; ')
+        : `Erro desconhecido da Pagarme (${response.status})`;
+      
+      throw new Error(`Pagamento recusado pela Pagarme. Status: ${response.status}. ${finalMessage}`);
     }
 
     const order: any = responseData;

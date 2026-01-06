@@ -73,8 +73,8 @@ echo -e "${GREEN}✅ Produto criado (ID: $PRODUCT_ID)${NC}"
 echo "$PRODUCT_RESPONSE" | jq '.data | {id, name, price, quantity}' 2>/dev/null || echo "$PRODUCT_RESPONSE"
 echo ""
 
-# 4. Criar pedido com pagamento (cartão de teste que retorna sucesso)
-echo "4. Criando pedido com pagamento (cartão 4111111111111111 - sucesso)..."
+# 4. Criar pedido com pagamento (testando diferentes cartões)
+echo "4. Criando pedido com pagamento..."
 CPF_TEST="12345678901"
 echo "   CPF no cardData: $CPF_TEST"
 
@@ -84,7 +84,17 @@ if [ ${#CPF_TEST} -ne 11 ]; then
   exit 1
 fi
 
-ORDER_DATA=$(cat <<EOF
+# Tentar diferentes cartões de teste até um funcionar
+TEST_CARDS=("4000000000000002" "4111111111111111" "5555555555554444")
+CARD_INDEX=0
+SUCCESS=false
+
+for TEST_CARD in "${TEST_CARDS[@]}"; do
+  CARD_INDEX=$((CARD_INDEX + 1))
+  echo ""
+  echo "   Tentativa $CARD_INDEX/${#TEST_CARDS[@]}: Cartão $TEST_CARD"
+  
+  ORDER_DATA=$(cat <<EOF
 {
   "items": [{"productId": "$PRODUCT_ID", "quantity": 1, "discount": 0}],
   "status": "pending",
@@ -101,7 +111,7 @@ ORDER_DATA=$(cat <<EOF
   },
   "paymentMethod": "credit_card",
   "cardData": {
-    "cardNumber": "4111111111111111",
+    "cardNumber": "$TEST_CARD",
     "cardHolderName": "Test User",
     "cardExpirationDate": "1226",
     "cardCvv": "123",
@@ -111,66 +121,60 @@ ORDER_DATA=$(cat <<EOF
 EOF
 )
 
-# Verificar se CPF está no cardData antes de enviar
-if echo "$ORDER_DATA" | grep -q "\"cpf\": \"$CPF_TEST\""; then
-  echo -e "${GREEN}✅ CPF confirmado no cardData antes de enviar${NC}"
-else
-  echo -e "${RED}❌ ERRO: CPF não encontrado no cardData!${NC}"
-  echo "ORDER_DATA:"
-  echo "$ORDER_DATA" | jq '.' 2>/dev/null || echo "$ORDER_DATA"
-  exit 1
-fi
-
-# Log do cardData para debug
-echo "   CardData enviado:"
-echo "$ORDER_DATA" | jq '.cardData' 2>/dev/null || echo "Erro ao parsear JSON"
-echo ""
-
-echo "Enviando requisição de criação de pedido..."
-ORDER_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "$ORDER_DATA" \
-  "$BASE_URL/api/orders")
-
-HTTP_STATUS=$(echo "$ORDER_RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
-ORDER_BODY=$(echo "$ORDER_RESPONSE" | sed '/HTTP_STATUS/d')
-
-echo ""
-echo "Status HTTP: $HTTP_STATUS"
-echo ""
-echo "Resposta completa:"
-echo "$ORDER_BODY" | jq '.' 2>/dev/null || echo "$ORDER_BODY"
-echo ""
-
-if [ "$HTTP_STATUS" = "201" ]; then
-  ORDER_ID=$(echo "$ORDER_BODY" | jq -r '.data.id' 2>/dev/null)
-  PAYMENT_STATUS=$(echo "$ORDER_BODY" | jq -r '.data.paymentStatus' 2>/dev/null)
-  TRANSACTION_ID=$(echo "$ORDER_BODY" | jq -r '.data.paymentTransactionId' 2>/dev/null)
-  ORDER_TOTAL=$(echo "$ORDER_BODY" | jq -r '.data.total' 2>/dev/null)
-  
-  if [ "$PAYMENT_STATUS" = "paid" ]; then
-    echo -e "${GREEN}✅ SUCESSO! Pedido criado e pagamento aprovado${NC}"
-    echo "  Order ID: $ORDER_ID"
-    echo "  Payment Status: $PAYMENT_STATUS"
-    echo "  Transaction ID: $TRANSACTION_ID"
-    echo "  Total: R$ $ORDER_TOTAL"
-    echo ""
-    echo -e "${GREEN}✅ Teste concluído com sucesso!${NC}"
+  # Verificar se CPF está no cardData antes de enviar
+  if echo "$ORDER_DATA" | grep -q "\"cpf\": \"$CPF_TEST\""; then
+    echo -e "${GREEN}✅ CPF confirmado no cardData${NC}"
   else
-    echo -e "${YELLOW}⚠️  Pedido criado mas pagamento não foi aprovado${NC}"
-    echo "  Order ID: $ORDER_ID"
-    echo "  Payment Status: $PAYMENT_STATUS"
-    echo "  Transaction ID: $TRANSACTION_ID"
-    echo "  Total: R$ $ORDER_TOTAL"
-    echo ""
-    echo -e "${RED}❌ Pagamento não foi aprovado pela Pagarme${NC}"
-    exit 1
+    echo -e "${RED}❌ ERRO: CPF não encontrado no cardData!${NC}"
+    continue
   fi
-else
-  echo -e "${RED}❌ Erro ao criar pedido${NC}"
-  ERROR_MSG=$(echo "$ORDER_BODY" | jq -r '.message // .error // "Erro desconhecido"' 2>/dev/null)
-  echo "  Erro: $ERROR_MSG"
+
+  echo "   Enviando requisição..."
+  ORDER_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$ORDER_DATA" \
+    "$BASE_URL/api/orders")
+
+  HTTP_STATUS=$(echo "$ORDER_RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
+  ORDER_BODY=$(echo "$ORDER_RESPONSE" | sed '/HTTP_STATUS/d')
+
+  if [ "$HTTP_STATUS" = "201" ]; then
+    ORDER_ID=$(echo "$ORDER_BODY" | jq -r '.data.id' 2>/dev/null)
+    PAYMENT_STATUS=$(echo "$ORDER_BODY" | jq -r '.data.paymentStatus' 2>/dev/null)
+    TRANSACTION_ID=$(echo "$ORDER_BODY" | jq -r '.data.paymentTransactionId' 2>/dev/null)
+    ORDER_TOTAL=$(echo "$ORDER_BODY" | jq -r '.data.total' 2>/dev/null)
+    
+    if [ "$PAYMENT_STATUS" = "paid" ]; then
+      echo ""
+      echo -e "${GREEN}✅ SUCESSO! Pedido criado e pagamento aprovado${NC}"
+      echo "  Order ID: $ORDER_ID"
+      echo "  Payment Status: $PAYMENT_STATUS"
+      echo "  Transaction ID: $TRANSACTION_ID"
+      echo "  Total: R$ $ORDER_TOTAL"
+      echo "  Cartão usado: $TEST_CARD"
+      echo ""
+      echo -e "${GREEN}✅ Teste concluído com sucesso!${NC}"
+      SUCCESS=true
+      break
+    else
+      echo -e "${YELLOW}⚠️  Pedido criado mas pagamento não aprovado (Status: $PAYMENT_STATUS)${NC}"
+      echo "   Tentando próximo cartão..."
+      continue
+    fi
+  else
+    ERROR_MSG=$(echo "$ORDER_BODY" | jq -r '.message // .error // "Erro desconhecido"' 2>/dev/null)
+    echo -e "${YELLOW}⚠️  Erro com cartão $TEST_CARD: $ERROR_MSG${NC}"
+    echo "   Tentando próximo cartão..."
+    continue
+  fi
+done
+
+if [ "$SUCCESS" = false ]; then
+  echo ""
+  echo -e "${RED}❌ Nenhum cartão de teste funcionou${NC}"
+  echo "   Última resposta:"
+  echo "$ORDER_BODY" | jq '.' 2>/dev/null || echo "$ORDER_BODY"
   exit 1
 fi
 

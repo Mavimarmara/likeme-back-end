@@ -61,10 +61,21 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response): Pro
       error.message.includes('card') ||
       error.message.includes('billing')
     )) {
-      // Se a mensagem já é amigável, usar diretamente; senão, adicionar prefixo
-      const userMessage = error.message.includes('recusado') || error.message.includes('Verifique')
-        ? error.message
-        : `Erro ao processar pagamento: ${error.message}`;
+      // Em desenvolvimento, mostrar mensagem completa; em produção, mensagem genérica
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      let userMessage = error.message;
+      
+      // Se a mensagem já contém detalhes da Pagarme, usar diretamente
+      if (error.message.includes('Pagamento recusado pela Pagarme')) {
+        userMessage = error.message;
+      } else if (isDevelopment) {
+        // Em desenvolvimento, mostrar erro completo
+        userMessage = error.message;
+      } else {
+        // Em produção, mensagem genérica
+        userMessage = 'Pagamento recusado. Verifique os dados do cartão e tente novamente.';
+      }
+      
       sendError(res, userMessage, 400);
       return;
     }
