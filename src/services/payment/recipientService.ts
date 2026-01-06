@@ -180,27 +180,6 @@ export class RecipientService {
       : [];
 
     return {
-      name: companyName,
-      email,
-      description: `Recebedor: ${companyName}`,
-      document,
-      type: 'company',
-      default_bank_account: {
-        holder_name: companyName,
-        holder_type: 'individual',
-        holder_document: document,
-        bank: '341',
-        branch_number: '0001',
-        branch_check_digit: '0',
-        account_number: '00000000',
-        account_check_digit: '0',
-        type: 'checking',
-      },
-      transfer_settings: {
-        transfer_enabled: true,
-        transfer_interval: 'Weekly',
-        transfer_day: 1,
-      },
       register_information: {
         phone_numbers: phoneNumbers,
         main_address: {
@@ -241,8 +220,8 @@ export class RecipientService {
         ],
         company_name: companyName,
         trading_name: `${companyName} ME`,
-        email,
-        document,
+        email: email,
+        document: document,
         type: 'corporation',
         site_url: process.env.FRONTEND_URL || 'https://likeme.com.br',
         annual_revenue: 0,

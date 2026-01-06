@@ -21,7 +21,8 @@ export const createIndividualRecipient = async (req: AuthenticatedRequest, res: 
       return;
     }
 
-    const document = recipientData.register_information.document.replace(/\D/g, '');
+    const regInfo = recipientData.register_information;
+    const document = (regInfo as any).document?.replace(/\D/g, '') || '';
 
     const existingRecipient = await prisma.pagarmeRecipient.findFirst({
       where: {
@@ -87,7 +88,8 @@ export const createCorporationRecipient = async (req: AuthenticatedRequest, res:
       return;
     }
 
-    const document = recipientData.register_information.document.replace(/\D/g, '');
+    const regInfo = recipientData.register_information;
+    const document = (regInfo as any).document?.replace(/\D/g, '') || '';
 
     const existingRecipient = await prisma.pagarmeRecipient.findFirst({
       where: {

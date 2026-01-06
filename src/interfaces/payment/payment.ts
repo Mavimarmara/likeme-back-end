@@ -131,26 +131,23 @@ export interface IndividualRecipientData {
 }
 
 export interface CorporationRecipientData {
-  name: string;
-  email: string;
-  description?: string;
-  document: string;
-  type: 'company';
+  register_information: {
+    phone_numbers: RecipientPhoneNumber[];
+    main_address: RecipientAddress;
+    managing_partners: ManagingPartner[];
+    company_name: string;
+    trading_name: string;
+    email: string;
+    document: string;
+    type: 'corporation';
+    site_url?: string;
+    annual_revenue: number;
+    corporation_type: string;
+    founding_date: string;
+  };
   default_bank_account: DefaultBankAccount;
   transfer_settings: TransferSettings;
   automatic_anticipation_settings?: AutomaticAnticipationSettings;
-  metadata?: Record<string, any>;
   code?: string;
-  register_information?: {
-    phone_numbers?: RecipientPhoneNumber[];
-    main_address?: RecipientAddress;
-    managing_partners?: ManagingPartner[];
-    company_name?: string;
-    trading_name?: string;
-    site_url?: string;
-    annual_revenue?: number;
-    corporation_type?: string;
-    founding_date?: string;
-  };
 }
 
