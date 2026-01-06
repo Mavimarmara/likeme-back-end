@@ -258,6 +258,19 @@ export async function createCreditCardTransaction(params: {
       phones_is_array: Array.isArray(transactionData.customer.phones),
     }, null, 2));
     
+    // Log do JSON completo que será enviado (sem dados sensíveis do cartão)
+    const requestPreview = JSON.parse(JSON.stringify(transactionData));
+    if (requestPreview.payments && requestPreview.payments[0] && requestPreview.payments[0].credit_card) {
+      const card = requestPreview.payments[0].credit_card.card;
+      if (card.number) {
+        card.number = card.number.substring(0, 4) + '****' + card.number.substring(card.number.length - 4);
+      }
+      if (card.cvv) {
+        card.cvv = '***';
+      }
+    }
+    console.log('[Pagarme] 📤 JSON completo que será enviado (preview):', JSON.stringify(requestPreview, null, 2));
+    
     console.log('[Pagarme] URL da requisição: https://api.pagar.me/core/v5/orders');
     console.log('[Pagarme] Headers:', {
       'Authorization': `Basic ${authString.substring(0, 20)}...`,
