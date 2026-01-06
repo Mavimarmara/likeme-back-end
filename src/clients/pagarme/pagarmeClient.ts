@@ -373,6 +373,29 @@ export async function createCreditCardTransaction(params: {
         : `Erro desconhecido da Pagarme (${response.status})`;
       
       console.error('[Pagarme] 📋 Mensagens de erro extraídas:', errorMessages);
+      console.error('[Pagarme] 📋 Response data completo:', JSON.stringify(responseData, null, 2));
+      
+      // Para erro 400, incluir mais detalhes
+      if (response.status === 400) {
+        console.error('[Pagarme] ⚠️  Erro 400 - Bad Request. Verifique a estrutura da requisição.');
+        console.error('[Pagarme] Request body preview (sem dados sensíveis):', JSON.stringify({
+          items_count: transactionData.items.length,
+          items: transactionData.items.map((item: any) => ({
+            code: item.code,
+            description: item.description,
+            amount: item.amount,
+            quantity: item.quantity,
+          })),
+          customer: {
+            name: transactionData.customer.name,
+            email: transactionData.customer.email,
+            type: transactionData.customer.type,
+            has_document: !!transactionData.customer.document,
+            has_phones: !!transactionData.customer.phones,
+          },
+          payments_count: transactionData.payments.length,
+        }, null, 2));
+      }
       
       throw new Error(`Pagamento recusado pela Pagarme. Status: ${response.status}. ${finalMessage}`);
     }
