@@ -140,9 +140,9 @@ export async function safeTestCleanup(
     if (allIds.has('ad') && allIds.get('ad')!.length > 0) {
       const testAdIds = filterTestIds(allIds.get('ad')!);
       if (testAdIds.length > 0) {
-        await prisma.ad.deleteMany({
+      await prisma.ad.deleteMany({
           where: { id: { in: testAdIds } },
-        });
+      });
       }
     }
     
@@ -150,9 +150,9 @@ export async function safeTestCleanup(
     if (allIds.has('product') && allIds.get('product')!.length > 0) {
       const testProductIds = filterTestIds(allIds.get('product')!);
       if (testProductIds.length > 0) {
-        await prisma.orderItem.deleteMany({
+      await prisma.orderItem.deleteMany({
           where: { productId: { in: testProductIds } },
-        });
+      });
       }
     }
     
@@ -160,9 +160,9 @@ export async function safeTestCleanup(
     if (allIds.has('orderItem') && allIds.get('orderItem')!.length > 0) {
       const testOrderItemIds = filterTestIds(allIds.get('orderItem')!);
       if (testOrderItemIds.length > 0) {
-        await prisma.orderItem.deleteMany({
+      await prisma.orderItem.deleteMany({
           where: { id: { in: testOrderItemIds } },
-        });
+      });
       }
     }
     
@@ -170,9 +170,9 @@ export async function safeTestCleanup(
     if (allIds.has('order') && allIds.get('order')!.length > 0) {
       const testOrderIds = filterTestIds(allIds.get('order')!);
       if (testOrderIds.length > 0) {
-        await prisma.order.deleteMany({
+      await prisma.order.deleteMany({
           where: { id: { in: testOrderIds } },
-        });
+      });
       }
     }
     
@@ -180,19 +180,19 @@ export async function safeTestCleanup(
     if (allIds.has('product') && allIds.get('product')!.length > 0) {
       const testProductIds = filterTestIds(allIds.get('product')!);
       if (testProductIds.length > 0) {
-        try {
-          await prisma.product.deleteMany({
+      try {
+        await prisma.product.deleteMany({
             where: { id: { in: testProductIds } },
-          });
-        } catch (error: any) {
-          // Se falhar por foreign key, tentar soft delete
-          if (error.code === 'P2003') {
-            await prisma.product.updateMany({
+        });
+      } catch (error: any) {
+        // Se falhar por foreign key, tentar soft delete
+        if (error.code === 'P2003') {
+          await prisma.product.updateMany({
               where: { id: { in: testProductIds } },
-              data: { deletedAt: new Date() },
-            });
-          } else {
-            throw error;
+            data: { deletedAt: new Date() },
+          });
+        } else {
+          throw error;
           }
         }
       }
@@ -201,52 +201,52 @@ export async function safeTestCleanup(
     if (allIds.has('advertiser') && allIds.get('advertiser')!.length > 0) {
       const testAdvertiserIds = filterTestIds(allIds.get('advertiser')!);
       if (testAdvertiserIds.length > 0) {
-        await prisma.advertiser.deleteMany({
+      await prisma.advertiser.deleteMany({
           where: { id: { in: testAdvertiserIds } },
-        });
+      });
       }
     }
     
     if (allIds.has('user') && allIds.get('user')!.length > 0) {
       const testUserIds = filterTestIds(allIds.get('user')!);
       if (testUserIds.length > 0) {
-        await prisma.user.deleteMany({
+      await prisma.user.deleteMany({
           where: { id: { in: testUserIds } },
-        });
+      });
       }
     }
     
     if (allIds.has('person') && allIds.get('person')!.length > 0) {
       const testPersonIds = filterTestIds(allIds.get('person')!);
       if (testPersonIds.length > 0) {
-        await prisma.person.deleteMany({
+      await prisma.person.deleteMany({
           where: { id: { in: testPersonIds } },
-        });
+      });
       }
     }
     
     if (allIds.has('personContact') && allIds.get('personContact')!.length > 0) {
       const testPersonContactIds = filterTestIds(allIds.get('personContact')!);
       if (testPersonContactIds.length > 0) {
-        await prisma.personContact.deleteMany({
+      await prisma.personContact.deleteMany({
           where: { id: { in: testPersonContactIds } },
-        });
+      });
       }
     }
     
     if (allIds.has('tip') && allIds.get('tip')!.length > 0) {
       const testTipIds = filterTestIds(allIds.get('tip')!);
       if (testTipIds.length > 0) {
-        await prisma.tip.deleteMany({
+      await prisma.tip.deleteMany({
           where: { id: { in: testTipIds } },
-        });
+      });
       }
     }
     
     if (allIds.has('activity') && allIds.get('activity')!.length > 0) {
       const testActivityIds = filterTestIds(allIds.get('activity')!);
       if (testActivityIds.length > 0) {
-        await prisma.activity.deleteMany({
+      await prisma.activity.deleteMany({
           where: { id: { in: testActivityIds } },
         });
       }
@@ -268,7 +268,7 @@ export async function safeTestCleanup(
       if (testOptionTextIds.length > 0) {
         await prisma.anamneseAnswerOptionText.deleteMany({
           where: { id: { in: testOptionTextIds } },
-        });
+      });
       }
     }
     

@@ -145,7 +145,7 @@ describe('PersonContact Endpoints', () => {
   let testPerson: any;
 
   beforeAll(async () => {
-    authToken = await createTestToken();
+    authToken = await createTestToken(prisma, testDataTracker);
 
     // Buscar person do usuário autenticado
     const jwt = require('jsonwebtoken');
