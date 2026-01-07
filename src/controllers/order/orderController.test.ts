@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '@/server';
 import prisma from '@/config/database';
-import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
+import { safeTestCleanup, TestDataTracker, generateTestId, createTestToken, TEST_ID_PREFIX } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -28,19 +28,23 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-// Helper para criar um token de teste
-const createTestToken = async (): Promise<string> => {
-  const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+// Helper para criar um token de teste com contact
+const createTestTokenWithContact = async (): Promise<string> => {
+  const personId = generateTestId();
   const person = await prisma.person.create({
     data: {
+      id: personId,
       firstName: 'Test',
       lastName: 'User',
     },
   });
   testDataTracker.add('person', person.id);
 
+  const userId = generateTestId();
+  const uniqueId = `${Date.now()}${TEST_ID_PREFIX}`;
   const user = await prisma.user.create({
     data: {
+      id: userId,
       personId: person.id,
       username: `test-${uniqueId}@example.com`,
       password: 'hashedpassword',
@@ -50,16 +54,16 @@ const createTestToken = async (): Promise<string> => {
   testDataTracker.add('user', user.id);
 
   // Criar email contact (necessário para processar pagamento)
+  const emailContactId = generateTestId();
   const emailContact = await prisma.personContact.create({
     data: {
+      id: emailContactId,
       personId: person.id,
       type: 'email',
       value: `test-${uniqueId}@example.com`,
     },
   });
   testDataTracker.add('personContact', emailContact.id);
-
-  // CPF deve estar no campo nationalRegistration da Person, não em PersonContact
 
   const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
@@ -72,7 +76,7 @@ describe('Order Endpoints', () => {
   const { createCreditCardTransaction } = require('@/clients/pagarme/pagarmeClient');
 
   beforeAll(async () => {
-    authToken = await createTestToken();
+    authToken = await createTestTokenWithContact();
 
     // Buscar o usuário do token
     const jwt = require('jsonwebtoken');
@@ -96,9 +100,11 @@ describe('Order Endpoints', () => {
     });
 
     // Criar produto de teste
+    const testProductId = generateTestId();
     testProduct = await prisma.product.create({
       data: {
-        name: 'Test Product',
+        id: testProductId,
+        name: `Test Product${TEST_ID_PREFIX}`,
         price: 99.99,
         quantity: 100,
         status: 'active',
@@ -168,9 +174,11 @@ describe('Order Endpoints', () => {
       const initialQuantity = 50;
       const orderQuantity = 5;
 
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Stock Test Product',
+          id: productId,
+          name: `Stock Test Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: initialQuantity,
           status: 'active',
@@ -273,9 +281,11 @@ describe('Order Endpoints', () => {
     });
 
     it('should process payment successfully when creating order', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Payment Test Product',
+          id: productId,
+          name: `Payment Test Product${TEST_ID_PREFIX}`,
           price: 50.00,
           quantity: 10,
           status: 'active',
@@ -334,9 +344,11 @@ describe('Order Endpoints', () => {
 
     it('should revert stock when payment fails during order creation', async () => {
       const initialQuantity = 20;
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Stock Revert Test Product',
+          id: productId,
+          name: `Stock Revert Test Product${TEST_ID_PREFIX}`,
           price: 30.00,
           quantity: initialQuantity,
           status: 'active',
@@ -388,9 +400,11 @@ describe('Order Endpoints', () => {
     });
 
     it('should handle authorized transaction status', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Authorized Payment Product',
+          id: productId,
+          name: `Authorized Payment Product${TEST_ID_PREFIX}`,
           price: 75.00,
           quantity: 15,
           status: 'active',
@@ -451,9 +465,11 @@ describe('Order Endpoints', () => {
 
     it('should handle refused transaction status and revert stock', async () => {
       const initialQuantity = 25;
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Refused Payment Product',
+          id: productId,
+          name: `Refused Payment Product${TEST_ID_PREFIX}`,
           price: 40.00,
           quantity: initialQuantity,
           status: 'active',
@@ -577,9 +593,11 @@ describe('Order Endpoints', () => {
         authorization_code: 'AUTH789',
       });
 
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Transaction ID Test Product',
+          id: productId,
+          name: `Transaction ID Test Product${TEST_ID_PREFIX}`,
           price: 60.00,
           quantity: 8,
           status: 'active',
@@ -638,9 +656,11 @@ describe('Order Endpoints', () => {
   describe('GET /api/orders', () => {
     it('should list orders for authenticated user', async () => {
       // Criar uma ordem
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Order List Product',
+          id: productId,
+          name: `Order List Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -701,9 +721,11 @@ describe('Order Endpoints', () => {
 
   describe('GET /api/orders/:id', () => {
     it('should get order by id', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Single Order Product',
+          id: productId,
+          name: `Single Order Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -762,9 +784,11 @@ describe('Order Endpoints', () => {
 
   describe('PUT /api/orders/:id', () => {
     it('should update order', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Update Order Product',
+          id: productId,
+          name: `Update Order Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -824,9 +848,11 @@ describe('Order Endpoints', () => {
       const initialQuantity = 50;
       const orderQuantity = 5;
 
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Cancel Order Product',
+          id: productId,
+          name: `Cancel Order Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: initialQuantity - orderQuantity,
           status: 'active',
@@ -883,9 +909,11 @@ describe('Order Endpoints', () => {
 
   describe('DELETE /api/orders/:id', () => {
     it('should soft delete order', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Delete Order Product',
+          id: productId,
+          name: `Delete Order Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',

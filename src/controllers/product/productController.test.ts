@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '@/server';
 import prisma from '@/config/database';
-import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
+import { safeTestCleanup, TestDataTracker, generateTestId, createTestToken, TEST_ID_PREFIX } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -19,35 +19,11 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-// Helper para criar um token de teste
-const createTestToken = async (): Promise<string> => {
-  const person = await prisma.person.create({
-    data: {
-      firstName: 'Test',
-      lastName: 'User',
-    },
-  });
-  testDataTracker.add('person', person.id);
-
-  const user = await prisma.user.create({
-    data: {
-      personId: person.id,
-      username: `test${Date.now()}@example.com`,
-      password: 'hashedpassword',
-      isActive: true,
-    },
-  });
-  testDataTracker.add('user', user.id);
-
-  const jwt = require('jsonwebtoken');
-  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
-};
-
 describe('Product Endpoints', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    authToken = await createTestToken();
+    authToken = await createTestToken(prisma, testDataTracker);
   });
 
   describe('POST /api/products', () => {
@@ -100,16 +76,20 @@ describe('Product Endpoints', () => {
   describe('GET /api/products', () => {
     it('should list all products', async () => {
       // Criar alguns produtos
+      const product1Id = generateTestId();
+      const product2Id = generateTestId();
       await prisma.product.createMany({
         data: [
           {
-            name: 'Product 1',
+            id: product1Id,
+            name: `Product 1${TEST_ID_PREFIX}`,
             price: 10.99,
             quantity: 5,
             status: 'active',
           },
           {
-            name: 'Product 2',
+            id: product2Id,
+            name: `Product 2${TEST_ID_PREFIX}`,
             price: 20.99,
             quantity: 10,
             status: 'active',
@@ -117,12 +97,8 @@ describe('Product Endpoints', () => {
         ],
       });
       
-      // Buscar IDs dos produtos criados
-      const products = await prisma.product.findMany({
-        where: { name: { in: ['Product 1', 'Product 2'] } },
-        select: { id: true },
-      });
-      products.forEach(p => testDataTracker.add('product', p.id));
+      testDataTracker.add('product', product1Id);
+      testDataTracker.add('product', product2Id);
 
       const response = await request(app)
         .get('/api/products')
@@ -135,9 +111,11 @@ describe('Product Endpoints', () => {
     });
 
     it('should filter products by category', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Categorized Product',
+          id: productId,
+          name: `Categorized Product${TEST_ID_PREFIX}`,
           price: 15.99,
           quantity: 5,
           category: 'Electronics',
@@ -158,9 +136,11 @@ describe('Product Endpoints', () => {
 
   describe('GET /api/products/:id', () => {
     it('should get a product by id', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Single Product',
+          id: productId,
+          name: `Single Product${TEST_ID_PREFIX}`,
           price: 25.99,
           quantity: 5,
           status: 'active',
@@ -175,7 +155,7 @@ describe('Product Endpoints', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.id).toBe(product.id);
-      expect(response.body.data.name).toBe('Single Product');
+      expect(response.body.data.name).toBe(`Single Product${TEST_ID_PREFIX}`);
     });
 
     it('should return 404 if product not found', async () => {
@@ -190,9 +170,11 @@ describe('Product Endpoints', () => {
 
   describe('PUT /api/products/:id', () => {
     it('should update a product', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Original Product',
+          id: productId,
+          name: `Original Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 5,
           status: 'active',
@@ -227,9 +209,11 @@ describe('Product Endpoints', () => {
 
   describe('PATCH /api/products/:id/stock', () => {
     it('should add to stock', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Stock Product',
+          id: productId,
+          name: `Stock Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -248,9 +232,11 @@ describe('Product Endpoints', () => {
     });
 
     it('should subtract from stock', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Subtract Stock Product',
+          id: productId,
+          name: `Subtract Stock Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -268,9 +254,11 @@ describe('Product Endpoints', () => {
     });
 
     it('should set stock', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Set Stock Product',
+          id: productId,
+          name: `Set Stock Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -288,9 +276,11 @@ describe('Product Endpoints', () => {
     });
 
     it('should validate stock operation', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Validation Product',
+          id: productId,
+          name: `Validation Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -309,9 +299,11 @@ describe('Product Endpoints', () => {
 
   describe('DELETE /api/products/:id', () => {
     it('should soft delete a product', async () => {
+      const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
-          name: 'Delete Product',
+          id: productId,
+          name: `Delete Product${TEST_ID_PREFIX}`,
           price: 10.99,
           quantity: 5,
           status: 'active',

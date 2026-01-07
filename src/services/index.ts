@@ -6,3 +6,4 @@ export { communityService, CommunityService } from './community/communityService
 export { userService, UserService } from './user/userService';
 export { userTokenService } from './user/userTokenService';
 export { paymentSplitService } from './payment/paymentSplitService';
+export * from './anamnese/anamneseService';

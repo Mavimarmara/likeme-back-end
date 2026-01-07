@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '@/server';
 import prisma from '@/config/database';
-import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
+import { safeTestCleanup, TestDataTracker, createTestToken, generateTestId, TEST_ID_PREFIX } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -22,35 +22,12 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-const createTestToken = async (): Promise<string> => {
-  const person = await prisma.person.create({
-    data: {
-      firstName: 'Test',
-      lastName: 'User',
-    },
-  });
-  testDataTracker.add('person', person.id);
-
-  const user = await prisma.user.create({
-    data: {
-      personId: person.id,
-      username: `test${Date.now()}@example.com`,
-      password: 'hashedpassword',
-      isActive: true,
-    },
-  });
-  testDataTracker.add('user', user.id);
-
-  const jwt = require('jsonwebtoken');
-  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
-};
-
 describe('Activity Endpoints', () => {
   let authToken: string;
   let testUser: any;
 
   beforeAll(async () => {
-    authToken = await createTestToken();
+    authToken = await createTestToken(prisma, testDataTracker);
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(authToken, process.env.JWT_SECRET || 'test-secret') as { userId: string };
     testUser = await prisma.user.findUnique({ where: { id: decoded.userId } });
@@ -137,10 +114,12 @@ describe('Activity Endpoints', () => {
 
   describe('GET /api/activities', () => {
     it('should list all activities for authenticated user', async () => {
+      const activityId = generateTestId();
       const activity = await prisma.activity.create({
         data: {
+          id: activityId,
           userId: testUser!.id,
-          name: 'Test Activity',
+          name: `Test Activity${TEST_ID_PREFIX}`,
           type: 'task',
           startDate: new Date(),
         },
@@ -158,10 +137,12 @@ describe('Activity Endpoints', () => {
     });
 
     it('should filter activities by type', async () => {
+      const eventActivityId = generateTestId();
       const eventActivity = await prisma.activity.create({
         data: {
+          id: eventActivityId,
           userId: testUser!.id,
-          name: 'Test Event',
+          name: `Test Event${TEST_ID_PREFIX}`,
           type: 'event',
           startDate: new Date(),
         },
@@ -181,10 +162,12 @@ describe('Activity Endpoints', () => {
 
   describe('GET /api/activities/:id', () => {
     it('should get activity by id', async () => {
+      const activityId = generateTestId();
       const activity = await prisma.activity.create({
         data: {
+          id: activityId,
           userId: testUser!.id,
-          name: 'Test Activity',
+          name: `Test Activity${TEST_ID_PREFIX}`,
           type: 'task',
           startDate: new Date(),
         },
@@ -209,25 +192,34 @@ describe('Activity Endpoints', () => {
     });
 
     it('should return 403 if user does not own activity', async () => {
+      const otherPersonId = generateTestId();
       const otherPerson = await prisma.person.create({
-        data: { firstName: 'Other', lastName: 'User' },
+        data: { 
+          id: otherPersonId,
+          firstName: 'Other', 
+          lastName: 'User' 
+        },
       });
       testDataTracker.add('person', otherPerson.id);
 
+      const otherUserId = generateTestId();
       const otherUser = await prisma.user.create({
         data: {
+          id: otherUserId,
           personId: otherPerson.id,
-          username: `other${Date.now()}@example.com`,
+          username: `other${Date.now()}${TEST_ID_PREFIX}@example.com`,
           password: 'hashed',
           isActive: true,
         },
       });
       testDataTracker.add('user', otherUser.id);
 
+      const activityId = generateTestId();
       const activity = await prisma.activity.create({
         data: {
+          id: activityId,
           userId: otherUser.id,
-          name: 'Other User Activity',
+          name: `Other User Activity${TEST_ID_PREFIX}`,
           type: 'task',
           startDate: new Date(),
         },
@@ -244,10 +236,12 @@ describe('Activity Endpoints', () => {
 
   describe('PUT /api/activities/:id', () => {
     it('should update activity', async () => {
+      const activityId = generateTestId();
       const activity = await prisma.activity.create({
         data: {
+          id: activityId,
           userId: testUser!.id,
-          name: 'Original Name',
+          name: `Original Name${TEST_ID_PREFIX}`,
           type: 'task',
           startDate: new Date(),
         },
@@ -280,10 +274,12 @@ describe('Activity Endpoints', () => {
 
   describe('DELETE /api/activities/:id', () => {
     it('should soft delete activity', async () => {
+      const activityId = generateTestId();
       const activity = await prisma.activity.create({
         data: {
+          id: activityId,
           userId: testUser!.id,
-          name: 'Activity to Delete',
+          name: `Activity to Delete${TEST_ID_PREFIX}`,
           type: 'task',
           startDate: new Date(),
         },

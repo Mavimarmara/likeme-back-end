@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '@/server';
 import prisma from '@/config/database';
-import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
+import { safeTestCleanup, TestDataTracker, createTestToken } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -19,36 +19,12 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-// Helper para criar um token de teste
-const createTestToken = async (): Promise<string> => {
-  const person = await prisma.person.create({
-    data: {
-      firstName: 'Test',
-      lastName: 'User',
-    },
-  });
-  testDataTracker.add('person', person.id);
-
-  const user = await prisma.user.create({
-    data: {
-      personId: person.id,
-      username: `test${Date.now()}@example.com`,
-      password: 'hashedpassword',
-      isActive: true,
-    },
-  });
-  testDataTracker.add('user', user.id);
-
-  const jwt = require('jsonwebtoken');
-  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
-};
-
 describe('Person Endpoints', () => {
   let authToken: string;
   let testUser: any;
 
   beforeAll(async () => {
-    authToken = await createTestToken();
+    authToken = await createTestToken(prisma, testDataTracker);
 
     // Buscar o usuário do token
     const jwt = require('jsonwebtoken');

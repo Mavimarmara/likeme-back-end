@@ -74,6 +74,7 @@ model User {
   advertiser         Advertiser?             @relation("UserAdvertiser")
   activities         Activity[]              @relation("UserActivities")
   products           Product[]               @relation("UserProducts")
+  anamneseAnswers    AnamneseUserAnswer[]    @relation("UserAnamneseAnswers")
 
   @@index([personId])
   @@index([username])
@@ -434,4 +435,135 @@ model PagarmeRecipient {
   @@index([isDefault])
   @@index([status])
   @@map("pagarme_recipient")
+}
+
+// ============================================
+// ANAMNESE MODELS - Clinical Anamnesis with i18n
+// ============================================
+
+enum QuestionType {
+  single_choice
+  multiple_choice
+  text
+  number
+}
+
+model AnamneseQuestionConcept {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Identificador lógico único da pergunta
+  key String @unique
+
+  // Tipo de resposta esperada
+  type QuestionType
+
+  // Relações
+  texts         AnamneseQuestionText[]
+  answerOptions AnamneseAnswerOption[]
+  userAnswers   AnamneseUserAnswer[]
+
+  @@index([key])
+  @@index([type])
+  @@map("anamnese_question_concept")
+}
+
+model AnamneseQuestionText {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  questionConceptId String @map("question_concept_id")
+
+  // Locale (ex: "pt-BR", "en-US")
+  locale String
+
+  // Texto exibido da pergunta
+  value String
+
+  // Relações
+  questionConcept AnamneseQuestionConcept @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
+
+  @@unique([questionConceptId, locale])
+  @@index([questionConceptId])
+  @@index([locale])
+  @@map("anamnese_question_text")
+}
+
+model AnamneseAnswerOption {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  questionConceptId String @map("question_concept_id")
+
+  // Identificador lógico da opção (yes, no, low, high, grave, moderado, etc)
+  key String
+
+  // Ordem de exibição
+  order Int @default(0)
+
+  // Relações
+  questionConcept AnamneseQuestionConcept    @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
+  texts           AnamneseAnswerOptionText[]
+  userAnswers     AnamneseUserAnswer[]
+
+  @@unique([questionConceptId, key])
+  @@index([questionConceptId])
+  @@index([key])
+  @@index([order])
+  @@map("anamnese_answer_option")
+}
+
+model AnamneseAnswerOptionText {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  answerOptionId String @map("answer_option_id")
+
+  // Locale (ex: "pt-BR", "en-US")
+  locale String
+
+  // Texto exibido da opção
+  value String
+
+  // Relações
+  answerOption AnamneseAnswerOption @relation(fields: [answerOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([answerOptionId, locale])
+  @@index([answerOptionId])
+  @@index([locale])
+  @@map("anamnese_answer_option_text")
+}
+
+model AnamneseUserAnswer {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // User ID (string ou uuid conforme necessário)
+  userId String @map("user_id")
+
+  questionConceptId String @map("question_concept_id")
+
+  // Opção escolhida (nullable para perguntas abertas)
+  answerOptionId String? @map("answer_option_id")
+
+  // Resposta em texto (nullable para perguntas de escolha)
+  answerText String? @map("answer_text")
+
+  // Relações
+  user            User                    @relation("UserAnamneseAnswers", fields: [userId], references: [id], onDelete: Cascade)
+  questionConcept AnamneseQuestionConcept @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
+  answerOption    AnamneseAnswerOption?   @relation(fields: [answerOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, questionConceptId])
+  @@index([userId])
+  @@index([questionConceptId])
+  @@index([answerOptionId])
+  @@index([createdAt])
+  @@map("anamnese_user_answer")
 }
