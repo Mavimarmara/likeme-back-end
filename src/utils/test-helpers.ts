@@ -302,6 +302,16 @@ export async function safeTestCleanup(
       }
     }
     
+    // Deletar recipients da Pagarme (pagarmeRecipient)
+    if (allIds.has('pagarmeRecipient') && allIds.get('pagarmeRecipient')!.length > 0) {
+      const testRecipientIds = filterTestIds(allIds.get('pagarmeRecipient')!);
+      if (testRecipientIds.length > 0) {
+        await prisma.pagarmeRecipient.deleteMany({
+          where: { id: { in: testRecipientIds } },
+        });
+      }
+    }
+    
     tracker.clear();
     
     if (process.env.NODE_ENV === 'test') {

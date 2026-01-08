@@ -7,7 +7,27 @@ import { createRecipient } from '../src/clients/pagarme/pagarmeClient';
 import type { IndividualRecipientData } from '../src/interfaces/payment/payment';
 
 async function testCreateRecipient() {
-  console.log('🧪 Testando criação de recebedor pessoa física...\n');
+  console.log('========================================');
+  console.log('🧪 TESTE: Criação de Recebedor Pagarme');
+  console.log('========================================\n');
+  
+  // Verificar variáveis de ambiente
+  const dotenv = require('dotenv');
+  dotenv.config();
+  
+  const apiKey = process.env.PAGARME_SECRET_API_KEY || process.env.PAGARME_API_KEY;
+  console.log('📋 Configuração:');
+  console.log('  - PAGARME_SECRET_API_KEY:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NÃO CONFIGURADA');
+  console.log('  - Tipo da chave:', apiKey ? (apiKey.startsWith('sk_test_') ? 'TEST (sk_test_*)' : apiKey.startsWith('sk_live_') ? 'PRODUCTION (sk_live_*)' : 'UNKNOWN') : 'N/A');
+  console.log('  - URL da API: https://api.pagar.me/core/v5/recipients');
+  console.log('  - Ambiente:', apiKey ? (apiKey.startsWith('sk_test_') ? 'TESTE' : apiKey.startsWith('sk_live_') ? 'PRODUÇÃO' : 'DESCONHECIDO') : 'N/A');
+  console.log('');
+  
+  if (apiKey && apiKey.startsWith('sk_test_')) {
+    console.log('⚠️  ATENÇÃO: Você está usando chave de TESTE (sk_test_*)');
+    console.log('   Se o suporte liberou em PRODUÇÃO, você precisa usar uma chave sk_live_*');
+    console.log('');
+  }
 
   // Dados de teste para recebedor pessoa física
   const recipientData: IndividualRecipientData = {
@@ -65,8 +85,14 @@ async function testCreateRecipient() {
       document: recipientData.register_information.document.substring(0, 3) + '***',
       type: recipientData.register_information.type,
     }, null, 2));
+    console.log('');
+    console.log('⏳ Aguardando resposta da Pagarme...\n');
 
+    const startTime = Date.now();
     const recipient = await createRecipient(recipientData);
+    const endTime = Date.now();
+    
+    console.log(`⏱️  Tempo de resposta: ${endTime - startTime}ms\n`);
 
     console.log('\n✅ Recebedor criado com sucesso!');
     console.log('ID:', recipient.id);

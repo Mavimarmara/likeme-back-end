@@ -49,42 +49,61 @@ SPLIT_ENABLED=$(curl -s -X GET \
 if [ -z "$SPLIT_ENABLED" ]; then
   echo "⚠️  Nenhum recipient encontrado. Criando recipient de teste..."
   
-  # Criar recipient individual de teste
+  # Criar recipient individual de teste (formato correto)
+  RECIPIENT_DATA=$(cat <<EOF
+{
+  "register_information": {
+    "phone_numbers": [
+      {
+        "ddd": "11",
+        "number": "999999999",
+        "type": "mobile"
+      }
+    ],
+    "address": {
+      "street": "Rua Teste",
+      "complementary": "Apto 1",
+      "street_number": "123",
+      "neighborhood": "Centro",
+      "city": "São Paulo",
+      "state": "SP",
+      "zip_code": "01234567",
+      "reference_point": "Próximo ao metrô"
+    },
+    "name": "Test Recipient $(date +%s)",
+    "email": "test-recipient-$(date +%s)@example.com",
+    "document": "11144477735",
+    "type": "individual",
+    "site_url": "https://example.com",
+    "mother_name": "Maria Silva",
+    "birthdate": "12/10/1995",
+    "monthly_income": 12000000,
+    "professional_occupation": "Vendedor"
+  },
+  "default_bank_account": {
+    "holder_name": "Test Recipient",
+    "holder_type": "individual",
+    "holder_document": "11144477735",
+    "bank": "341",
+    "branch_number": "1234",
+    "branch_check_digit": "6",
+    "account_number": "12345",
+    "account_check_digit": "6",
+    "type": "checking"
+  },
+  "transfer_settings": {
+    "transfer_enabled": false,
+    "transfer_interval": "Daily",
+    "transfer_day": 0
+  }
+}
+EOF
+)
+  
   RECIPIENT_RESPONSE=$(curl -s -X POST \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{
-      "name": "Test Recipient",
-      "email": "test-recipient@example.com",
-      "document": "11144477735",
-      "type": "individual",
-      "default_bank_account": {
-        "holder_name": "Test Recipient",
-        "holder_type": "individual",
-        "holder_document": "11144477735",
-        "bank": "341",
-        "branch_number": "1234",
-        "branch_check_digit": "6",
-        "account_number": "12345",
-        "account_check_digit": "6",
-        "type": "checking"
-      },
-      "transfer_settings": {
-        "transfer_enabled": true,
-        "transfer_interval": "Weekly",
-        "transfer_day": 1
-      },
-      "address": {
-        "street": "Rua Teste",
-        "street_number": "123",
-        "neighborhood": "Centro",
-        "city": "São Paulo",
-        "state": "SP",
-        "zip_code": "01234567",
-        "complementary": "Apto 1",
-        "reference_point": "Próximo ao metrô"
-      }
-    }' \
+    -d "$RECIPIENT_DATA" \
     "$BASE_URL/api/payment/recipients/individual")
   
   RECIPIENT_ID=$(echo "$RECIPIENT_RESPONSE" | jq -r '.data.id // empty' 2>/dev/null || echo "")
@@ -206,12 +225,28 @@ if [ "$SUCCESS" = "true" ] && [ -n "$ORDER_ID" ]; then
   SPLIT_INFO=$(echo "$ORDER_RESPONSE" | jq -r '.data.split // .split // empty' 2>/dev/null || echo "")
   if [ -n "$SPLIT_INFO" ]; then
     echo ""
-    echo "📊 Informações de Split:"
+    echo "📊 Informações de Split na resposta:"
     echo "$ORDER_RESPONSE" | jq '.data.split' 2>/dev/null || echo "Split aplicado (detalhes não disponíveis na resposta)"
+  fi
+  
+  # Buscar informações da transação na Pagarme para verificar split
+  if [ -n "$TRANSACTION_ID" ]; then
+    echo ""
+    echo "5. Verificando detalhes da transação na Pagarme..."
+    echo "   Transaction ID: $TRANSACTION_ID"
+    echo ""
+    echo "💡 Para verificar se o split foi aplicado:"
+    echo "   1. Verifique os logs do backend na Vercel"
+    echo "   2. Procure por: '[PaymentSplitService] Split calculado:'"
+    echo "   3. Procure por: '[Pagarme] 📊 Detalhes do Split que será enviado:'"
+    echo "   4. Procure por: '[Pagarme] Adicionando split:'"
+    echo ""
+    echo "   Dashboard Vercel: https://vercel.com/dashboard"
+    echo "   Transaction ID: $TRANSACTION_ID"
   else
     echo ""
     echo "ℹ️  Nota: Split pode ter sido aplicado, mas não está na resposta do pedido."
-    echo "   Verifique os logs do backend para confirmar se o split foi enviado à Pagarme."
+    echo "   Verifique os logs do backend na Vercel para confirmar se o split foi enviado à Pagarme."
   fi
   
   echo ""
