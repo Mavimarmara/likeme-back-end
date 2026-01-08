@@ -71,16 +71,30 @@ async function main() {
   }
 
   // Buscar produtos existentes
-  const products = await prisma.product.findMany({
+  const allProducts = await prisma.product.findMany({
     where: {
       deletedAt: null,
       status: 'active',
     },
-    take: 3,
+    include: {
+      ads: {
+        where: {
+          deletedAt: null,
+        },
+      },
+    },
     orderBy: {
       createdAt: 'desc',
     },
   });
+
+  // Filtrar apenas produtos que não têm anúncios
+  const productsWithoutAds = allProducts
+    .filter(product => product.ads.length === 0)
+    .slice(0, 3);
+
+  // Extrair apenas os dados do produto (sem a relação ads)
+  const products = productsWithoutAds.map(({ ads, ...product }) => product);
 
   if (products.length === 0) {
     console.log('⚠️  Nenhum produto encontrado. Criando produtos de teste...\n');
@@ -159,6 +173,11 @@ async function main() {
 
   for (const adData of ads) {
     try {
+      if (!adData.productId) {
+        console.log(`⚠️  Produto não disponível. Pulando...`);
+        continue;
+      }
+
       // Verificar se já existe um anúncio para este produto
       const existing = await prisma.ad.findFirst({
         where: {
