@@ -20,10 +20,12 @@ export class ActivityService {
     
     // Se for string, tentar parsear
     if (typeof dateValue === 'string') {
-      // Se for formato YYYY-MM-DD, adicionar hora para evitar problemas de timezone
+      // Se for formato YYYY-MM-DD, criar como data local (não UTC) para evitar problemas de timezone
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-        // Criar data no meio do dia para evitar problemas de timezone
-        return new Date(`${dateValue}T12:00:00`);
+        // Parsear como data local (não UTC) para preservar o dia correto
+        const [year, month, day] = dateValue.split('-').map(Number);
+        // month - 1 porque Date usa 0-indexed months
+        return new Date(year, month - 1, day);
       }
       
       const parsed = new Date(dateValue);
@@ -161,11 +163,29 @@ export class ActivityService {
     }
 
     if (updateData.startDate) {
-      updateData.startDate = new Date(updateData.startDate);
+      const parsedDate = this.parseDate(updateData.startDate);
+      // Normalizar para meia-noite UTC para evitar problemas de timezone
+      updateData.startDate = new Date(Date.UTC(
+        parsedDate.getFullYear(),
+        parsedDate.getMonth(),
+        parsedDate.getDate(),
+        0, 0, 0, 0
+      ));
     }
 
     if (updateData.endDate !== undefined) {
-      updateData.endDate = updateData.endDate ? new Date(updateData.endDate) : null;
+      if (updateData.endDate) {
+        const parsedDate = this.parseDate(updateData.endDate);
+        // Normalizar para meia-noite UTC para evitar problemas de timezone
+        updateData.endDate = new Date(Date.UTC(
+          parsedDate.getFullYear(),
+          parsedDate.getMonth(),
+          parsedDate.getDate(),
+          0, 0, 0, 0
+        ));
+      } else {
+        updateData.endDate = null;
+      }
     }
 
     // Normalizar strings vazias para null

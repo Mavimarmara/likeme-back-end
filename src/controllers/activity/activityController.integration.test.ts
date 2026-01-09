@@ -388,5 +388,122 @@ describe('Activity Integration Tests - Create and List', () => {
       expect(otherUserActivity).toBeUndefined();
     });
   });
+
+  describe('Date Timezone Handling', () => {
+    it('deve criar atividade para hoje e ela deve aparecer com a data de hoje (não de ontem)', async () => {
+      if (!shouldRunTests) {
+        console.log('⏭️  Teste pulado (não está em desenvolvimento)');
+        return;
+      }
+
+      // Obter data de hoje no formato YYYY-MM-DD (timezone local)
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      const activityData = {
+        name: `Today Activity Test ${Date.now()}${generateTestId()}`,
+        type: 'event',
+        startDate: todayString, // Data de hoje no formato YYYY-MM-DD
+        startTime: '10:00 AM',
+      };
+
+      // 1. Criar a atividade
+      const createResponse = await request(app)
+        .post('/api/activities')
+        .send(activityData)
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(createResponse.status).toBe(201);
+      expect(createResponse.body.success).toBe(true);
+      expect(createResponse.body.data.id).toBeDefined();
+
+      const createdActivityId = createResponse.body.data.id;
+      testDataTracker.add('activity', createdActivityId);
+
+      // 2. Verificar que a data salva no banco é a correta
+      const activityInDb = await prisma.activity.findUnique({
+        where: { id: createdActivityId },
+      });
+
+      expect(activityInDb).toBeDefined();
+      expect(activityInDb?.startDate).toBeDefined();
+
+      // 3. Verificar que a data é de hoje (comparando apenas dia, mês e ano)
+      // A data vem do banco como UTC, então precisamos comparar usando UTC também
+      const dbDate = new Date(activityInDb!.startDate);
+      const todayDate = new Date();
+      
+      // Comparar usando UTC para evitar problemas de timezone
+      expect(dbDate.getUTCFullYear()).toBe(todayDate.getUTCFullYear());
+      expect(dbDate.getUTCMonth()).toBe(todayDate.getUTCMonth());
+      expect(dbDate.getUTCDate()).toBe(todayDate.getUTCDate());
+
+      // 4. Buscar a atividade na listagem
+      const listResponse = await request(app)
+        .get('/api/activities')
+        .query({ page: 1, limit: 100 })
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(listResponse.status).toBe(200);
+      expect(listResponse.body.success).toBe(true);
+
+      // 5. Verificar que a atividade criada está na lista
+      const activityInList = listResponse.body.data.activities.find(
+        (a: any) => a.id === createdActivityId
+      );
+
+      expect(activityInList).toBeDefined();
+      
+      // 6. Verificar que a data retornada é de hoje (não de ontem)
+      // A data vem como string ISO (UTC), então comparamos usando UTC
+      const returnedDate = new Date(activityInList.startDate);
+      expect(returnedDate.getUTCFullYear()).toBe(todayDate.getUTCFullYear());
+      expect(returnedDate.getUTCMonth()).toBe(todayDate.getUTCMonth());
+      expect(returnedDate.getUTCDate()).toBe(todayDate.getUTCDate());
+    });
+
+    it('deve criar atividade para amanhã e ela não deve aparecer como sendo de hoje', async () => {
+      if (!shouldRunTests) {
+        console.log('⏭️  Teste pulado (não está em desenvolvimento)');
+        return;
+      }
+
+      // Obter data de amanhã no formato YYYY-MM-DD
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowString = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+      const activityData = {
+        name: `Tomorrow Activity Test ${Date.now()}${generateTestId()}`,
+        type: 'event',
+        startDate: tomorrowString,
+        startTime: '10:00 AM',
+      };
+
+      // 1. Criar a atividade
+      const createResponse = await request(app)
+        .post('/api/activities')
+        .send(activityData)
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(createResponse.status).toBe(201);
+      expect(createResponse.body.success).toBe(true);
+
+      const createdActivityId = createResponse.body.data.id;
+      testDataTracker.add('activity', createdActivityId);
+
+      // 2. Verificar que a data salva no banco é de amanhã (não de hoje)
+      const activityInDb = await prisma.activity.findUnique({
+        where: { id: createdActivityId },
+      });
+
+      expect(activityInDb).toBeDefined();
+      const dbDate = new Date(activityInDb!.startDate);
+      const todayDate = new Date();
+      
+      // Deve ser amanhã, não hoje (usando UTC para evitar problemas de timezone)
+      expect(dbDate.getUTCDate()).toBe(todayDate.getUTCDate() + 1);
+    });
+  });
 });
 
