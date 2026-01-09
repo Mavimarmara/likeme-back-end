@@ -10,22 +10,69 @@ export interface ActivityQueryFilters {
 }
 
 export class ActivityService {
+  private parseDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    
+    // Se já for uma Date, retornar
+    if (dateValue instanceof Date) {
+      return dateValue;
+    }
+    
+    // Se for string, tentar parsear
+    if (typeof dateValue === 'string') {
+      // Se for formato YYYY-MM-DD, adicionar hora para evitar problemas de timezone
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        // Criar data no meio do dia para evitar problemas de timezone
+        return new Date(`${dateValue}T12:00:00`);
+      }
+      
+      const parsed = new Date(dateValue);
+      if (isNaN(parsed.getTime())) {
+        throw new Error(`Invalid date format: ${dateValue}. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)`);
+      }
+      return parsed;
+    }
+    
+    return new Date();
+  }
+
   async create(activityData: any): Promise<Activity> {
-    return prisma.activity.create({
-      data: {
-        userId: activityData.userId,
-        name: activityData.name,
-        type: activityData.type,
-        startDate: activityData.startDate ? new Date(activityData.startDate) : new Date(),
-        startTime: activityData.startTime || null,
-        endDate: activityData.endDate ? new Date(activityData.endDate) : null,
-        endTime: activityData.endTime || null,
-        location: activityData.location || null,
-        description: activityData.description || null,
-        reminderEnabled: activityData.reminderEnabled || false,
-        reminderOffset: activityData.reminderOffset || null,
-      },
-    });
+    try {
+      const startDate = this.parseDate(activityData.startDate);
+      const endDate = activityData.endDate ? this.parseDate(activityData.endDate) : null;
+      
+      // Validar que startDate é válida
+      if (isNaN(startDate.getTime())) {
+        throw new Error('Invalid startDate');
+      }
+      
+      // Validar que endDate é válida (se fornecida)
+      if (endDate && isNaN(endDate.getTime())) {
+        throw new Error('Invalid endDate');
+      }
+      
+      return prisma.activity.create({
+        data: {
+          userId: activityData.userId,
+          name: activityData.name,
+          type: activityData.type,
+          startDate,
+          startTime: activityData.startTime || null,
+          endDate,
+          endTime: activityData.endTime || null,
+          location: activityData.location || null,
+          description: activityData.description || null,
+          reminderEnabled: activityData.reminderEnabled || false,
+          reminderOffset: activityData.reminderOffset || null,
+        },
+      });
+    } catch (error: any) {
+      // Re-throw com mensagem mais clara
+      if (error.message && error.message.includes('Invalid date')) {
+        throw new Error(`Invalid date format: ${error.message}`);
+      }
+      throw error;
+    }
   }
 
   private buildWhereClause(filters: ActivityQueryFilters): Prisma.ActivityWhereInput {

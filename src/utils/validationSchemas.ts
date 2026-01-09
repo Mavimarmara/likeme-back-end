@@ -401,7 +401,7 @@ export const refundPaymentSchema = Joi.object({
 
 export const createActivitySchema = Joi.object({
   userId: Joi.string().optional(),
-  name: Joi.string().min(1).max(200).required(),
+  name: Joi.string().max(200).allow('', null).optional(),
   type: Joi.string().valid('task', 'event').required(),
   startDate: Joi.date().iso().required(),
   startTime: Joi.string().max(20).optional().allow('', null),
@@ -414,7 +414,7 @@ export const createActivitySchema = Joi.object({
 });
 
 export const updateActivitySchema = Joi.object({
-  name: Joi.string().min(1).max(200).optional(),
+  name: Joi.string().max(200).allow('', null).optional(),
   type: Joi.string().valid('task', 'event').optional(),
   startDate: Joi.date().iso().optional(),
   startTime: Joi.string().max(20).optional().allow('', null),

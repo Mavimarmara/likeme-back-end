@@ -13,8 +13,12 @@ export const createActivity = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
+    // Preencher name com "evento sem nome" se estiver vazio ou não fornecido
+    const name = req.body.name?.trim() || 'evento sem nome';
+
     const activityData = {
       ...req.body,
+      name,
       userId,
     };
 
@@ -22,7 +26,32 @@ export const createActivity = async (req: AuthenticatedRequest, res: Response): 
     sendSuccess(res, activity, 'Activity created successfully', 201);
   } catch (error: any) {
     console.error('Create activity error:', error);
-    sendError(res, 'Error creating activity');
+    
+    // Tratar erros específicos do Prisma
+    if (error.code === 'P2002') {
+      sendError(res, 'Activity already exists', 409);
+      return;
+    }
+    
+    if (error.code === 'P2003') {
+      sendError(res, 'Invalid user reference', 400);
+      return;
+    }
+    
+    // Tratar erros de validação
+    if (error.name === 'ValidationError' || error.isJoi) {
+      sendError(res, error.message || 'Invalid activity data', 400);
+      return;
+    }
+    
+    // Tratar erros de formato de data
+    if (error.message && error.message.includes('Invalid date')) {
+      sendError(res, 'Invalid date format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)', 400);
+      return;
+    }
+    
+    // Erro genérico
+    sendError(res, error.message || 'Error creating activity', 500);
   }
 };
 
@@ -116,7 +145,13 @@ export const updateActivity = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const updatedActivity = await activityService.update(id, req.body);
+    // Preencher name com "evento sem nome" se estiver vazio ou não fornecido
+    const updateData = { ...req.body };
+    if (updateData.name !== undefined && (!updateData.name || !updateData.name.trim())) {
+      updateData.name = 'evento sem nome';
+    }
+
+    const updatedActivity = await activityService.update(id, updateData);
     sendSuccess(res, updatedActivity, 'Activity updated successfully');
   } catch (error: any) {
     console.error('Update activity error:', error);

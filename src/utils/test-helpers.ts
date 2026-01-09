@@ -69,7 +69,18 @@ export class TestDataTracker {
   private ids: Map<string, string[]> = new Map();
 
   add(table: string, id: string) {
-    // Apenas rastrear IDs que são de teste
+    // Para atividades em testes de integração, aceitar IDs sem sufixo
+    // pois o Prisma gera UUIDs normais. A limpeza será feita pelo ID diretamente.
+    if (table === 'activity' && (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development')) {
+      // Aceitar IDs de atividades em testes de integração
+      if (!this.ids.has(table)) {
+        this.ids.set(table, []);
+      }
+      this.ids.get(table)!.push(id);
+      return;
+    }
+    
+    // Para outras tabelas, apenas rastrear IDs que são de teste
     if (!isTestId(id)) {
       console.warn(`⚠️  Tentativa de rastrear ID não-test: ${id} na tabela ${table}`);
       return;
@@ -244,10 +255,14 @@ export async function safeTestCleanup(
     }
     
     if (allIds.has('activity') && allIds.get('activity')!.length > 0) {
-      const testActivityIds = filterTestIds(allIds.get('activity')!);
-      if (testActivityIds.length > 0) {
-      await prisma.activity.deleteMany({
-          where: { id: { in: testActivityIds } },
+      // Para atividades, em testes de integração, aceitar todos os IDs
+      // pois são gerados pelo Prisma e não têm sufixo
+      const activityIds = (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development')
+        ? allIds.get('activity')!
+        : filterTestIds(allIds.get('activity')!);
+      if (activityIds.length > 0) {
+        await prisma.activity.deleteMany({
+          where: { id: { in: activityIds } },
         });
       }
     }
