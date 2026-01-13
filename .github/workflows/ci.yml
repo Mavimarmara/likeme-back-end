@@ -7,6 +7,29 @@ on:
     branches: [ main ]
 
 jobs:
+  sync-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    
+    - name: Reset staging to main
+      run: |
+        git fetch origin main staging
+        git checkout staging || git checkout -b staging
+        git reset --hard origin/main
+        git push origin staging --force
+
   test:
     runs-on: ubuntu-latest
     
