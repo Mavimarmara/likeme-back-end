@@ -81,7 +81,7 @@ Já existem scripts no `package.json`:
 
 Após configurar:
 - **Production**: `https://likeme-back-end-one.vercel.app` (ou seu domínio customizado)
-- **Staging**: `https://likeme-back-end-git-staging-[team].vercel.app` (URL gerada automaticamente)
+- **Staging**: `https://likeme-back-end-git-staging-pixel-pulse-labs.vercel.app`
 
 Para ter uma URL mais amigável, você pode:
 1. Usar um domínio customizado para staging
