@@ -1,5 +1,5 @@
 import prisma from '@/config/database';
-import type { AnamneseUserAnswer } from '@prisma/client';
+import type { AnamnesisUserAnswer } from '@prisma/client';
 import type { AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
 
 /**
@@ -8,7 +8,7 @@ import type { AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/inte
  * @returns Array de perguntas com textos e opções traduzidas
  */
 export async function getAnamnesisQuestions(locale: string): Promise<AnamnesisQuestion[]> {
-  const questions = await prisma.anamneseQuestionConcept.findMany({
+  const questions = await prisma.anamnesisQuestionConcept.findMany({
     where: {
       deletedAt: null,
     },
@@ -62,7 +62,7 @@ export async function getQuestionByKey(
   key: string,
   locale: string
 ): Promise<AnamnesisQuestion | null> {
-  const question = await prisma.anamneseQuestionConcept.findUnique({
+  const question = await prisma.anamnesisQuestionConcept.findUnique({
     where: {
       key: key,
       deletedAt: null,
@@ -115,9 +115,9 @@ export async function getQuestionByKey(
  */
 export async function createOrUpdateUserAnswer(
   data: CreateUserAnswerData
-): Promise<AnamneseUserAnswer> {
+): Promise<AnamnesisUserAnswer> {
   // Validação: verificar se a pergunta existe
-  const question = await prisma.anamneseQuestionConcept.findUnique({
+  const question = await prisma.anamnesisQuestionConcept.findUnique({
     where: {
       id: data.questionConceptId,
       deletedAt: null,
@@ -130,7 +130,7 @@ export async function createOrUpdateUserAnswer(
 
   // Validação: se answerOptionId foi fornecido, verificar se existe e pertence à pergunta
   if (data.answerOptionId) {
-    const option = await prisma.anamneseAnswerOption.findFirst({
+    const option = await prisma.anamnesisAnswerOption.findFirst({
       where: {
         id: data.answerOptionId,
         questionConceptId: data.questionConceptId,
@@ -160,7 +160,7 @@ export async function createOrUpdateUserAnswer(
   }
 
   // Upsert: atualiza se já existe, cria se não existe
-  const answer = await prisma.anamneseUserAnswer.upsert({
+  const answer = await prisma.anamnesisUserAnswer.upsert({
     where: {
       userId_questionConceptId: {
         userId: data.userId,
@@ -193,7 +193,7 @@ export async function getUserAnswers(
   userId: string,
   locale?: string
 ): Promise<UserAnswer[]> {
-  const answers = await prisma.anamneseUserAnswer.findMany({
+  const answers = await prisma.anamnesisUserAnswer.findMany({
     where: {
       userId: userId,
     },
@@ -249,8 +249,8 @@ export async function getUserAnswers(
 export async function getUserAnswerByQuestion(
   userId: string,
   questionConceptId: string
-): Promise<AnamneseUserAnswer | null> {
-  return prisma.anamneseUserAnswer.findUnique({
+): Promise<AnamnesisUserAnswer | null> {
+  return prisma.anamnesisUserAnswer.findUnique({
     where: {
       userId_questionConceptId: {
         userId: userId,
@@ -265,7 +265,7 @@ export async function getUserAnswerByQuestion(
  * Filtrado por locale
  */
 export async function getCompleteAnamnesisByLocale(locale: string) {
-  return prisma.anamneseQuestionConcept.findMany({
+  return prisma.anamnesisQuestionConcept.findMany({
     where: {
       deletedAt: null,
     },

@@ -74,7 +74,7 @@ model User {
   advertiser         Advertiser?             @relation("UserAdvertiser")
   activities         Activity[]              @relation("UserActivities")
   products           Product[]               @relation("UserProducts")
-  anamneseAnswers    AnamneseUserAnswer[]    @relation("UserAnamneseAnswers")
+  anamnesisAnswers    AnamnesisUserAnswer[]    @relation("UserAnamnesisAnswers")
 
   @@index([personId])
   @@index([username])
@@ -448,7 +448,7 @@ enum QuestionType {
   number
 }
 
-model AnamneseQuestionConcept {
+model AnamnesisQuestionConcept {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -461,16 +461,16 @@ model AnamneseQuestionConcept {
   type QuestionType
 
   // Relações
-  texts         AnamneseQuestionText[]
-  answerOptions AnamneseAnswerOption[]
-  userAnswers   AnamneseUserAnswer[]
+  texts         AnamnesisQuestionText[]
+  answerOptions AnamnesisAnswerOption[]
+  userAnswers   AnamnesisUserAnswer[]
 
   @@index([key])
   @@index([type])
-  @@map("anamnese_question_concept")
+  @@map("anamnesis_question_concept")
 }
 
-model AnamneseQuestionText {
+model AnamnesisQuestionText {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -484,15 +484,15 @@ model AnamneseQuestionText {
   value String
 
   // Relações
-  questionConcept AnamneseQuestionConcept @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
+  questionConcept AnamnesisQuestionConcept @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
 
   @@unique([questionConceptId, locale])
   @@index([questionConceptId])
   @@index([locale])
-  @@map("anamnese_question_text")
+  @@map("anamnesis_question_text")
 }
 
-model AnamneseAnswerOption {
+model AnamnesisAnswerOption {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -506,18 +506,18 @@ model AnamneseAnswerOption {
   order Int @default(0)
 
   // Relações
-  questionConcept AnamneseQuestionConcept    @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
-  texts           AnamneseAnswerOptionText[]
-  userAnswers     AnamneseUserAnswer[]
+  questionConcept AnamnesisQuestionConcept    @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
+  texts           AnamnesisAnswerOptionText[]
+  userAnswers     AnamnesisUserAnswer[]
 
   @@unique([questionConceptId, key])
   @@index([questionConceptId])
   @@index([key])
   @@index([order])
-  @@map("anamnese_answer_option")
+  @@map("anamnesis_answer_option")
 }
 
-model AnamneseAnswerOptionText {
+model AnamnesisAnswerOptionText {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -531,15 +531,15 @@ model AnamneseAnswerOptionText {
   value String
 
   // Relações
-  answerOption AnamneseAnswerOption @relation(fields: [answerOptionId], references: [id], onDelete: Cascade)
+  answerOption AnamnesisAnswerOption @relation(fields: [answerOptionId], references: [id], onDelete: Cascade)
 
   @@unique([answerOptionId, locale])
   @@index([answerOptionId])
   @@index([locale])
-  @@map("anamnese_answer_option_text")
+  @@map("anamnesis_answer_option_text")
 }
 
-model AnamneseUserAnswer {
+model AnamnesisUserAnswer {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -556,14 +556,14 @@ model AnamneseUserAnswer {
   answerText String? @map("answer_text")
 
   // Relações
-  user            User                    @relation("UserAnamneseAnswers", fields: [userId], references: [id], onDelete: Cascade)
-  questionConcept AnamneseQuestionConcept @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
-  answerOption    AnamneseAnswerOption?   @relation(fields: [answerOptionId], references: [id], onDelete: SetNull)
+  user            User                     @relation("UserAnamnesisAnswers", fields: [userId], references: [id], onDelete: Cascade)
+  questionConcept AnamnesisQuestionConcept @relation(fields: [questionConceptId], references: [id], onDelete: Cascade)
+  answerOption    AnamnesisAnswerOption?   @relation(fields: [answerOptionId], references: [id], onDelete: SetNull)
 
   @@unique([userId, questionConceptId])
   @@index([userId])
   @@index([questionConceptId])
   @@index([answerOptionId])
   @@index([createdAt])
-  @@map("anamnese_user_answer")
+  @@map("anamnesis_user_answer")
 }

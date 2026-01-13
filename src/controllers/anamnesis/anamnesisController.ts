@@ -249,7 +249,7 @@ export const getCompleteAnamnesis = async (req: Request, res: Response): Promise
     const anamnesis = await getCompleteAnamnesisByLocale(locale);
     sendSuccess(res, anamnesis, 'Complete anamnesis retrieved successfully');
   } catch (error: any) {
-    sendError(res, error.message || 'Error retrieving complete anamnese', 500);
+    sendError(res, error.message || 'Error retrieving complete anamnesis', 500);
   }
 };
 

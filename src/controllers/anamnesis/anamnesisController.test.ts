@@ -57,7 +57,7 @@ const createTestToken = async (): Promise<string> => {
 const createTestAnamnesisData = async () => {
   // Criar pergunta conceito
   const questionConceptId = generateTestId();
-  const questionConcept = await prisma.anamneseQuestionConcept.create({
+  const questionConcept = await prisma.anamnesisQuestionConcept.create({
     data: {
       id: questionConceptId,
       key: `test-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -139,27 +139,27 @@ const createTestAnamnesisData = async () => {
       },
     },
   });
-  testDataTracker.add('anamneseQuestionConcept', questionConcept.id);
+      testDataTracker.add('anamnesisQuestionConcept', questionConcept.id);
 
   // Rastrear textos e opções criadas
-  const questionTexts = await prisma.anamneseQuestionText.findMany({
+      const questionTexts = await prisma.anamnesisQuestionText.findMany({
     where: { questionConceptId: questionConcept.id },
   });
-  questionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+  questionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
 
-  const answerOptions = await prisma.anamneseAnswerOption.findMany({
+      const answerOptions = await prisma.anamnesisAnswerOption.findMany({
     where: { questionConceptId: questionConcept.id },
   });
   answerOptions.forEach((option) => {
-    testDataTracker.add('anamneseAnswerOption', option.id);
+    testDataTracker.add('anamnesisAnswerOption', option.id);
   });
 
-  const answerOptionTexts = await prisma.anamneseAnswerOptionText.findMany({
+      const answerOptionTexts = await prisma.anamnesisAnswerOptionText.findMany({
     where: {
       answerOptionId: { in: answerOptions.map((o) => o.id) },
     },
   });
-  answerOptionTexts.forEach((text) => testDataTracker.add('anamneseAnswerOptionText', text.id));
+  answerOptionTexts.forEach((text) => testDataTracker.add('anamnesisAnswerOptionText', text.id));
 
   return { questionConcept, answerOptions };
 };
@@ -264,7 +264,7 @@ describe('Anamnesis Endpoints', () => {
   });
 
   describe('GET /api/anamnesis/complete', () => {
-    it('should get complete anamnese with all questions and options', async () => {
+    it('should get complete anamnesis with all questions and options', async () => {
       const response = await request(app)
         .get('/api/anamnesis/complete')
         .query({ locale: 'pt-BR' });
@@ -318,14 +318,14 @@ describe('Anamnesis Endpoints', () => {
       expect(response.body.data.answerOptionId).toBe(testAnswerOption.id);
 
       if (response.body.data?.id) {
-        testDataTracker.add('anamneseUserAnswer', response.body.data.id);
+        testDataTracker.add('anamnesisUserAnswer', response.body.data.id);
       }
     });
 
     it('should create a new answer with answerText', async () => {
       // Criar pergunta de texto
       const textQuestionId = generateTestId();
-      const textQuestion = await prisma.anamneseQuestionConcept.create({
+      const textQuestion = await prisma.anamnesisQuestionConcept.create({
         data: {
           id: textQuestionId,
           key: `test-text-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -339,13 +339,13 @@ describe('Anamnesis Endpoints', () => {
           },
         },
       });
-      testDataTracker.add('anamneseQuestionConcept', textQuestion.id);
+      testDataTracker.add('anamnesisQuestionConcept', textQuestion.id);
       
       // Rastrear texto criado
-      const questionTexts = await prisma.anamneseQuestionText.findMany({
+      const questionTexts = await prisma.anamnesisQuestionText.findMany({
         where: { questionConceptId: textQuestion.id },
       });
-      questionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+      questionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
 
       const answerData = {
         userId: testUser.id,
@@ -363,14 +363,14 @@ describe('Anamnesis Endpoints', () => {
       expect(response.body.data.answerText).toBe(answerData.answerText);
 
       if (response.body.data?.id) {
-        testDataTracker.add('anamneseUserAnswer', response.body.data.id);
+        testDataTracker.add('anamnesisUserAnswer', response.body.data.id);
       }
     });
 
     it('should update existing answer', async () => {
       // Criar uma nova pergunta para este teste para evitar conflito com testes anteriores
       const updateQuestionId = generateTestId();
-      const updateQuestion = await prisma.anamneseQuestionConcept.create({
+      const updateQuestion = await prisma.anamnesisQuestionConcept.create({
         data: {
           id: updateQuestionId,
           key: `test-update-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -412,27 +412,27 @@ describe('Anamnesis Endpoints', () => {
           },
         },
       });
-      testDataTracker.add('anamneseQuestionConcept', updateQuestion.id);
+      testDataTracker.add('anamnesisQuestionConcept', updateQuestion.id);
       
-      const updateQuestionTexts = await prisma.anamneseQuestionText.findMany({
+      const updateQuestionTexts = await prisma.anamnesisQuestionText.findMany({
         where: { questionConceptId: updateQuestion.id },
       });
-      updateQuestionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+      updateQuestionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
       
-      const updateOptions = await prisma.anamneseAnswerOption.findMany({
+      const updateOptions = await prisma.anamnesisAnswerOption.findMany({
         where: { questionConceptId: updateQuestion.id },
       });
       for (const option of updateOptions) {
-        testDataTracker.add('anamneseAnswerOption', option.id);
-        const optionTexts = await prisma.anamneseAnswerOptionText.findMany({
+        testDataTracker.add('anamnesisAnswerOption', option.id);
+        const optionTexts = await prisma.anamnesisAnswerOptionText.findMany({
           where: { answerOptionId: option.id },
         });
-        optionTexts.forEach((text) => testDataTracker.add('anamneseAnswerOptionText', text.id));
+        optionTexts.forEach((text) => testDataTracker.add('anamnesisAnswerOptionText', text.id));
       }
       
       // Criar resposta inicial
       const initialAnswerId = generateTestId();
-      const initialAnswer = await prisma.anamneseUserAnswer.create({
+      const initialAnswer = await prisma.anamnesisUserAnswer.create({
         data: {
           id: initialAnswerId,
           userId: testUser.id,
@@ -440,10 +440,10 @@ describe('Anamnesis Endpoints', () => {
           answerOptionId: updateOptions[0].id,
         },
       });
-      testDataTracker.add('anamneseUserAnswer', initialAnswer.id);
+      testDataTracker.add('anamnesisUserAnswer', initialAnswer.id);
 
       // Buscar outra opção de resposta
-      const otherOption = await prisma.anamneseAnswerOption.findFirst({
+      const otherOption = await prisma.anamnesisAnswerOption.findFirst({
         where: {
           questionConceptId: updateQuestion.id,
           id: { not: updateOptions[0].id },
@@ -502,7 +502,7 @@ describe('Anamnesis Endpoints', () => {
     it('should return 401 if token is missing', async () => {
       // Criar uma nova pergunta para este teste
       const authTestQuestionId = generateTestId();
-      const authTestQuestion = await prisma.anamneseQuestionConcept.create({
+      const authTestQuestion = await prisma.anamnesisQuestionConcept.create({
         data: {
           id: authTestQuestionId,
           key: `test-auth-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -516,12 +516,12 @@ describe('Anamnesis Endpoints', () => {
           },
         },
       });
-      testDataTracker.add('anamneseQuestionConcept', authTestQuestion.id);
+      testDataTracker.add('anamnesisQuestionConcept', authTestQuestion.id);
       
-      const questionTexts = await prisma.anamneseQuestionText.findMany({
+      const questionTexts = await prisma.anamnesisQuestionText.findMany({
         where: { questionConceptId: authTestQuestion.id },
       });
-      questionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+      questionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
 
       const response = await request(app)
         .post('/api/anamnesis/answers')
@@ -539,7 +539,7 @@ describe('Anamnesis Endpoints', () => {
     it('should get all answers for a user', async () => {
       // Criar uma nova pergunta para este teste
       const listQuestionId = generateTestId();
-      const listQuestion = await prisma.anamneseQuestionConcept.create({
+      const listQuestion = await prisma.anamnesisQuestionConcept.create({
         data: {
           id: listQuestionId,
           key: `test-list-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -567,27 +567,27 @@ describe('Anamnesis Endpoints', () => {
           },
         },
       });
-      testDataTracker.add('anamneseQuestionConcept', listQuestion.id);
+      testDataTracker.add('anamnesisQuestionConcept', listQuestion.id);
       
-      const listQuestionTexts = await prisma.anamneseQuestionText.findMany({
+      const listQuestionTexts = await prisma.anamnesisQuestionText.findMany({
         where: { questionConceptId: listQuestion.id },
       });
-      listQuestionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+      listQuestionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
       
-      const listOptions = await prisma.anamneseAnswerOption.findMany({
+      const listOptions = await prisma.anamnesisAnswerOption.findMany({
         where: { questionConceptId: listQuestion.id },
       });
       for (const option of listOptions) {
-        testDataTracker.add('anamneseAnswerOption', option.id);
-        const optionTexts = await prisma.anamneseAnswerOptionText.findMany({
+        testDataTracker.add('anamnesisAnswerOption', option.id);
+        const optionTexts = await prisma.anamnesisAnswerOptionText.findMany({
           where: { answerOptionId: option.id },
         });
-        optionTexts.forEach((text) => testDataTracker.add('anamneseAnswerOptionText', text.id));
+        optionTexts.forEach((text) => testDataTracker.add('anamnesisAnswerOptionText', text.id));
       }
       
       // Criar algumas respostas
       const answer1Id = generateTestId();
-      const answer1 = await prisma.anamneseUserAnswer.create({
+      const answer1 = await prisma.anamnesisUserAnswer.create({
         data: {
           id: answer1Id,
           userId: testUser.id,
@@ -595,7 +595,7 @@ describe('Anamnesis Endpoints', () => {
           answerOptionId: listOptions[0].id,
         },
       });
-      testDataTracker.add('anamneseUserAnswer', answer1.id);
+      testDataTracker.add('anamnesisUserAnswer', answer1.id);
 
       const response = await request(app)
         .get(`/api/anamnesis/answers/user/${testUser.id}`)
@@ -658,7 +658,7 @@ describe('Anamnesis Endpoints', () => {
     it('should get a specific answer for a user and question', async () => {
       // Criar uma nova pergunta para este teste
       const specificQuestionId = generateTestId();
-      const specificQuestion = await prisma.anamneseQuestionConcept.create({
+      const specificQuestion = await prisma.anamnesisQuestionConcept.create({
         data: {
           id: specificQuestionId,
           key: `test-specific-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -686,27 +686,27 @@ describe('Anamnesis Endpoints', () => {
           },
         },
       });
-      testDataTracker.add('anamneseQuestionConcept', specificQuestion.id);
+      testDataTracker.add('anamnesisQuestionConcept', specificQuestion.id);
       
-      const specificQuestionTexts = await prisma.anamneseQuestionText.findMany({
+      const specificQuestionTexts = await prisma.anamnesisQuestionText.findMany({
         where: { questionConceptId: specificQuestion.id },
       });
-      specificQuestionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+      specificQuestionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
       
-      const specificOptions = await prisma.anamneseAnswerOption.findMany({
+      const specificOptions = await prisma.anamnesisAnswerOption.findMany({
         where: { questionConceptId: specificQuestion.id },
       });
       for (const option of specificOptions) {
-        testDataTracker.add('anamneseAnswerOption', option.id);
-        const optionTexts = await prisma.anamneseAnswerOptionText.findMany({
+        testDataTracker.add('anamnesisAnswerOption', option.id);
+        const optionTexts = await prisma.anamnesisAnswerOptionText.findMany({
           where: { answerOptionId: option.id },
         });
-        optionTexts.forEach((text) => testDataTracker.add('anamneseAnswerOptionText', text.id));
+        optionTexts.forEach((text) => testDataTracker.add('anamnesisAnswerOptionText', text.id));
       }
       
       // Criar resposta
       const answerId = generateTestId();
-      const answer = await prisma.anamneseUserAnswer.create({
+      const answer = await prisma.anamnesisUserAnswer.create({
         data: {
           id: answerId,
           userId: testUser.id,
@@ -714,7 +714,7 @@ describe('Anamnesis Endpoints', () => {
           answerOptionId: specificOptions[0].id,
         },
       });
-      testDataTracker.add('anamneseUserAnswer', answer.id);
+      testDataTracker.add('anamnesisUserAnswer', answer.id);
 
       const response = await request(app)
         .get(`/api/anamnesis/answers/user/${testUser.id}/question/${specificQuestion.id}`)
@@ -729,7 +729,7 @@ describe('Anamnesis Endpoints', () => {
     it('should return 404 if answer not found', async () => {
       // Criar nova pergunta sem resposta
       const newQuestionId = generateTestId();
-      const newQuestion = await prisma.anamneseQuestionConcept.create({
+      const newQuestion = await prisma.anamnesisQuestionConcept.create({
         data: {
           id: newQuestionId,
           key: `test-new-question-${Date.now()}${TEST_ID_PREFIX}`,
@@ -743,13 +743,13 @@ describe('Anamnesis Endpoints', () => {
           },
         },
       });
-      testDataTracker.add('anamneseQuestionConcept', newQuestion.id);
+      testDataTracker.add('anamnesisQuestionConcept', newQuestion.id);
       
       // Rastrear texto criado
-      const questionTexts = await prisma.anamneseQuestionText.findMany({
+      const questionTexts = await prisma.anamnesisQuestionText.findMany({
         where: { questionConceptId: newQuestion.id },
       });
-      questionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
+      questionTexts.forEach((text) => testDataTracker.add('anamnesisQuestionText', text.id));
 
       const response = await request(app)
         .get(`/api/anamnesis/answers/user/${testUser.id}/question/${newQuestion.id}`)

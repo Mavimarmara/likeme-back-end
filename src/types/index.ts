@@ -33,13 +33,13 @@ export interface AuthResponse {
   objectivesSelectedAt?: Date | null; // Data em que os objetivos foram selecionados (calculado)
 }
 
-export interface AnamneseAnswer {
+export interface AnamnesisAnswer {
   questionId: string;
   answer: string;
 }
 
-export interface CreateAnamneseData {
-  answers: AnamneseAnswer[];
+export interface CreateAnamnesisData {
+  answers: AnamnesisAnswer[];
 }
 
 export interface CreateActivityData {

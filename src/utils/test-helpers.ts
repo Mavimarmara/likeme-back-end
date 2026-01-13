@@ -267,51 +267,51 @@ export async function safeTestCleanup(
       }
     }
     
-    // Deletar respostas de anamnese (anamneseUserAnswer)
-    if (allIds.has('anamneseUserAnswer') && allIds.get('anamneseUserAnswer')!.length > 0) {
-      const testAnswerIds = filterTestIds(allIds.get('anamneseUserAnswer')!);
+    // Deletar respostas de anamnesis (anamnesisUserAnswer)
+    if (allIds.has('anamnesisUserAnswer') && allIds.get('anamnesisUserAnswer')!.length > 0) {
+      const testAnswerIds = filterTestIds(allIds.get('anamnesisUserAnswer')!);
       if (testAnswerIds.length > 0) {
-        await prisma.anamneseUserAnswer.deleteMany({
+        await prisma.anamnesisUserAnswer.deleteMany({
           where: { id: { in: testAnswerIds } },
         });
       }
     }
     
-    // Deletar textos de opções de resposta (anamneseAnswerOptionText)
-    if (allIds.has('anamneseAnswerOptionText') && allIds.get('anamneseAnswerOptionText')!.length > 0) {
-      const testOptionTextIds = filterTestIds(allIds.get('anamneseAnswerOptionText')!);
+    // Deletar textos de opções de resposta (anamnesisAnswerOptionText)
+    if (allIds.has('anamnesisAnswerOptionText') && allIds.get('anamnesisAnswerOptionText')!.length > 0) {
+      const testOptionTextIds = filterTestIds(allIds.get('anamnesisAnswerOptionText')!);
       if (testOptionTextIds.length > 0) {
-        await prisma.anamneseAnswerOptionText.deleteMany({
+        await prisma.anamnesisAnswerOptionText.deleteMany({
           where: { id: { in: testOptionTextIds } },
       });
       }
     }
     
-    // Deletar opções de resposta (anamneseAnswerOption)
-    if (allIds.has('anamneseAnswerOption') && allIds.get('anamneseAnswerOption')!.length > 0) {
-      const testOptionIds = filterTestIds(allIds.get('anamneseAnswerOption')!);
+    // Deletar opções de resposta (anamnesisAnswerOption)
+    if (allIds.has('anamnesisAnswerOption') && allIds.get('anamnesisAnswerOption')!.length > 0) {
+      const testOptionIds = filterTestIds(allIds.get('anamnesisAnswerOption')!);
       if (testOptionIds.length > 0) {
-        await prisma.anamneseAnswerOption.deleteMany({
+        await prisma.anamnesisAnswerOption.deleteMany({
           where: { id: { in: testOptionIds } },
         });
       }
     }
     
-    // Deletar textos de perguntas (anamneseQuestionText)
-    if (allIds.has('anamneseQuestionText') && allIds.get('anamneseQuestionText')!.length > 0) {
-      const testQuestionTextIds = filterTestIds(allIds.get('anamneseQuestionText')!);
+    // Deletar textos de perguntas (anamnesisQuestionText)
+    if (allIds.has('anamnesisQuestionText') && allIds.get('anamnesisQuestionText')!.length > 0) {
+      const testQuestionTextIds = filterTestIds(allIds.get('anamnesisQuestionText')!);
       if (testQuestionTextIds.length > 0) {
-        await prisma.anamneseQuestionText.deleteMany({
+        await prisma.anamnesisQuestionText.deleteMany({
           where: { id: { in: testQuestionTextIds } },
         });
       }
     }
     
-    // Deletar conceitos de perguntas (anamneseQuestionConcept) - último, pois é referenciado por outros
-    if (allIds.has('anamneseQuestionConcept') && allIds.get('anamneseQuestionConcept')!.length > 0) {
-      const testQuestionConceptIds = filterTestIds(allIds.get('anamneseQuestionConcept')!);
+    // Deletar conceitos de perguntas (anamnesisQuestionConcept) - último, pois é referenciado por outros
+    if (allIds.has('anamnesisQuestionConcept') && allIds.get('anamnesisQuestionConcept')!.length > 0) {
+      const testQuestionConceptIds = filterTestIds(allIds.get('anamnesisQuestionConcept')!);
       if (testQuestionConceptIds.length > 0) {
-        await prisma.anamneseQuestionConcept.deleteMany({
+        await prisma.anamnesisQuestionConcept.deleteMany({
           where: { id: { in: testQuestionConceptIds } },
         });
       }
