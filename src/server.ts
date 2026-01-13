@@ -27,7 +27,7 @@ import adRoutes from '@/routes/ad/adRoutes';
 import advertiserRoutes from '@/routes/advertiser/advertiserRoutes';
 import amazonRoutes from '@/routes/amazon/amazonRoutes';
 import activityRoutes from '@/routes/activity/activityRoutes';
-import anamneseRoutes from '@/routes/anamnese/anamneseRoutes';
+import anamnesisRoutes from '@/routes/anamnesis/anamnesisRoutes';
 
 const app = express();
 
@@ -257,7 +257,7 @@ app.use('/api/ads', adRoutes);
 app.use('/api/advertisers', advertiserRoutes);
 app.use('/api/amazon', amazonRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/api/anamnese', anamneseRoutes);
+app.use('/api/anamnesis', anamnesisRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({

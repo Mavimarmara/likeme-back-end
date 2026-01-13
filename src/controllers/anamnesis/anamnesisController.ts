@@ -1,21 +1,21 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError } from '@/utils/response';
 import {
-  getAnamneseQuestions,
+  getAnamnesisQuestions,
   getQuestionByKey,
   createOrUpdateUserAnswer,
   getUserAnswers,
   getUserAnswerByQuestion,
-  getCompleteAnamneseByLocale,
-} from '@/services/anamnese/anamneseService';
-import type { CreateUserAnswerData } from '@/interfaces/anamnese';
+  getCompleteAnamnesisByLocale,
+} from '@/services/anamnesis/anamnesisService';
+import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
 
 /**
  * @swagger
- * /api/anamnese/questions:
+ * /api/anamnesis/questions:
  *   get:
- *     summary: Lista todas as perguntas da anamnese com traduções
- *     tags: [Anamnese]
+ *     summary: Lista todas as perguntas da anamnesis com traduções
+ *     tags: [Anamnesis]
  *     parameters:
  *       - in: query
  *         name: locale
@@ -37,7 +37,7 @@ export const getQuestions = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const questions = await getAnamneseQuestions(locale);
+    const questions = await getAnamnesisQuestions(locale);
     sendSuccess(res, questions, 'Questions retrieved successfully');
   } catch (error: any) {
     sendError(res, error.message || 'Error retrieving questions', 500);
@@ -46,10 +46,10 @@ export const getQuestions = async (req: Request, res: Response): Promise<void> =
 
 /**
  * @swagger
- * /api/anamnese/questions/{key}:
+ * /api/anamnesis/questions/{key}:
  *   get:
  *     summary: Busca uma pergunta específica por key
- *     tags: [Anamnese]
+ *     tags: [Anamnesis]
  *     parameters:
  *       - in: path
  *         name: key
@@ -95,10 +95,10 @@ export const getQuestion = async (req: Request, res: Response): Promise<void> =>
 
 /**
  * @swagger
- * /api/anamnese/answers:
+ * /api/anamnesis/answers:
  *   post:
  *     summary: Cria ou atualiza uma resposta do usuário
- *     tags: [Anamnese]
+ *     tags: [Anamnesis]
  *     requestBody:
  *       required: true
  *       content:
@@ -143,10 +143,10 @@ export const createAnswer = async (req: Request, res: Response): Promise<void> =
 
 /**
  * @swagger
- * /api/anamnese/answers/user/{userId}:
+ * /api/anamnesis/answers/user/{userId}:
  *   get:
  *     summary: Busca todas as respostas de um usuário
- *     tags: [Anamnese]
+ *     tags: [Anamnesis]
  *     parameters:
  *       - in: path
  *         name: userId
@@ -179,10 +179,10 @@ export const getUserAnswersList = async (req: Request, res: Response): Promise<v
 
 /**
  * @swagger
- * /api/anamnese/answers/user/{userId}/question/{questionConceptId}:
+ * /api/anamnesis/answers/user/{userId}/question/{questionConceptId}:
  *   get:
  *     summary: Busca uma resposta específica do usuário para uma pergunta
- *     tags: [Anamnese]
+ *     tags: [Anamnesis]
  *     parameters:
  *       - in: path
  *         name: userId
@@ -221,10 +221,10 @@ export const getUserAnswer = async (req: Request, res: Response): Promise<void> 
 
 /**
  * @swagger
- * /api/anamnese/complete:
+ * /api/anamnesis/complete:
  *   get:
- *     summary: Busca anamnese completa com todas as perguntas, textos e opções traduzidas
- *     tags: [Anamnese]
+ *     summary: Busca anamnesis completa com todas as perguntas, textos e opções traduzidas
+ *     tags: [Anamnesis]
  *     parameters:
  *       - in: query
  *         name: locale
@@ -235,9 +235,9 @@ export const getUserAnswer = async (req: Request, res: Response): Promise<void> 
  *         description: Locale para tradução
  *     responses:
  *       200:
- *         description: Anamnese completa com traduções
+ *         description: Anamnesis completa com traduções
  */
-export const getCompleteAnamnese = async (req: Request, res: Response): Promise<void> => {
+export const getCompleteAnamnesis = async (req: Request, res: Response): Promise<void> => {
   try {
     const locale = req.query.locale as string;
 
@@ -246,8 +246,8 @@ export const getCompleteAnamnese = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const anamnese = await getCompleteAnamneseByLocale(locale);
-    sendSuccess(res, anamnese, 'Complete anamnese retrieved successfully');
+    const anamnesis = await getCompleteAnamnesisByLocale(locale);
+    sendSuccess(res, anamnesis, 'Complete anamnesis retrieved successfully');
   } catch (error: any) {
     sendError(res, error.message || 'Error retrieving complete anamnese', 500);
   }

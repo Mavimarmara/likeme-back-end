@@ -1,13 +1,13 @@
 import prisma from '@/config/database';
 import type { AnamneseUserAnswer } from '@prisma/client';
-import type { AnamneseQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnese';
+import type { AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
 
 /**
- * Busca todas as perguntas da anamnese com textos traduzidos e opções de resposta
+ * Busca todas as perguntas da anamnesis com textos traduzidos e opções de resposta
  * @param locale - Locale para tradução (ex: "pt-BR", "en-US")
  * @returns Array de perguntas com textos e opções traduzidas
  */
-export async function getAnamneseQuestions(locale: string): Promise<AnamneseQuestion[]> {
+export async function getAnamnesisQuestions(locale: string): Promise<AnamnesisQuestion[]> {
   const questions = await prisma.anamneseQuestionConcept.findMany({
     where: {
       deletedAt: null,
@@ -61,7 +61,7 @@ export async function getAnamneseQuestions(locale: string): Promise<AnamneseQues
 export async function getQuestionByKey(
   key: string,
   locale: string
-): Promise<AnamneseQuestion | null> {
+): Promise<AnamnesisQuestion | null> {
   const question = await prisma.anamneseQuestionConcept.findUnique({
     where: {
       key: key,
@@ -264,7 +264,7 @@ export async function getUserAnswerByQuestion(
  * Query Prisma completa que retorna question_concept com question_text e answer_options com answer_option_text
  * Filtrado por locale
  */
-export async function getCompleteAnamneseByLocale(locale: string) {
+export async function getCompleteAnamnesisByLocale(locale: string) {
   return prisma.anamneseQuestionConcept.findMany({
     where: {
       deletedAt: null,

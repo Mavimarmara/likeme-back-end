@@ -53,8 +53,8 @@ const createTestToken = async (): Promise<string> => {
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
 };
 
-// Helper para criar dados de teste de anamnese
-const createTestAnamneseData = async () => {
+// Helper para criar dados de teste de anamnesis
+const createTestAnamnesisData = async () => {
   // Criar pergunta conceito
   const questionConceptId = generateTestId();
   const questionConcept = await prisma.anamneseQuestionConcept.create({
@@ -164,7 +164,7 @@ const createTestAnamneseData = async () => {
   return { questionConcept, answerOptions };
 };
 
-describe('Anamnese Endpoints', () => {
+describe('Anamnesis Endpoints', () => {
   let authToken: string;
   let testUser: any;
   let testQuestionConcept: any;
@@ -180,15 +180,15 @@ describe('Anamnese Endpoints', () => {
     });
 
     // Criar dados de teste
-    const testData = await createTestAnamneseData();
+    const testData = await createTestAnamnesisData();
     testQuestionConcept = testData.questionConcept;
     testAnswerOption = testData.answerOptions[0];
   });
 
-  describe('GET /api/anamnese/questions', () => {
+  describe('GET /api/anamnesis/questions', () => {
     it('should list all questions with translations', async () => {
       const response = await request(app)
-        .get('/api/anamnese/questions')
+        .get('/api/anamnesis/questions')
         .query({ locale: 'pt-BR' });
 
       expect(response.status).toBe(200);
@@ -198,7 +198,7 @@ describe('Anamnese Endpoints', () => {
 
     it('should require locale parameter', async () => {
       const response = await request(app)
-        .get('/api/anamnese/questions');
+        .get('/api/anamnesis/questions');
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -206,7 +206,7 @@ describe('Anamnese Endpoints', () => {
 
     it('should return questions with translated texts', async () => {
       const response = await request(app)
-        .get('/api/anamnese/questions')
+        .get('/api/anamnesis/questions')
         .query({ locale: 'pt-BR' });
 
       expect(response.status).toBe(200);
@@ -222,11 +222,11 @@ describe('Anamnese Endpoints', () => {
 
     it('should return questions in different locales', async () => {
       const ptResponse = await request(app)
-        .get('/api/anamnese/questions')
+        .get('/api/anamnesis/questions')
         .query({ locale: 'pt-BR' });
 
       const enResponse = await request(app)
-        .get('/api/anamnese/questions')
+        .get('/api/anamnesis/questions')
         .query({ locale: 'en-US' });
 
       expect(ptResponse.status).toBe(200);
@@ -234,10 +234,10 @@ describe('Anamnese Endpoints', () => {
     });
   });
 
-  describe('GET /api/anamnese/questions/:key', () => {
+  describe('GET /api/anamnesis/questions/:key', () => {
     it('should get a question by key', async () => {
       const response = await request(app)
-        .get(`/api/anamnese/questions/${testQuestionConcept.key}`)
+        .get(`/api/anamnesis/questions/${testQuestionConcept.key}`)
         .query({ locale: 'pt-BR' });
 
       expect(response.status).toBe(200);
@@ -248,7 +248,7 @@ describe('Anamnese Endpoints', () => {
 
     it('should return 404 if question not found', async () => {
       const response = await request(app)
-        .get('/api/anamnese/questions/non-existent-key')
+        .get('/api/anamnesis/questions/non-existent-key')
         .query({ locale: 'pt-BR' });
 
       expect(response.status).toBe(404);
@@ -257,16 +257,16 @@ describe('Anamnese Endpoints', () => {
 
     it('should require locale parameter', async () => {
       const response = await request(app)
-        .get(`/api/anamnese/questions/${testQuestionConcept.key}`);
+        .get(`/api/anamnesis/questions/${testQuestionConcept.key}`);
 
       expect(response.status).toBe(400);
     });
   });
 
-  describe('GET /api/anamnese/complete', () => {
+  describe('GET /api/anamnesis/complete', () => {
     it('should get complete anamnese with all questions and options', async () => {
       const response = await request(app)
-        .get('/api/anamnese/complete')
+        .get('/api/anamnesis/complete')
         .query({ locale: 'pt-BR' });
 
       expect(response.status).toBe(200);
@@ -276,14 +276,14 @@ describe('Anamnese Endpoints', () => {
 
     it('should require locale parameter', async () => {
       const response = await request(app)
-        .get('/api/anamnese/complete');
+        .get('/api/anamnesis/complete');
 
       expect(response.status).toBe(400);
     });
 
     it('should return complete structure with nested data', async () => {
       const response = await request(app)
-        .get('/api/anamnese/complete')
+        .get('/api/anamnesis/complete')
         .query({ locale: 'pt-BR' });
 
       expect(response.status).toBe(200);
@@ -298,7 +298,7 @@ describe('Anamnese Endpoints', () => {
     });
   });
 
-  describe('POST /api/anamnese/answers', () => {
+  describe('POST /api/anamnesis/answers', () => {
     it('should create a new answer with answerOptionId', async () => {
       const answerData = {
         userId: testUser.id,
@@ -307,7 +307,7 @@ describe('Anamnese Endpoints', () => {
       };
 
       const response = await request(app)
-        .post('/api/anamnese/answers')
+        .post('/api/anamnesis/answers')
         .send(answerData)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -354,7 +354,7 @@ describe('Anamnese Endpoints', () => {
       };
 
       const response = await request(app)
-        .post('/api/anamnese/answers')
+        .post('/api/anamnesis/answers')
         .send(answerData)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -459,7 +459,7 @@ describe('Anamnese Endpoints', () => {
         };
 
         const response = await request(app)
-          .post('/api/anamnese/answers')
+          .post('/api/anamnesis/answers')
           .send(updateData)
           .set('Authorization', `Bearer ${authToken}`);
 
@@ -477,7 +477,7 @@ describe('Anamnese Endpoints', () => {
       };
 
       const response = await request(app)
-        .post('/api/anamnese/answers')
+        .post('/api/anamnesis/answers')
         .send(updateData)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -488,7 +488,7 @@ describe('Anamnese Endpoints', () => {
 
     it('should validate required fields', async () => {
       const response = await request(app)
-        .post('/api/anamnese/answers')
+        .post('/api/anamnesis/answers')
         .send({
           userId: testUser.id,
           // missing questionConceptId
@@ -524,7 +524,7 @@ describe('Anamnese Endpoints', () => {
       questionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
 
       const response = await request(app)
-        .post('/api/anamnese/answers')
+        .post('/api/anamnesis/answers')
         .send({
           userId: testUser.id,
           questionConceptId: authTestQuestion.id,
@@ -535,7 +535,7 @@ describe('Anamnese Endpoints', () => {
     });
   });
 
-  describe('GET /api/anamnese/answers/user/:userId', () => {
+  describe('GET /api/anamnesis/answers/user/:userId', () => {
     it('should get all answers for a user', async () => {
       // Criar uma nova pergunta para este teste
       const listQuestionId = generateTestId();
@@ -598,7 +598,7 @@ describe('Anamnese Endpoints', () => {
       testDataTracker.add('anamneseUserAnswer', answer1.id);
 
       const response = await request(app)
-        .get(`/api/anamnese/answers/user/${testUser.id}`)
+        .get(`/api/anamnesis/answers/user/${testUser.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -608,7 +608,7 @@ describe('Anamnese Endpoints', () => {
 
     it('should get answers with locale translations', async () => {
       const response = await request(app)
-        .get(`/api/anamnese/answers/user/${testUser.id}`)
+        .get(`/api/anamnesis/answers/user/${testUser.id}`)
         .query({ locale: 'pt-BR' })
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -645,7 +645,7 @@ describe('Anamnese Endpoints', () => {
       testDataTracker.add('user', newUser.id);
 
       const response = await request(app)
-        .get(`/api/anamnese/answers/user/${newUser.id}`)
+        .get(`/api/anamnesis/answers/user/${newUser.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -654,7 +654,7 @@ describe('Anamnese Endpoints', () => {
     });
   });
 
-  describe('GET /api/anamnese/answers/user/:userId/question/:questionConceptId', () => {
+  describe('GET /api/anamnesis/answers/user/:userId/question/:questionConceptId', () => {
     it('should get a specific answer for a user and question', async () => {
       // Criar uma nova pergunta para este teste
       const specificQuestionId = generateTestId();
@@ -717,7 +717,7 @@ describe('Anamnese Endpoints', () => {
       testDataTracker.add('anamneseUserAnswer', answer.id);
 
       const response = await request(app)
-        .get(`/api/anamnese/answers/user/${testUser.id}/question/${specificQuestion.id}`)
+        .get(`/api/anamnesis/answers/user/${testUser.id}/question/${specificQuestion.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -752,7 +752,7 @@ describe('Anamnese Endpoints', () => {
       questionTexts.forEach((text) => testDataTracker.add('anamneseQuestionText', text.id));
 
       const response = await request(app)
-        .get(`/api/anamnese/answers/user/${testUser.id}/question/${newQuestion.id}`)
+        .get(`/api/anamnesis/answers/user/${testUser.id}/question/${newQuestion.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);

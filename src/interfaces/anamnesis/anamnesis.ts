@@ -1,9 +1,9 @@
 import type { QuestionType } from '@prisma/client';
 
 /**
- * Interface para uma pergunta da anamnese com textos traduzidos e opções de resposta
+ * Interface para uma pergunta da anamnesis com textos traduzidos e opções de resposta
  */
-export interface AnamneseQuestion {
+export interface AnamnesisQuestion {
   id: string;
   key: string;
   type: QuestionType;
