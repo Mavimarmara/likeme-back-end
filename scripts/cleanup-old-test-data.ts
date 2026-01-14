@@ -128,11 +128,11 @@ async function cleanupOldTestData() {
       const personIds = testUsers.map(u => u.personId).filter(Boolean);
       
       // Deletar respostas de anamnese relacionadas
-      const anamneseAnswers = await prisma.anamneseUserAnswer.findMany({
+      const anamneseAnswers = await prisma.anamnesisUserAnswer.findMany({
         where: { userId: { in: userIds } },
       });
       if (anamneseAnswers.length > 0) {
-        await prisma.anamneseUserAnswer.deleteMany({
+        await prisma.anamnesisUserAnswer.deleteMany({
           where: { userId: { in: userIds } },
         });
         console.log(`   Deletadas ${anamneseAnswers.length} respostas de anamnese`);
@@ -189,14 +189,14 @@ async function cleanupOldTestData() {
       console.log('   Nenhum usuário de teste encontrado');
     }
 
-    // Limpar perguntas de teste antigas da anamnese
+    // Limpar perguntas de teste antigas da anamnese (apenas com prefixo -system-test)
     console.log('\n❓ Limpando perguntas de teste da anamnese...');
-    const testQuestions = await prisma.anamneseQuestionConcept.findMany({
+    const TEST_ID_PREFIX = '-system-test';
+    
+    // Buscar perguntas que contenham o prefixo de teste
+    const testQuestions = await prisma.anamnesisQuestionConcept.findMany({
       where: {
-        OR: [
-          { key: { contains: 'test', mode: 'insensitive' } },
-          { key: { contains: 'question', mode: 'insensitive' } },
-        ],
+        key: { contains: TEST_ID_PREFIX },
       },
     });
 
@@ -204,42 +204,42 @@ async function cleanupOldTestData() {
       const questionIds = testQuestions.map(q => q.id);
       
       // Deletar respostas relacionadas
-      const questionAnswers = await prisma.anamneseUserAnswer.findMany({
+      const questionAnswers = await prisma.anamnesisUserAnswer.findMany({
         where: { questionConceptId: { in: questionIds } },
       });
       if (questionAnswers.length > 0) {
-        await prisma.anamneseUserAnswer.deleteMany({
+        await prisma.anamnesisUserAnswer.deleteMany({
           where: { questionConceptId: { in: questionIds } },
         });
         console.log(`   Deletadas ${questionAnswers.length} respostas relacionadas`);
       }
       
       // Buscar opções de resposta
-      const answerOptions = await prisma.anamneseAnswerOption.findMany({
+      const answerOptions = await prisma.anamnesisAnswerOption.findMany({
         where: { questionConceptId: { in: questionIds } },
       });
       const optionIds = answerOptions.map(o => o.id);
       
       if (optionIds.length > 0) {
         // Deletar textos das opções
-        await prisma.anamneseAnswerOptionText.deleteMany({
+        await prisma.anamnesisAnswerOptionText.deleteMany({
           where: { answerOptionId: { in: optionIds } },
         });
         
         // Deletar opções
-        await prisma.anamneseAnswerOption.deleteMany({
+        await prisma.anamnesisAnswerOption.deleteMany({
           where: { id: { in: optionIds } },
         });
         console.log(`   Deletadas ${answerOptions.length} opções de resposta`);
       }
       
       // Deletar textos das perguntas
-      await prisma.anamneseQuestionText.deleteMany({
+      await prisma.anamnesisQuestionText.deleteMany({
         where: { questionConceptId: { in: questionIds } },
       });
       
       // Deletar perguntas
-      await prisma.anamneseQuestionConcept.deleteMany({
+      await prisma.anamnesisQuestionConcept.deleteMany({
         where: { id: { in: questionIds } },
       });
       

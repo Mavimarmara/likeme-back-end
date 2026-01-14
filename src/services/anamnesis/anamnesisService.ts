@@ -1,17 +1,36 @@
 import prisma from '@/config/database';
 import type { AnamnesisUserAnswer } from '@prisma/client';
-import type { AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
+import { Prisma } from '@prisma/client';
+import type { AnamnesisDomain, AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
 
-/**
- * Busca todas as perguntas da anamnesis com textos traduzidos e opções de resposta
- * @param locale - Locale para tradução (ex: "pt-BR", "en-US")
- * @returns Array de perguntas com textos e opções traduzidas
- */
-export async function getAnamnesisQuestions(locale: string): Promise<AnamnesisQuestion[]> {
+function getAnamnesisDomainFromKey(key: string): AnamnesisDomain {
+  const prefix = key.split('_')[0]?.toLowerCase();
+  const allowed: Record<string, AnamnesisDomain> = {
+    body: 'body',
+    mind: 'mind',
+    habits: 'habits',
+    movement: 'movement',
+    sleep: 'sleep',
+    nutrition: 'nutrition',
+    stress: 'stress',
+    spirituality: 'spirituality',
+  };
+  return allowed[prefix] ?? 'unknown';
+}
+
+export async function getAnamnesisQuestions(locale: string, keyPrefix?: string): Promise<AnamnesisQuestion[]> {
+  const whereClause: Prisma.AnamnesisQuestionConceptWhereInput = {
+    deletedAt: null,
+  };
+
+  if (keyPrefix) {
+    whereClause.key = {
+      startsWith: keyPrefix,
+    };
+  }
+
   const questions = await prisma.anamnesisQuestionConcept.findMany({
-    where: {
-      deletedAt: null,
-    },
+    where: whereClause,
     include: {
       texts: {
         where: {
@@ -41,7 +60,8 @@ export async function getAnamnesisQuestions(locale: string): Promise<AnamnesisQu
   return questions.map((question) => ({
     id: question.id,
     key: question.key,
-    type: question.type,
+    domain: getAnamnesisDomainFromKey(question.key),
+    answerType: question.type,
     text: question.texts[0]?.value || null,
     answerOptions: question.answerOptions.map((option) => ({
       id: option.id,
@@ -97,7 +117,8 @@ export async function getQuestionByKey(
   return {
     id: question.id,
     key: question.key,
-    type: question.type,
+    domain: getAnamnesisDomainFromKey(question.key),
+    answerType: question.type,
     text: question.texts[0]?.value || null,
     answerOptions: question.answerOptions.map((option: any) => ({
       id: option.id,

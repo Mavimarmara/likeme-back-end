@@ -214,7 +214,8 @@ describe('Anamnesis Endpoints', () => {
         const question = response.body.data[0];
         expect(question).toHaveProperty('id');
         expect(question).toHaveProperty('key');
-        expect(question).toHaveProperty('type');
+        expect(question).toHaveProperty('domain');
+        expect(question).toHaveProperty('answerType');
         expect(question).toHaveProperty('text');
         expect(question).toHaveProperty('answerOptions');
       }

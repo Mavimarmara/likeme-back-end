@@ -12,6 +12,41 @@ import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     AnamnesisAnswerOption:
+ *       type: object
+ *       properties:
+ *         id: { type: string }
+ *         key: { type: string }
+ *         order: { type: number }
+ *         text: { type: string, nullable: true }
+ *     AnamnesisQuestion:
+ *       type: object
+ *       properties:
+ *         id: { type: string }
+ *         key: { type: string }
+ *         domain:
+ *           type: string
+ *           enum: [body, mind, habits, movement, sleep, nutrition, stress, spirituality, unknown]
+ *         answerType:
+ *           type: string
+ *           enum: [single_choice, multiple_choice, text, number]
+ *         text: { type: string, nullable: true }
+ *         answerOptions:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/AnamnesisAnswerOption'
+ *     ApiResponseAnamnesisQuestions:
+ *       type: object
+ *       properties:
+ *         success: { type: boolean }
+ *         message: { type: string }
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/AnamnesisQuestion'
+ *
  * /api/anamnesis/questions:
  *   get:
  *     summary: Lista todas as perguntas da anamnesis com traduções
@@ -24,20 +59,38 @@ import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
  *           type: string
  *           example: "pt-BR"
  *         description: Locale para tradução (ex: pt-BR, en-US)
+ *       - in: query
+ *         name: keyPrefix
+ *         required: false
+ *         schema:
+ *           type: string
+ *           example: "mind_"
+ *         description: Prefixo opcional para filtrar perguntas por key (ex: "mind_", "body_", "habits_")
  *     responses:
  *       200:
  *         description: Lista de perguntas com textos e opções traduzidas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseAnamnesisQuestions'
  */
 export const getQuestions = async (req: Request, res: Response): Promise<void> => {
   try {
     const locale = req.query.locale as string;
+    const keyPrefixRaw = typeof req.query.keyPrefix === 'string' ? req.query.keyPrefix : undefined;
+    const keyPrefix = keyPrefixRaw?.trim().toLowerCase();
 
     if (!locale) {
       sendError(res, 'Locale parameter is required', 400);
       return;
     }
 
-    const questions = await getAnamnesisQuestions(locale);
+    if (keyPrefix && !/^[a-z_]{1,40}$/.test(keyPrefix)) {
+      sendError(res, 'Invalid keyPrefix', 400);
+      return;
+    }
+
+    const questions = await getAnamnesisQuestions(locale, keyPrefix);
     sendSuccess(res, questions, 'Questions retrieved successfully');
   } catch (error: any) {
     sendError(res, error.message || 'Error retrieving questions', 500);
