@@ -46,10 +46,11 @@ export const swaggerOptions = {
         oauth2: {
           type: 'oauth2',
           flows: {
-            implicit: {
+            authorizationCode: {
               authorizationUrl: config.auth0.domain 
-                ? `https://${config.auth0.domain}/authorize?audience=${config.auth0.clientId}`
+                ? `https://${config.auth0.domain}/authorize`
                 : '',
+              tokenUrl: `${config.baseUrl}/api/auth/swagger-token`,
               scopes: {
                 openid: 'OpenID',
                 profile: 'User profile',
@@ -57,7 +58,7 @@ export const swaggerOptions = {
               },
             },
           },
-          description: 'Login via Auth0',
+          description: 'Login via Auth0 (clique em Authorize para redirecionar)',
         },
       },
     },

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import prisma from '@/config/database';
 import { config } from '@/config';
 import { generateToken } from '@/utils/auth';
@@ -640,7 +641,6 @@ export const exchangeCodeForToken = async (req: Request, res: Response): Promise
     const clientSecret = config.auth0.clientSecret;
     const redirectUri = `${config.baseUrl}/api/auth/callback`;
 
-    // Trocar código por tokens
     const tokenUrl = `https://${auth0Domain}/oauth/token`;
 
     const body = new URLSearchParams();
@@ -666,7 +666,6 @@ export const exchangeCodeForToken = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Retornar o idToken
     sendSuccess(
       res,
       {
@@ -680,6 +679,111 @@ export const exchangeCodeForToken = async (req: Request, res: Response): Promise
   } catch (error) {
     console.error('Auth0 code exchange error:', error);
     sendError(res, 'Erro ao trocar código por tokens');
+  }
+};
+
+export const swaggerTokenExchange = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code, redirect_uri } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'Código de autorização não fornecido',
+      });
+    }
+
+    if (!config.auth0.domain || !config.auth0.clientId || !config.auth0.clientSecret) {
+      return res.status(500).json({
+        error: 'server_error',
+        error_description: 'Auth0 não configurado corretamente',
+      });
+    }
+
+    const auth0Domain = config.auth0.domain;
+    const clientId = config.auth0.clientId;
+    const clientSecret = config.auth0.clientSecret;
+
+    const tokenUrl = `https://${auth0Domain}/oauth/token`;
+
+    const body = new URLSearchParams();
+    body.append('grant_type', 'authorization_code');
+    body.append('client_id', clientId);
+    body.append('client_secret', clientSecret);
+    body.append('code', code);
+    body.append('redirect_uri', redirect_uri || `${config.baseUrl}/api-docs/oauth2-redirect.html`);
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    const data = (await response.json()) as any;
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data.error || 'invalid_grant',
+        error_description: data.error_description || 'Erro ao trocar código por tokens',
+      });
+    }
+
+    const idToken = data.id_token;
+    
+    const decoded = await verifyAuth0Token(idToken);
+    const auth0User = extractUserInfoFromToken(decoded);
+    const email = auth0User.email;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'invalid_token',
+        error_description: 'Email não encontrado no token',
+      });
+    }
+
+    const existingContact = await prisma.personContact.findFirst({
+      where: {
+        type: 'email',
+        value: email,
+        deletedAt: null,
+      },
+      include: {
+        person: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!existingContact?.person?.user) {
+      return res.status(401).json({
+        error: 'unauthorized',
+        error_description: 'Usuário não encontrado. Faça o registro primeiro.',
+      });
+    }
+
+    const user = existingContact.person.user;
+
+    const backendToken = jwt.sign(
+      { userId: user.id },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+
+    return res.json({
+      access_token: backendToken,
+      token_type: 'Bearer',
+      expires_in: 604800,
+    });
+  } catch (error) {
+    console.error('Swagger token exchange error:', error);
+    return res.status(500).json({
+      error: 'server_error',
+      error_description: 'Erro ao processar autenticação',
+    });
   }
 };
 

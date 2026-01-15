@@ -5,6 +5,7 @@ import {
   getAuthUrl,
   handleAuthCallback,
   exchangeCodeForToken,
+  swaggerTokenExchange,
   verifyToken,
   getCurrentToken,
   getAmityAuthToken,
@@ -30,10 +31,10 @@ router.post('/register', authRateLimiter, validate(createUserSchema), register);
 router.post('/login', authRateLimiter, validate(loginSchema), login);
 router.post('/verify', authRateLimiter, validate(verifyTokenSchema), verifyToken);
 
-// Authorization Code Flow endpoints
 router.get('/auth-url', authRateLimiter, getAuthUrl);
 router.get('/callback', handleAuthCallback);
 router.post('/exchange-code', authRateLimiter, validate(exchangeCodeSchema), exchangeCodeForToken);
+router.post('/swagger-token', swaggerTokenExchange);
 
 router.get('/token', authenticateToken, requireAuth, getCurrentToken);
 router.get('/amity-token', authenticateToken, requireAuth, getAmityAuthToken);
