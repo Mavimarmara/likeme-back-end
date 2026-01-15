@@ -145,6 +145,34 @@ Recomenda-se ter um banco de dados separado para staging:
    DATABASE_URL=<staging-db-url> npx prisma migrate deploy
    ```
 
+## Banco de Produção (Supabase separado)
+
+Para manter staging isolado e evitar risco em produção:
+
+1. **Mantenha o Supabase atual para staging**
+   - Não altere `DATABASE_URL`/`DIRECT_URL` do ambiente de staging.
+
+2. **Crie um novo projeto no Supabase para produção**
+   - No painel do Supabase: **New Project**
+   - Defina uma senha forte e guarde com segurança
+
+3. **Configure as variáveis no Vercel**
+   - Em **Settings → Environment Variables** do projeto `likeme-back-end`:
+     - **Production**: aponte para o **novo Supabase de produção**
+     - **Preview** (staging): mantenha apontando para o **Supabase atual**
+   - Variáveis mínimas:
+     - `DATABASE_URL` (pooling para runtime)
+     - `DIRECT_URL` (conexão direta para migrations)
+
+4. **Rode migrations no banco de produção**
+   - Em ambiente local (com `.env.production` ou exportando vars):
+     ```bash
+     DATABASE_URL=<prod-db-url> DIRECT_URL=<prod-direct-url> npx prisma migrate deploy
+     ```
+
+5. **Seed obrigatório (se necessário)**
+   - Se a aplicação depende de dados base (ex.: perguntas da anamnese), rode o seed em produção com as variáveis do banco de produção.
+
 ## Workflow Recomendado
 
 1. **Desenvolvimento**: Trabalhar em branches de feature

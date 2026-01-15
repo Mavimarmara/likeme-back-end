@@ -13,8 +13,9 @@ export const getSupabaseDatabaseUrl = (password: string): string => {
   }
 
   const projectRef = projectRefMatch[1];
-  
-  return `postgresql://postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`;
+  const encodedPassword = encodeURIComponent(password);
+
+  return `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
 };
 
 export const supabaseConfig = {
