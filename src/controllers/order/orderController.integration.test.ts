@@ -133,10 +133,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -194,10 +191,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -256,10 +250,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -301,10 +292,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -427,10 +415,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -491,10 +476,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -564,10 +546,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
@@ -613,10 +592,7 @@ describe('Order Endpoints', () => {
           },
         ],
         cardData: {
-          cardNumber: '4111111111111111',
-          cardHolderName: 'Test User',
-          cardExpirationDate: '1225',
-          cardCvv: '123',
+          ...createValidCardData(),
           cpf: '12345678901',
         },
         billingAddress: {
