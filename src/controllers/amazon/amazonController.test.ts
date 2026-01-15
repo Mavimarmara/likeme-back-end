@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '@/server';
 import prisma from '@/config/database';
-import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
+import { safeTestCleanup, TestDataTracker, createTestToken as createTestTokenHelper } from '@/utils/test-helpers';
 
 jest.setTimeout(30000);
 
@@ -27,29 +27,9 @@ afterEach(async () => {
   // Não limpar dados aqui para evitar problemas com tokens
 });
 
-// Helper para criar um token de teste
+// Helper para criar um token de teste usando o utilitário centralizado
 const createTestToken = async (): Promise<string> => {
-  // Criar person primeiro
-  const person = await prisma.person.create({
-    data: {
-      firstName: 'Test',
-      lastName: 'User',
-    },
-  });
-
-  // Criar um usuário de teste
-  const user = await prisma.user.create({
-    data: {
-      personId: person.id,
-      username: `test${Date.now()}@example.com`,
-      password: 'hashedpassword',
-      isActive: true,
-    },
-  });
-
-  // Usar o JWT secret para criar um token
-  const jwt = require('jsonwebtoken');
-  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
+  return createTestTokenHelper(prisma, testDataTracker);
 };
 
 describe('Amazon Endpoints', () => {

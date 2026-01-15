@@ -112,11 +112,18 @@ async function cleanupOldTestData() {
       console.log('   Nenhuma atividade de teste encontrada');
     }
 
-    // Limpar usuários de teste antigos (com email @example.com)
+    // Limpar usuários de teste antigos (com padrões de teste no username)
     console.log('\n👤 Limpando usuários de teste...');
     const testUsers = await prisma.user.findMany({
       where: {
-        username: { contains: '@example.com' },
+        OR: [
+          { username: { contains: '@example.com' } },
+          { username: { startsWith: 'test_' } },
+          { username: { startsWith: 'testuser_' } },
+          { username: { contains: '_test_' } },
+          { username: { contains: '_recipient_' } },
+          { username: { contains: '_split_' } },
+        ],
       },
       include: {
         person: true,

@@ -155,8 +155,6 @@
  *                       type: string
  *                     status:
  *                       type: string
- *                     amount:
- *                       type: number
  *                     authorizationCode:
  *                       type: string
  *                     amount:

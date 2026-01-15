@@ -57,15 +57,15 @@ import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
  *         required: true
  *         schema:
  *           type: string
- *           example: "pt-BR"
- *         description: Locale para tradução (ex: pt-BR, en-US)
+ *           example: pt-BR
+ *         description: Locale para traducao
  *       - in: query
  *         name: keyPrefix
  *         required: false
  *         schema:
  *           type: string
- *           example: "mind_"
- *         description: Prefixo opcional para filtrar perguntas por key (ex: "mind_", "body_", "habits_")
+ *           example: mind_
+ *         description: Prefixo opcional para filtrar perguntas por key (ex: mind_, body_, habits_)
  *     responses:
  *       200:
  *         description: Lista de perguntas com textos e opções traduzidas
