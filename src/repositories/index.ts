@@ -14,6 +14,8 @@ export * from './order/PrismaOrderRepository';
 // Product
 export * from './product/ProductRepository';
 export * from './product/PrismaProductRepository';
+export * from './product/ProductImportRepository';
+export * from './product/PrismaProductImportRepository';
 
 // Community
 export * from './community/CommunityRepository';

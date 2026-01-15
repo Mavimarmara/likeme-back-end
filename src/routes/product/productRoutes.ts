@@ -8,6 +8,10 @@ import {
   updateStock,
 } from '@/controllers/product/productController';
 import {
+  importProductsFromCSV,
+  getImportTemplate,
+} from '@/controllers/product/productImportController';
+import {
   createProductSchema,
   updateProductSchema,
   idParamSchema,
@@ -16,12 +20,18 @@ import {
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
+import { uploadCSV } from '@/middleware/upload';
 
 const router = Router();
 
 router.use(authenticateToken);
 router.use(requireAuth);
 
+// Rotas de importação CSV
+router.post('/import/csv', generalRateLimiter, uploadCSV, importProductsFromCSV);
+router.get('/import/template', generalRateLimiter, getImportTemplate);
+
+// Rotas de produtos
 router.post('/', generalRateLimiter, validate(createProductSchema), createProduct);
 router.get('/', generalRateLimiter, getAllProducts);
 router.get('/:id', generalRateLimiter, validateParams(idParamSchema), getProductById);
