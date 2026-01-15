@@ -687,17 +687,19 @@ export const swaggerTokenExchange = async (req: Request, res: Response): Promise
     const { code, redirect_uri } = req.body;
 
     if (!code) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'invalid_request',
         error_description: 'Código de autorização não fornecido',
       });
+      return;
     }
 
     if (!config.auth0.domain || !config.auth0.clientId || !config.auth0.clientSecret) {
-      return res.status(500).json({
+      res.status(500).json({
         error: 'server_error',
         error_description: 'Auth0 não configurado corretamente',
       });
+      return;
     }
 
     const auth0Domain = config.auth0.domain;
@@ -724,10 +726,11 @@ export const swaggerTokenExchange = async (req: Request, res: Response): Promise
     const data = (await response.json()) as any;
 
     if (!response.ok) {
-      return res.status(response.status).json({
+      res.status(response.status).json({
         error: data.error || 'invalid_grant',
         error_description: data.error_description || 'Erro ao trocar código por tokens',
       });
+      return;
     }
 
     const idToken = data.id_token;
@@ -737,10 +740,11 @@ export const swaggerTokenExchange = async (req: Request, res: Response): Promise
     const email = auth0User.email;
 
     if (!email) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'invalid_token',
         error_description: 'Email não encontrado no token',
       });
+      return;
     }
 
     const existingContact = await prisma.personContact.findFirst({
@@ -759,10 +763,11 @@ export const swaggerTokenExchange = async (req: Request, res: Response): Promise
     });
 
     if (!existingContact?.person?.user) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'unauthorized',
         error_description: 'Usuário não encontrado. Faça o registro primeiro.',
       });
+      return;
     }
 
     const user = existingContact.person.user;
@@ -773,14 +778,14 @@ export const swaggerTokenExchange = async (req: Request, res: Response): Promise
       { expiresIn: config.jwtExpiresIn }
     );
 
-    return res.json({
+    res.json({
       access_token: backendToken,
       token_type: 'Bearer',
       expires_in: 604800,
     });
   } catch (error) {
     console.error('Swagger token exchange error:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: 'server_error',
       error_description: 'Erro ao processar autenticação',
     });
