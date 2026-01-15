@@ -1,17 +1,13 @@
 import path from 'path';
+import { config } from './index';
 
 const projectRoot = process.cwd();
 
 const getServerUrl = (): string => {
-  // Usar URL relativa "/" para fazer requisições ao mesmo servidor
-  // Isso evita problemas de CORS quando o Swagger UI está no mesmo domínio
-  // O Swagger fará requisições relativas ao domínio atual
   return '/';
 };
 
 const getServerDescription = (): string => {
-  // Usando URL relativa, o Swagger fará requisições para o mesmo servidor
-  // Isso resolve problemas de CORS automaticamente
   return 'Servidor atual';
 };
 
@@ -45,12 +41,32 @@ export const swaggerOptions = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+          description: 'Token JWT obtido via login',
+        },
+        oauth2: {
+          type: 'oauth2',
+          flows: {
+            implicit: {
+              authorizationUrl: config.auth0.domain 
+                ? `https://${config.auth0.domain}/authorize?audience=${config.auth0.clientId}`
+                : '',
+              scopes: {
+                openid: 'OpenID',
+                profile: 'User profile',
+                email: 'User email',
+              },
+            },
+          },
+          description: 'Login via Auth0',
         },
       },
     },
     security: [
       {
         bearerAuth: [],
+      },
+      {
+        oauth2: ['openid', 'profile', 'email'],
       },
     ],
   },
