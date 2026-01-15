@@ -254,7 +254,7 @@ describe('OrderService - processPaymentForOrder (CPF handling)', () => {
       billingAddress: createValidAddress(),
     };
 
-    await expect(orderService.create(orderData)).rejects.toThrow('CPF is required');
+    await expect(orderService.create(orderData)).rejects.toThrow('CPF do cliente é obrigatório');
   });
 });
 

@@ -1,9 +1,15 @@
-import prisma from '@/config/database';
 import { socialPlusClient, SocialPlusUser } from '@/clients/socialPlus/socialPlusClient';
 import { communityService } from '../community/communityService';
 import { userTokenService } from './userTokenService';
+import { getUserRepository } from '@/utils/repositoryContainer';
+import type { UserRepository } from '@/repositories';
 
 export class UserService {
+  private userRepository: UserRepository;
+
+  constructor(userRepository?: UserRepository) {
+    this.userRepository = userRepository || getUserRepository();
+  }
   async createUser(userData: SocialPlusUser): Promise<{ id: string }> {
     const response = await socialPlusClient.createUser(userData);
     
@@ -21,10 +27,7 @@ export class UserService {
     const createResponse = await this.createUser(userData);
     const socialPlusUserId = createResponse.id;
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { socialPlusUserId },
-    });
+    await this.userRepository.update(userId, { socialPlusUserId });
 
     return { socialPlusUserId };
   }

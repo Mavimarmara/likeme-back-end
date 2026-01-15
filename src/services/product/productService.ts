@@ -6,8 +6,15 @@ import type {
   UpdateStockOperation,
 } from '@/interfaces/product/product';
 import { recipientService } from '@/services/payment/recipientService';
+import { getProductRepository } from '@/utils/repositoryContainer';
+import type { ProductRepository } from '@/repositories';
 
 export class ProductService {
+  private productRepository: ProductRepository;
+
+  constructor(productRepository?: ProductRepository) {
+    this.productRepository = productRepository || getProductRepository();
+  }
   async findById(id: string): Promise<any | null> {
     const product = await prisma.product.findUnique({
       where: { id },

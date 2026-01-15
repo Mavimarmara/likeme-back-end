@@ -2,6 +2,8 @@ import prisma from '@/config/database';
 import type { AnamnesisUserAnswer } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import type { AnamnesisDomain, AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
+import { getAnamnesisRepository } from '@/utils/repositoryContainer';
+import type { AnamnesisRepository } from '@/repositories';
 
 function getAnamnesisDomainFromKey(key: string): AnamnesisDomain {
   const prefix = key.split('_')[0]?.toLowerCase();
@@ -18,300 +20,299 @@ function getAnamnesisDomainFromKey(key: string): AnamnesisDomain {
   return allowed[prefix] ?? 'unknown';
 }
 
-export async function getAnamnesisQuestions(locale: string, keyPrefix?: string): Promise<AnamnesisQuestion[]> {
-  const whereClause: Prisma.AnamnesisQuestionConceptWhereInput = {
-    deletedAt: null,
-  };
+export class AnamnesisService {
+  private anamnesisRepository: AnamnesisRepository;
 
-  if (keyPrefix) {
-    whereClause.key = {
-      startsWith: keyPrefix,
+  constructor(anamnesisRepository?: AnamnesisRepository) {
+    this.anamnesisRepository = anamnesisRepository || getAnamnesisRepository();
+  }
+
+  async getAnamnesisQuestions(locale: string, keyPrefix?: string): Promise<AnamnesisQuestion[]> {
+    const whereClause: Prisma.AnamnesisQuestionConceptWhereInput = {
+      deletedAt: null,
     };
-  }
 
-  const questions = await prisma.anamnesisQuestionConcept.findMany({
-    where: whereClause,
-    include: {
-      texts: {
-        where: {
-          locale: locale,
+    if (keyPrefix) {
+      whereClause.key = {
+        startsWith: keyPrefix,
+      };
+    }
+
+    // Usando Prisma direto para queries complexas com includes
+    const questions = await prisma.anamnesisQuestionConcept.findMany({
+      where: whereClause,
+      include: {
+        texts: {
+          where: {
+            locale: locale,
+          },
+          take: 1,
         },
-        take: 1,
-      },
-      answerOptions: {
-        include: {
-          texts: {
-            where: {
-              locale: locale,
+        answerOptions: {
+          include: {
+            texts: {
+              where: {
+                locale: locale,
+              },
+              take: 1,
             },
-            take: 1,
+          },
+          orderBy: {
+            order: 'asc',
           },
         },
-        orderBy: {
-          order: 'asc',
-        },
       },
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-  });
-
-  return questions.map((question) => ({
-    id: question.id,
-    key: question.key,
-    domain: getAnamnesisDomainFromKey(question.key),
-    answerType: question.type,
-    text: question.texts[0]?.value || null,
-    answerOptions: question.answerOptions.map((option) => ({
-      id: option.id,
-      key: option.key,
-      order: option.order,
-      text: option.texts[0]?.value || null,
-    })),
-  }));
-}
-
-/**
- * Busca uma pergunta específica por key com textos traduzidos
- * @param key - Key da pergunta
- * @param locale - Locale para tradução
- * @returns Pergunta com textos e opções traduzidas ou null
- */
-export async function getQuestionByKey(
-  key: string,
-  locale: string
-): Promise<AnamnesisQuestion | null> {
-  const question = await prisma.anamnesisQuestionConcept.findUnique({
-    where: {
-      key: key,
-      deletedAt: null,
-    },
-    include: {
-      texts: {
-        where: {
-          locale: locale,
-        },
-        take: 1,
-      },
-      answerOptions: {
-        include: {
-          texts: {
-            where: {
-              locale: locale,
-            },
-            take: 1,
-          },
-        },
-        orderBy: {
-          order: 'asc',
-        },
-      },
-    },
-  });
-
-  if (!question) {
-    return null;
-  }
-
-  return {
-    id: question.id,
-    key: question.key,
-    domain: getAnamnesisDomainFromKey(question.key),
-    answerType: question.type,
-    text: question.texts[0]?.value || null,
-    answerOptions: question.answerOptions.map((option: any) => ({
-      id: option.id,
-      key: option.key,
-      order: option.order,
-      text: option.texts[0]?.value || null,
-    })),
-  };
-}
-
-/**
- * Cria ou atualiza uma resposta do usuário
- * @param data - Dados da resposta
- * @returns Resposta criada/atualizada
- */
-export async function createOrUpdateUserAnswer(
-  data: CreateUserAnswerData
-): Promise<AnamnesisUserAnswer> {
-  // Validação: verificar se a pergunta existe
-  const question = await prisma.anamnesisQuestionConcept.findUnique({
-    where: {
-      id: data.questionConceptId,
-      deletedAt: null,
-    },
-  });
-
-  if (!question) {
-    throw new Error('Question concept not found');
-  }
-
-  // Validação: se answerOptionId foi fornecido, verificar se existe e pertence à pergunta
-  if (data.answerOptionId) {
-    const option = await prisma.anamnesisAnswerOption.findFirst({
-      where: {
-        id: data.answerOptionId,
-        questionConceptId: data.questionConceptId,
+      orderBy: {
+        createdAt: 'asc',
       },
     });
 
-    if (!option) {
-      throw new Error('Answer option not found or does not belong to the question');
-    }
+    return questions.map((question) => ({
+      id: question.id,
+      key: question.key,
+      domain: getAnamnesisDomainFromKey(question.key),
+      answerType: question.type,
+      text: question.texts[0]?.value || null,
+      answerOptions: question.answerOptions.map((option) => ({
+        id: option.id,
+        key: option.key,
+        order: option.order,
+        text: option.texts[0]?.value || null,
+      })),
+    }));
   }
 
-  // Validação: verificar tipo de pergunta
-  if (question.type === 'single_choice' || question.type === 'multiple_choice') {
-    if (!data.answerOptionId) {
-      throw new Error('Answer option is required for choice questions');
-    }
-    if (data.answerText) {
-      throw new Error('Answer text should not be provided for choice questions');
-    }
-  } else if (question.type === 'text' || question.type === 'number') {
-    if (!data.answerText) {
-      throw new Error('Answer text is required for text/number questions');
-    }
-    if (data.answerOptionId) {
-      throw new Error('Answer option should not be provided for text/number questions');
-    }
-  }
-
-  // Upsert: atualiza se já existe, cria se não existe
-  const answer = await prisma.anamnesisUserAnswer.upsert({
-    where: {
-      userId_questionConceptId: {
-        userId: data.userId,
-        questionConceptId: data.questionConceptId,
+  async getQuestionByKey(
+    key: string,
+    locale: string
+  ): Promise<AnamnesisQuestion | null> {
+    // Usando Prisma direto para queries complexas com includes
+    const question = await prisma.anamnesisQuestionConcept.findUnique({
+      where: {
+        key: key,
+        deletedAt: null,
       },
-    },
-    update: {
-      answerOptionId: data.answerOptionId || null,
-      answerText: data.answerText || null,
-      updatedAt: new Date(),
-    },
-    create: {
-      userId: data.userId,
-      questionConceptId: data.questionConceptId,
-      answerOptionId: data.answerOptionId || null,
-      answerText: data.answerText || null,
-    },
-  });
-
-  return answer;
-}
-
-/**
- * Busca todas as respostas de um usuário
- * @param userId - ID do usuário
- * @param locale - Locale para tradução (opcional)
- * @returns Array de respostas do usuário
- */
-export async function getUserAnswers(
-  userId: string,
-  locale?: string
-): Promise<UserAnswer[]> {
-  const answers = await prisma.anamnesisUserAnswer.findMany({
-    where: {
-      userId: userId,
-    },
-    include: {
-      questionConcept: {
-        include: locale
-          ? {
-              texts: {
-                where: {
-                  locale: locale,
-                },
-                take: 1,
-              },
-            }
-          : undefined,
-      },
-      answerOption: locale
-        ? {
-            include: {
-              texts: {
-                where: {
-                  locale: locale,
-                },
-                take: 1,
-              },
-            },
-          }
-        : true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
-
-  return answers.map((answer: any) => ({
-    id: answer.id,
-    userId: answer.userId,
-    questionConceptId: answer.questionConceptId,
-    questionKey: answer.questionConcept.key,
-    answerOptionId: answer.answerOptionId,
-    answerOptionKey: answer.answerOption?.key || null,
-    answerText: answer.answerText,
-    createdAt: answer.createdAt,
-  }));
-}
-
-/**
- * Busca uma resposta específica do usuário
- * @param userId - ID do usuário
- * @param questionConceptId - ID do conceito da pergunta
- * @returns Resposta ou null
- */
-export async function getUserAnswerByQuestion(
-  userId: string,
-  questionConceptId: string
-): Promise<AnamnesisUserAnswer | null> {
-  return prisma.anamnesisUserAnswer.findUnique({
-    where: {
-      userId_questionConceptId: {
-        userId: userId,
-        questionConceptId: questionConceptId,
-      },
-    },
-  });
-}
-
-/**
- * Query Prisma completa que retorna question_concept com question_text e answer_options com answer_option_text
- * Filtrado por locale
- */
-export async function getCompleteAnamnesisByLocale(locale: string) {
-  return prisma.anamnesisQuestionConcept.findMany({
-    where: {
-      deletedAt: null,
-    },
-    include: {
-      texts: {
-        where: {
-          locale: locale,
+      include: {
+        texts: {
+          where: {
+            locale: locale,
+          },
+          take: 1,
         },
-      },
-      answerOptions: {
-        include: {
-          texts: {
-            where: {
-              locale: locale,
+        answerOptions: {
+          include: {
+            texts: {
+              where: {
+                locale: locale,
+              },
+              take: 1,
             },
           },
-        },
-        orderBy: {
-          order: 'asc',
+          orderBy: {
+            order: 'asc',
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-  });
+    });
+
+    if (!question) {
+      return null;
+    }
+
+    return {
+      id: question.id,
+      key: question.key,
+      domain: getAnamnesisDomainFromKey(question.key),
+      answerType: question.type,
+      text: question.texts[0]?.value || null,
+      answerOptions: question.answerOptions.map((option: any) => ({
+        id: option.id,
+        key: option.key,
+        order: option.order,
+        text: option.texts[0]?.value || null,
+      })),
+    };
+  }
+
+  async createOrUpdateUserAnswer(
+    data: CreateUserAnswerData
+  ): Promise<AnamnesisUserAnswer> {
+    // Validação: verificar se a pergunta existe
+    const question = await prisma.anamnesisQuestionConcept.findUnique({
+      where: {
+        id: data.questionConceptId,
+        deletedAt: null,
+      },
+    });
+
+    if (!question) {
+      throw new Error('Question concept not found');
+    }
+
+    // Validação: se answerOptionId foi fornecido, verificar se existe e pertence à pergunta
+    if (data.answerOptionId) {
+      const option = await prisma.anamnesisAnswerOption.findFirst({
+        where: {
+          id: data.answerOptionId,
+          questionConceptId: data.questionConceptId,
+        },
+      });
+
+      if (!option) {
+        throw new Error('Answer option not found or does not belong to the question');
+      }
+    }
+
+    // Validação: verificar tipo de pergunta
+    if (question.type === 'single_choice' || question.type === 'multiple_choice') {
+      if (!data.answerOptionId) {
+        throw new Error('Answer option is required for choice questions');
+      }
+      if (data.answerText) {
+        throw new Error('Answer text should not be provided for choice questions');
+      }
+    } else if (question.type === 'text' || question.type === 'number') {
+      if (!data.answerText) {
+        throw new Error('Answer text is required for text/number questions');
+      }
+      if (data.answerOptionId) {
+        throw new Error('Answer option should not be provided for text/number questions');
+      }
+    }
+
+    // Verificar se já existe resposta
+    const existingAnswer = await this.anamnesisRepository.findAnswerByUserAndQuestion(
+      data.userId,
+      data.questionConceptId
+    );
+
+    if (existingAnswer) {
+      // Atualizar resposta existente
+      await this.anamnesisRepository.updateAnswer(existingAnswer.id, {
+        answerOptionId: data.answerOptionId || undefined,
+        answerText: data.answerText || undefined,
+      });
+      return (await this.anamnesisRepository.findAnswerById(existingAnswer.id))!;
+    } else {
+      // Criar nova resposta
+      const result = await this.anamnesisRepository.saveAnswer({
+        userId: data.userId,
+        questionConceptId: data.questionConceptId,
+        answerOptionId: data.answerOptionId,
+        answerText: data.answerText,
+      });
+      return (await this.anamnesisRepository.findAnswerById(result.id))!;
+    }
+  }
+
+  async getUserAnswers(
+    userId: string,
+    locale?: string
+  ): Promise<UserAnswer[]> {
+    // Usando Prisma direto para queries complexas com includes
+    const answers = await prisma.anamnesisUserAnswer.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        questionConcept: {
+          include: locale
+            ? {
+                texts: {
+                  where: {
+                    locale: locale,
+                  },
+                  take: 1,
+                },
+              }
+            : undefined,
+        },
+        answerOption: locale
+          ? {
+              include: {
+                texts: {
+                  where: {
+                    locale: locale,
+                  },
+                  take: 1,
+                },
+              },
+            }
+          : true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return answers.map((answer: any) => ({
+      id: answer.id,
+      userId: answer.userId,
+      questionConceptId: answer.questionConceptId,
+      questionKey: answer.questionConcept.key,
+      answerOptionId: answer.answerOptionId,
+      answerOptionKey: answer.answerOption?.key || null,
+      answerText: answer.answerText,
+      createdAt: answer.createdAt,
+    }));
+  }
+
+  async getUserAnswerByQuestion(
+    userId: string,
+    questionConceptId: string
+  ): Promise<AnamnesisUserAnswer | null> {
+    return await this.anamnesisRepository.findAnswerByUserAndQuestion(userId, questionConceptId);
+  }
+
+  async getCompleteAnamnesisByLocale(locale: string) {
+    // Usando Prisma direto para queries complexas com includes
+    return prisma.anamnesisQuestionConcept.findMany({
+      where: {
+        deletedAt: null,
+      },
+      include: {
+        texts: {
+          where: {
+            locale: locale,
+          },
+        },
+        answerOptions: {
+          include: {
+            texts: {
+              where: {
+                locale: locale,
+              },
+            },
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+  }
 }
 
+// Exportar instância singleton e funções para retrocompatibilidade
+const anamnesisServiceInstance = new AnamnesisService();
+
+export const getAnamnesisQuestions = (locale: string, keyPrefix?: string) =>
+  anamnesisServiceInstance.getAnamnesisQuestions(locale, keyPrefix);
+
+export const getQuestionByKey = (key: string, locale: string) =>
+  anamnesisServiceInstance.getQuestionByKey(key, locale);
+
+export const createOrUpdateUserAnswer = (data: CreateUserAnswerData) =>
+  anamnesisServiceInstance.createOrUpdateUserAnswer(data);
+
+export const getUserAnswers = (userId: string, locale?: string) =>
+  anamnesisServiceInstance.getUserAnswers(userId, locale);
+
+export const getUserAnswerByQuestion = (userId: string, questionConceptId: string) =>
+  anamnesisServiceInstance.getUserAnswerByQuestion(userId, questionConceptId);
+
+export const getCompleteAnamnesisByLocale = (locale: string) =>
+  anamnesisServiceInstance.getCompleteAnamnesisByLocale(locale);

@@ -49,12 +49,14 @@ describe('Auth Utils', () => {
       expect(token1).not.toBe(token2);
     });
 
-    it('should generate different tokens for same user at different times', () => {
+    it('should generate different tokens for same user at different times', async () => {
       const userId = 'user-same';
       
       const token1 = generateToken(userId);
       
-      // Pequeno delay para garantir timestamp diferente
+      // Delay de 1 segundo para garantir iat diferente (JWT usa segundos, não milissegundos)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const token2 = generateToken(userId);
 
       // Tokens devem ser diferentes porque iat (issued at) é diferente

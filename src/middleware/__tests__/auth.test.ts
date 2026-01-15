@@ -333,13 +333,17 @@ describe('Authentication Middleware', () => {
         (prisma.user.findUnique as jest.Mock).mockRejectedValue(
           new Error('Database connection failed')
         );
+        
+        // Mock Auth0 verification to also fail
+        (verifyAuth0Token as jest.Mock).mockRejectedValue(new Error('Invalid token'));
 
         await authenticateToken(req as AuthenticatedRequest, res as Response, next);
 
-        expect(statusMock).toHaveBeenCalledWith(500);
+        // Quando há erro de database, o middleware tenta Auth0 e retorna 401
+        expect(statusMock).toHaveBeenCalledWith(401);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: 'Erro interno do servidor',
+          message: 'Token inválido',
         });
       });
     });

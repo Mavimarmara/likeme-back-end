@@ -30,7 +30,7 @@ describe('AdService', () => {
     const user = await prisma.user.create({
       data: {
         personId: person.id,
-        username: `test${Date.now()}@example.com`,
+        username: `test_${Date.now()}_${Math.random().toString(36).substring(7)}@example.com`,
         password: 'hashed',
         isActive: true,
       },

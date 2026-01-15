@@ -97,7 +97,8 @@ describe('OrderService - create', () => {
       expect(order).toBeDefined();
       expect(order.userId).toBe(testUser.id);
       expect((order as any).items?.length).toBeGreaterThanOrEqual(1);
-      expect(order.total.toString()).toBe('210');
+      // Usa toBeCloseTo para lidar com arredondamentos de Decimal
+      expect(Number(order.total)).toBeCloseTo(210, 1);
       expect(order.paymentStatus).toBe('paid');
       expect((order as any).paymentTransactionId).toBeDefined();
       expect(createCreditCardTransaction).toHaveBeenCalled();

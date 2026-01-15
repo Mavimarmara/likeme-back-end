@@ -16,6 +16,8 @@ import type {
   CartItemValidation,
   ValidateCartItemsResponse,
 } from '@/interfaces/order/order';
+import { getUserRepository, getOrderRepository } from '@/utils/repositoryContainer';
+import type { UserRepository, OrderRepository } from '@/repositories';
 
 export class OrderAuthorizationError extends Error {
   constructor(message: string) {
@@ -25,12 +27,21 @@ export class OrderAuthorizationError extends Error {
 }
 
 export class OrderService {
-  private async validateUserExists(userId: string): Promise<void> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+  private userRepository: UserRepository;
+  private orderRepository: OrderRepository;
 
-    if (!user || user.deletedAt) {
+  constructor(
+    userRepository?: UserRepository,
+    orderRepository?: OrderRepository
+  ) {
+    this.userRepository = userRepository || getUserRepository();
+    this.orderRepository = orderRepository || getOrderRepository();
+  }
+
+  private async validateUserExists(userId: string): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
       throw new Error('User not found');
     }
   }
@@ -187,17 +198,18 @@ export class OrderService {
       try {
         await this.processPaymentForOrder(order, orderData.cardData, orderData.billingAddress);
       } catch (error: any) {
-        // Se o pagamento falhar, atualizar status do pedido para failed
+        // Se o pagamento falhar, reverter estoque dos produtos
+        for (const item of orderData.items) {
+          await this.updateProductStock(item.productId, -item.quantity);
+        }
+        
+        // Atualizar status do pedido para failed
         await prisma.order.update({
           where: { id: order.id },
           data: { paymentStatus: 'failed' },
         });
+        
         // Re-throw o erro para que o controller possa tratá-lo
-        throw error;
-        // Reverter estoque dos produtos
-        for (const item of orderData.items) {
-          await this.updateProductStock(item.productId, -item.quantity);
-        }
         throw error;
       }
       
