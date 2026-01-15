@@ -5,6 +5,13 @@ export interface AnamnesisRepository {
   findAnswerByUserAndQuestion(userId: string, questionConceptId: string): Promise<AnamnesisAnswerData | null>;
   updateAnswer(id: string, data: UpdateAnamnesisAnswerData): Promise<void>;
   deleteAnswer(id: string): Promise<void>;
+  
+  findQuestionsWithTextsAndOptions(locale: string, keyPrefix?: string): Promise<QuestionWithDetails[]>;
+  findQuestionByKeyWithDetails(key: string, locale: string): Promise<QuestionWithDetails | null>;
+  findQuestionById(id: string): Promise<QuestionBasic | null>;
+  findAnswerOptionByIdAndQuestion(optionId: string, questionId: string): Promise<AnswerOptionBasic | null>;
+  findAnswersWithDetailsById(userId: string, locale?: string): Promise<AnswerWithDetails[]>;
+  findAllQuestionsWithDetails(locale: string): Promise<any>;
 }
 
 export interface CreateAnamnesisAnswerData {
@@ -27,4 +34,56 @@ export interface AnamnesisAnswerData {
 export interface UpdateAnamnesisAnswerData {
   answerOptionId?: string;
   answerText?: string;
+}
+
+export interface QuestionBasic {
+  id: string;
+  key: string;
+  type: string;
+}
+
+export interface AnswerOptionBasic {
+  id: string;
+  key: string;
+  questionConceptId: string;
+}
+
+export interface QuestionText {
+  value: string;
+}
+
+export interface AnswerOptionText {
+  value: string;
+}
+
+export interface AnswerOptionWithTexts {
+  id: string;
+  key: string;
+  order: number;
+  texts: AnswerOptionText[];
+}
+
+export interface QuestionWithDetails {
+  id: string;
+  key: string;
+  type: string;
+  texts: QuestionText[];
+  answerOptions: AnswerOptionWithTexts[];
+}
+
+export interface AnswerWithDetails {
+  id: string;
+  userId: string;
+  questionConceptId: string;
+  answerOptionId: string | null;
+  answerText: string | null;
+  createdAt: Date;
+  questionConcept: {
+    key: string;
+    texts?: QuestionText[];
+  };
+  answerOption: {
+    key: string;
+    texts?: AnswerOptionText[];
+  } | null;
 }

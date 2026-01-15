@@ -1,6 +1,4 @@
-import prisma from '@/config/database';
 import type { AnamnesisUserAnswer } from '@prisma/client';
-import { Prisma } from '@prisma/client';
 import type { AnamnesisDomain, AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
 import { getAnamnesisRepository } from '@/utils/repositoryContainer';
 import type { AnamnesisRepository } from '@/repositories';
@@ -28,43 +26,7 @@ export class AnamnesisService {
   }
 
   async getAnamnesisQuestions(locale: string, keyPrefix?: string): Promise<AnamnesisQuestion[]> {
-    const whereClause: Prisma.AnamnesisQuestionConceptWhereInput = {
-      deletedAt: null,
-    };
-
-    if (keyPrefix) {
-      whereClause.key = {
-        startsWith: keyPrefix,
-      };
-    }
-
-    const questions = await prisma.anamnesisQuestionConcept.findMany({
-      where: whereClause,
-      include: {
-        texts: {
-          where: {
-            locale: locale,
-          },
-          take: 1,
-        },
-        answerOptions: {
-          include: {
-            texts: {
-              where: {
-                locale: locale,
-              },
-              take: 1,
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
+    const questions = await this.anamnesisRepository.findQuestionsWithTextsAndOptions(locale, keyPrefix);
 
     return questions.map((question) => ({
       id: question.id,
@@ -85,33 +47,7 @@ export class AnamnesisService {
     key: string,
     locale: string
   ): Promise<AnamnesisQuestion | null> {
-    const question = await prisma.anamnesisQuestionConcept.findUnique({
-      where: {
-        key: key,
-        deletedAt: null,
-      },
-      include: {
-        texts: {
-          where: {
-            locale: locale,
-          },
-          take: 1,
-        },
-        answerOptions: {
-          include: {
-            texts: {
-              where: {
-                locale: locale,
-              },
-              take: 1,
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
+    const question = await this.anamnesisRepository.findQuestionByKeyWithDetails(key, locale);
 
     if (!question) {
       return null;
@@ -135,24 +71,17 @@ export class AnamnesisService {
   async createOrUpdateUserAnswer(
     data: CreateUserAnswerData
   ): Promise<AnamnesisUserAnswer> {
-    const question = await prisma.anamnesisQuestionConcept.findUnique({
-      where: {
-        id: data.questionConceptId,
-        deletedAt: null,
-      },
-    });
+    const question = await this.anamnesisRepository.findQuestionById(data.questionConceptId);
 
     if (!question) {
       throw new Error('Question concept not found');
     }
 
     if (data.answerOptionId) {
-      const option = await prisma.anamnesisAnswerOption.findFirst({
-        where: {
-          id: data.answerOptionId,
-          questionConceptId: data.questionConceptId,
-        },
-      });
+      const option = await this.anamnesisRepository.findAnswerOptionByIdAndQuestion(
+        data.answerOptionId,
+        data.questionConceptId
+      );
 
       if (!option) {
         throw new Error('Answer option not found or does not belong to the question');
@@ -201,40 +130,7 @@ export class AnamnesisService {
     userId: string,
     locale?: string
   ): Promise<UserAnswer[]> {
-    const answers = await prisma.anamnesisUserAnswer.findMany({
-      where: {
-        userId: userId,
-      },
-      include: {
-        questionConcept: {
-          include: locale
-            ? {
-                texts: {
-                  where: {
-                    locale: locale,
-                  },
-                  take: 1,
-                },
-              }
-            : undefined,
-        },
-        answerOption: locale
-          ? {
-              include: {
-                texts: {
-                  where: {
-                    locale: locale,
-                  },
-                  take: 1,
-                },
-              },
-            }
-          : true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const answers = await this.anamnesisRepository.findAnswersWithDetailsById(userId, locale);
 
     return answers.map((answer: any) => ({
       id: answer.id,
@@ -256,33 +152,7 @@ export class AnamnesisService {
   }
 
   async getCompleteAnamnesisByLocale(locale: string) {
-    return prisma.anamnesisQuestionConcept.findMany({
-      where: {
-        deletedAt: null,
-      },
-      include: {
-        texts: {
-          where: {
-            locale: locale,
-          },
-        },
-        answerOptions: {
-          include: {
-            texts: {
-              where: {
-                locale: locale,
-              },
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
+    return this.anamnesisRepository.findAllQuestionsWithDetails(locale);
   }
 }
 
