@@ -775,7 +775,7 @@ export const swaggerTokenExchange = async (req: Request, res: Response): Promise
     const backendToken = jwt.sign(
       { userId: user.id },
       config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      { expiresIn: config.jwtExpiresIn as string }
     );
 
     res.json({
