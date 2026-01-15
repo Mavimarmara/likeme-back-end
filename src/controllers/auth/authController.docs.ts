@@ -542,6 +542,64 @@
 
 /**
  * @swagger
+ * /api/auth/dev-token:
+ *   get:
+ *     summary: Gerar token de desenvolvimento (DEV ONLY)
+ *     description: Gera um token JWT válido para testes no Swagger. Use o email ou userId de um usuário existente. **ATENÇÃO - Este endpoint é apenas para desenvolvimento!**
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: Email do usuário
+ *         example: usuario@example.com
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         description: ID do usuário (alternativa ao email)
+ *     responses:
+ *       200:
+ *         description: Token gerado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: Token JWT - copie e use no Swagger (Authorize → bearerAuth)
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                     instructions:
+ *                       type: string
+ *                       description: Como usar o token no Swagger
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Email ou userId não fornecido
+ *       404:
+ *         description: Usuário não encontrado
+ *     x-code-samples:
+ *       - lang: curl
+ *         source: |
+ *           curl -X GET "{baseUrl}/api/auth/dev-token?email=usuario@example.com"
+ */
+
+/**
+ * @swagger
  * /api/auth/logout:
  *   post:
  *     summary: Logout do usuário

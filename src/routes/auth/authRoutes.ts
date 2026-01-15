@@ -6,6 +6,7 @@ import {
   handleAuthCallback,
   exchangeCodeForToken,
   swaggerTokenExchange,
+  getDevToken,
   verifyToken,
   getCurrentToken,
   getAmityAuthToken,
@@ -35,6 +36,8 @@ router.get('/auth-url', authRateLimiter, getAuthUrl);
 router.get('/callback', handleAuthCallback);
 router.post('/exchange-code', authRateLimiter, validate(exchangeCodeSchema), exchangeCodeForToken);
 router.post('/swagger-token', swaggerTokenExchange);
+
+router.get('/dev-token', getDevToken);
 
 router.get('/token', authenticateToken, requireAuth, getCurrentToken);
 router.get('/amity-token', authenticateToken, requireAuth, getAmityAuthToken);

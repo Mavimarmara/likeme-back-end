@@ -682,6 +682,68 @@ export const exchangeCodeForToken = async (req: Request, res: Response): Promise
   }
 };
 
+export const getDevToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, userId } = req.query;
+
+    if (!email && !userId) {
+      sendError(res, 'Email ou userId é obrigatório', 400);
+      return;
+    }
+
+    let user;
+
+    if (userId) {
+      user = await prisma.user.findUnique({
+        where: { id: userId as string },
+      });
+    } else if (email) {
+      const contact = await prisma.personContact.findFirst({
+        where: {
+          type: 'email',
+          value: email as string,
+          deletedAt: null,
+        },
+        include: {
+          person: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+      user = contact?.person?.user;
+    }
+
+    if (!user) {
+      sendError(res, 'Usuário não encontrado', 404);
+      return;
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn } as jwt.SignOptions
+    );
+
+    sendSuccess(
+      res,
+      {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+        },
+        instructions: 'Copie o token acima e use no Swagger: Authorize → bearerAuth → Cole o token',
+      },
+      'Token de desenvolvimento gerado'
+    );
+  } catch (error) {
+    console.error('Dev token error:', error);
+    sendError(res, 'Erro ao gerar token');
+  }
+};
+
 export const swaggerTokenExchange = async (req: Request, res: Response): Promise<void> => {
   try {
     const { code, redirect_uri } = req.body;
