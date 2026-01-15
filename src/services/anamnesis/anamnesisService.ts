@@ -32,7 +32,7 @@ export class AnamnesisService {
       id: question.id,
       key: question.key,
       domain: getAnamnesisDomainFromKey(question.key),
-      answerType: question.type,
+      answerType: question.type as any,
       text: question.texts[0]?.value || null,
       answerOptions: question.answerOptions.map((option) => ({
         id: option.id,
@@ -57,7 +57,7 @@ export class AnamnesisService {
       id: question.id,
       key: question.key,
       domain: getAnamnesisDomainFromKey(question.key),
-      answerType: question.type,
+      answerType: question.type as any,
       text: question.texts[0]?.value || null,
       answerOptions: question.answerOptions.map((option: any) => ({
         id: option.id,
