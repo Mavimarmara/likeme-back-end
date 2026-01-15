@@ -1,10 +1,17 @@
-import { PrismaUserRepository, type UserRepository } from '@/repositories/user/UserRepository';
-import { PrismaProductRepository, type ProductRepository } from '@/repositories/product/ProductRepository';
-import { PrismaOrderRepository, type OrderRepository } from '@/repositories/order/OrderRepository';
-import { PrismaCommunityRepository, type CommunityRepository } from '@/repositories/community/CommunityRepository';
-import { PrismaActivityRepository, type ActivityRepository } from '@/repositories/activity/ActivityRepository';
-import { PrismaAnamnesisRepository, type AnamnesisRepository } from '@/repositories/anamnesis/AnamnesisRepository';
-import { PrismaProductImportRepository, type ProductImportRepository } from '@/repositories/product/ProductImportRepository';
+import { PrismaUserRepository } from '@/repositories/user/PrismaUserRepository';
+import type { UserRepository } from '@/repositories/user/UserRepository';
+import { PrismaProductRepository } from '@/repositories/product/PrismaProductRepository';
+import type { ProductRepository } from '@/repositories/product/ProductRepository';
+import { PrismaOrderRepository } from '@/repositories/order/PrismaOrderRepository';
+import type { OrderRepository } from '@/repositories/order/OrderRepository';
+import { PrismaCommunityRepository } from '@/repositories/community/PrismaCommunityRepository';
+import type { CommunityRepository } from '@/repositories/community/CommunityRepository';
+import { PrismaActivityRepository } from '@/repositories/activity/PrismaActivityRepository';
+import type { ActivityRepository } from '@/repositories/activity/ActivityRepository';
+import { PrismaAnamnesisRepository } from '@/repositories/anamnesis/PrismaAnamnesisRepository';
+import type { AnamnesisRepository } from '@/repositories/anamnesis/AnamnesisRepository';
+import { PrismaProductImportRepository } from '@/repositories/product/PrismaProductImportRepository';
+import type { ProductImportRepository } from '@/repositories/product/ProductImportRepository';
 
 let userRepository: UserRepository;
 let productRepository: ProductRepository;

@@ -38,7 +38,6 @@ export class AnamnesisService {
       };
     }
 
-    // Usando Prisma direto para queries complexas com includes
     const questions = await prisma.anamnesisQuestionConcept.findMany({
       where: whereClause,
       include: {
@@ -86,7 +85,6 @@ export class AnamnesisService {
     key: string,
     locale: string
   ): Promise<AnamnesisQuestion | null> {
-    // Usando Prisma direto para queries complexas com includes
     const question = await prisma.anamnesisQuestionConcept.findUnique({
       where: {
         key: key,
@@ -137,7 +135,6 @@ export class AnamnesisService {
   async createOrUpdateUserAnswer(
     data: CreateUserAnswerData
   ): Promise<AnamnesisUserAnswer> {
-    // Validação: verificar se a pergunta existe
     const question = await prisma.anamnesisQuestionConcept.findUnique({
       where: {
         id: data.questionConceptId,
@@ -149,7 +146,6 @@ export class AnamnesisService {
       throw new Error('Question concept not found');
     }
 
-    // Validação: se answerOptionId foi fornecido, verificar se existe e pertence à pergunta
     if (data.answerOptionId) {
       const option = await prisma.anamnesisAnswerOption.findFirst({
         where: {
@@ -163,7 +159,6 @@ export class AnamnesisService {
       }
     }
 
-    // Validação: verificar tipo de pergunta
     if (question.type === 'single_choice' || question.type === 'multiple_choice') {
       if (!data.answerOptionId) {
         throw new Error('Answer option is required for choice questions');
@@ -180,26 +175,23 @@ export class AnamnesisService {
       }
     }
 
-    // Verificar se já existe resposta
     const existingAnswer = await this.anamnesisRepository.findAnswerByUserAndQuestion(
       data.userId,
       data.questionConceptId
     );
 
     if (existingAnswer) {
-      // Atualizar resposta existente
       await this.anamnesisRepository.updateAnswer(existingAnswer.id, {
         answerOptionId: data.answerOptionId || undefined,
         answerText: data.answerText || undefined,
       });
       return (await this.anamnesisRepository.findAnswerById(existingAnswer.id))!;
     } else {
-      // Criar nova resposta
       const result = await this.anamnesisRepository.saveAnswer({
         userId: data.userId,
         questionConceptId: data.questionConceptId,
-        answerOptionId: data.answerOptionId,
-        answerText: data.answerText,
+        answerOptionId: data.answerOptionId || undefined,
+        answerText: data.answerText || undefined,
       });
       return (await this.anamnesisRepository.findAnswerById(result.id))!;
     }
@@ -209,7 +201,6 @@ export class AnamnesisService {
     userId: string,
     locale?: string
   ): Promise<UserAnswer[]> {
-    // Usando Prisma direto para queries complexas com includes
     const answers = await prisma.anamnesisUserAnswer.findMany({
       where: {
         userId: userId,
@@ -265,7 +256,6 @@ export class AnamnesisService {
   }
 
   async getCompleteAnamnesisByLocale(locale: string) {
-    // Usando Prisma direto para queries complexas com includes
     return prisma.anamnesisQuestionConcept.findMany({
       where: {
         deletedAt: null,
@@ -296,7 +286,6 @@ export class AnamnesisService {
   }
 }
 
-// Exportar instância singleton e funções para retrocompatibilidade
 const anamnesisServiceInstance = new AnamnesisService();
 
 export const getAnamnesisQuestions = (locale: string, keyPrefix?: string) =>
