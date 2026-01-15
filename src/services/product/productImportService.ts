@@ -113,8 +113,8 @@ export class ProductImportService {
       return true;
     }
 
-    const firstValue = String(values[0] || '').toLowerCase();
-    if (firstValue.includes('projeto') || firstValue.includes('template') || firstValue.includes('provider')) {
+    const productName = row['Product Name'] || row['Nome do produto'] || row.productName;
+    if (!productName || String(productName).trim() === '') {
       return true;
     }
 
@@ -122,19 +122,44 @@ export class ProductImportService {
   }
 
   private mapRowToCSVProduct(row: any): CSVProductRow {
+    const getField = (keys: string[]): string => {
+      for (const key of keys) {
+        const value = row[key];
+        if (value && String(value).trim() !== '') {
+          return String(value).trim();
+        }
+      }
+      return '';
+    };
+
     return {
-      provider: row['Provider'] || row['provider'] || '',
-      marker: row['Marker'] || row['marker'] || '',
-      community: row['Comunidade'] || row['Community'] || row['community'] || '',
-      productName: row['Nome do produto'] || row['Product Name'] || row['productName'] || '',
-      variation: row['Variação\n(tamanho, cor, sabor, volume etc.)'] || row['Variação'] || row['Variation'] || row['variation'] || '',
-      targetAudience: row['Indicado para'] || row['Target Audience'] || row['targetAudience'] || '',
-      fullDescription: row['Descrição completa e benefícios'] || row['Full Description'] || row['fullDescription'] || '',
-      technicalSpecifications: row['Lista de especificações técnicas'] || row['Technical Specifications'] || row['technicalSpecifications'] || '',
-      stock: row['Estoque\n(quantidade)'] || row['Estoque'] || row['Stock'] || row['stock'] || '',
-      unitPrice: row['Preço unitário'] || row['Unit Price'] || row['unitPrice'] || '',
-      mainImage: row['Imagem principal'] || row['Main Image'] || row['mainImage'] || '',
-      secondaryImages: row['Imagens secundárias'] || row['Secondary Images'] || row['secondaryImages'] || '',
+      provider: getField(['Provider', 'provider']),
+      marker: getField(['Marker', 'marker']),
+      community: getField(['Comunidade', 'Community', 'community']),
+      productName: getField(['Nome do produto', 'Product Name', 'productName']),
+      variation: getField([
+        'Variação\n(tamanho, cor, sabor, volume etc.)',
+        'Variação',
+        'Variation',
+        'variation'
+      ]),
+      targetAudience: getField(['Indicado para', 'Target Audience', 'targetAudience']),
+      fullDescription: getField([
+        'Descrição completa e benefícios',
+        'Full Description & Benefits',
+        'Full Description',
+        'fullDescription'
+      ]),
+      technicalSpecifications: getField([
+        'Lista de especificações técnicas',
+        'Technical Specifications List',
+        'Technical Specifications',
+        'technicalSpecifications'
+      ]),
+      stock: getField(['Estoque\n(quantidade)', 'Estoque', 'Stock', 'stock']),
+      unitPrice: getField(['Preço unitário', 'Unit Price', 'unitPrice']),
+      mainImage: getField(['Imagem principal', 'Main Image', 'mainImage']),
+      secondaryImages: getField(['Imagens secundárias', 'Secondary Images', 'secondaryImages']),
     };
   }
 
