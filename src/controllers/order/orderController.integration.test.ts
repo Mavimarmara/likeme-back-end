@@ -134,16 +134,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -192,16 +184,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const createResponse = await request(app)
@@ -251,16 +235,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -293,16 +269,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -361,14 +329,7 @@ describe('Order Endpoints', () => {
           cardCvv: '123',
           cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -416,16 +377,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -477,16 +430,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -519,14 +464,7 @@ describe('Order Endpoints', () => {
           cardExpirationDate: '1225',
           cardCvv: '123',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
@@ -547,7 +485,6 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
         billingAddress: {
           country: 'br',
@@ -593,16 +530,8 @@ describe('Order Endpoints', () => {
         ],
         cardData: {
           ...createValidCardData(),
-          cpf: '12345678901',
         },
-        billingAddress: {
-          country: 'br',
-          state: 'SP',
-          city: 'São Paulo',
-          street: 'Av. Paulista',
-          streetNumber: '1000',
-          zipcode: '01310000',
-        },
+        billingAddress: createValidAddress(),
       };
 
       const response = await request(app)
