@@ -146,11 +146,13 @@ describe('OrderService - validateCartItems', () => {
 
   it('should identify products without price', async () => {
     const noPriceProduct = await prisma.product.create({
-      data: createValidProduct({
+      data: {
         name: 'No Price Product',
         description: 'Test',
         price: null,
-      }),
+        quantity: 10,
+        status: 'active',
+      },
     });
     testDataTracker.add('product', noPriceProduct.id);
 

@@ -32,7 +32,8 @@
       "@/config/*": ["src/config/*"],
       "@/types/*": ["src/types/*"],
       "@/clients/*": ["src/clients/*"],
-      "@/services/*": ["src/services/*"]
+      "@/services/*": ["src/services/*"],
+      "@/tests/*": ["src/tests/*"]
     },
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,

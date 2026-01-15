@@ -242,10 +242,12 @@ describe('OrderService - create', () => {
 
     it('should throw error for products without price', async () => {
       const noPriceProduct = await prisma.product.create({
-        data: createValidProduct({
+        data: {
           name: 'No Price Product',
           price: null,
-        }),
+          quantity: 10,
+          status: 'active',
+        },
       });
       testDataTracker.add('product', noPriceProduct.id);
 
