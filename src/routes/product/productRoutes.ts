@@ -11,6 +11,7 @@ import {
   importProductsFromCSV,
   getImportTemplate,
 } from '@/controllers/product/productImportController';
+import '@/controllers/product/productImportController.docs';
 import {
   createProductSchema,
   updateProductSchema,
