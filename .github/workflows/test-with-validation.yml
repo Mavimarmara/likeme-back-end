@@ -1,0 +1,98 @@
+name: Tests with Data Cleanup Validation
+
+on:
+  push:
+    branches: [ staging, main ]
+  pull_request:
+    branches: [ staging, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: likeme_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup database
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/likeme_test
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      
+      - name: Count test data BEFORE tests
+        id: before
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/likeme_test
+        run: |
+          echo "Contando dados de teste ANTES..."
+          BEFORE_COUNT=$(npm run test:count-data 2>&1 | grep -o '"[^"]*": [0-9]*' | awk '{sum += $2} END {print sum}')
+          echo "before_count=$BEFORE_COUNT" >> $GITHUB_OUTPUT
+          echo "📊 Registros antes: $BEFORE_COUNT"
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/likeme_test
+          NODE_ENV: test
+        run: npm test
+        continue-on-error: true
+        id: tests
+      
+      - name: Count test data AFTER tests
+        id: after
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/likeme_test
+        run: |
+          echo "Contando dados de teste DEPOIS..."
+          AFTER_COUNT=$(npm run test:count-data 2>&1 | grep -o '"[^"]*": [0-9]*' | awk '{sum += $2} END {print sum}')
+          echo "after_count=$AFTER_COUNT" >> $GITHUB_OUTPUT
+          echo "📊 Registros depois: $AFTER_COUNT"
+      
+      - name: Validate cleanup
+        run: |
+          BEFORE=${{ steps.before.outputs.before_count }}
+          AFTER=${{ steps.after.outputs.after_count }}
+          
+          echo "📊 Comparação:"
+          echo "  Antes: $BEFORE registros"
+          echo "  Depois: $AFTER registros"
+          
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            LEAKED=$((AFTER - BEFORE))
+            echo "❌ FALHA: $LEAKED registros de teste não foram limpos!"
+            exit 1
+          else
+            echo "✅ SUCESSO: Limpeza funcionando corretamente!"
+          fi
+      
+      - name: Report test results
+        if: always()
+        run: |
+          if [ "${{ steps.tests.outcome }}" == "failure" ]; then
+            echo "⚠️ Alguns testes falharam, mas a limpeza está OK."
+            exit 1
+          fi
