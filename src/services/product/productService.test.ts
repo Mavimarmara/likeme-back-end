@@ -2,6 +2,7 @@ import { productService } from '@/services/product/productService';
 import prisma from '@/config/database';
 import { safeTestCleanup, TestDataTracker } from '@/utils/test-helpers';
 import { extractAmazonProductData } from '@/utils/amazonScraper';
+import { createValidProduct, createExternalProduct } from '@/tests/fixtures/testFixtures';
 
 jest.mock('@/utils/amazonScraper');
 
@@ -21,26 +22,22 @@ describe('ProductService', () => {
     jest.clearAllMocks();
     
     testProduct = await prisma.product.create({
-      data: {
+      data: createValidProduct({
         name: 'Test Product',
         description: 'Test Description',
-        price: 100,
-        quantity: 10,
-        status: 'active',
-      },
+      }),
     });
     testDataTracker.add('product', testProduct.id);
   });
 
   describe('create', () => {
     it('should create product', async () => {
-      const productData = {
+      const productData = createValidProduct({
         name: 'New Product',
         description: 'New Description',
         price: 50,
         quantity: 5,
-        status: 'active' as const,
-      };
+      });
 
       const product = await productService.create(productData);
 
@@ -74,12 +71,10 @@ describe('ProductService', () => {
     });
 
     it('should create product with nullable price and quantity', async () => {
-      const productData = {
+      const productData = createExternalProduct({
         name: 'External Product',
-        description: 'External Description',
         externalUrl: 'https://example.com/product',
-        status: 'active' as const,
-      };
+      });
 
       const product = await productService.create(productData);
 

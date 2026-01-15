@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '@/server';
 import prisma from '@/config/database';
 import { safeTestCleanup, TestDataTracker, generateTestId, createTestToken, TEST_ID_PREFIX } from '@/utils/test-helpers';
+import { createValidProduct, createValidCardData, createValidAddress } from '@/tests/fixtures/testFixtures';
 
 jest.setTimeout(30000);
 
@@ -104,10 +105,9 @@ describe('Order Endpoints', () => {
     testProduct = await prisma.product.create({
       data: {
         id: testProductId,
-        name: `Test Product${TEST_ID_PREFIX}`,
-        price: 99.99,
-        quantity: 100,
-        status: 'active',
+        ...createValidProduct({
+          name: `Test Product${TEST_ID_PREFIX}`,
+        }),
       },
     });
     testDataTracker.add('product', testProduct.id);
