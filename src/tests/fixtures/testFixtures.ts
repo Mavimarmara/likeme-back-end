@@ -292,7 +292,7 @@ export const createValidActivity = (overrides: Partial<TestActivity> = {}): Test
 /**
  * Converte valor em reais para centavos (formato Pagarme)
  */
-export const toC acts = (reais: number): number => Math.round(reais * 100);
+export const toCents = (reais: number): number => Math.round(reais * 100);
 
 /**
  * Converte centavos para reais
