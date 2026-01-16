@@ -80,7 +80,18 @@ export class ProductImportService {
       for await (const row of parser) {
         rowIndex++;
         
+        // Debug: log das primeiras linhas
+        if (rowIndex <= 5) {
+          console.log(`[ProductImport] Row ${rowIndex} keys:`, Object.keys(row));
+          console.log(`[ProductImport] Row ${rowIndex} sample values:`, {
+            firstKey: Object.keys(row)[0],
+            firstValue: Object.values(row)[0],
+            productName: row['Product Name'],
+          });
+        }
+        
         if (this.isHeaderOrEmptyRow(row)) {
+          console.log(`[ProductImport] Skipping row ${rowIndex} - identified as header or empty`);
           continue;
         }
 
