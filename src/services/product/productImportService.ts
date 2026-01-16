@@ -72,6 +72,7 @@ export class ProductImportService {
           quote: '"',
           escape: '"',
           record_delimiter: ['\n', '\r\n', '\r'],
+          from: 2, // Pula a primeira linha (product-import-template), linha 2 vira header
         })
       );
 
