@@ -96,7 +96,8 @@ export const downloadImportTemplate = async (
 Diogo Lara;Self-esteem, Purpose & vision, Stress;Círculo de Cura e Crescimento;Endura;60 Caps;Perfil Evitativo, Perfil Melancólico;Como tomar: iniciar com 1 cápsula pela manhã. Principais benefícios: melhora cognitiva e redução de estresse.;Lion's Mane 400mg, Cordyceps sinensis 100mg;100;150.00;https://example.com/image.png;https://example.com/image2.png`;
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="product-import-template.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="likeme-products-import.csv"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send('\uFEFF' + csvContent);
   } catch (error: any) {
     console.error('[ProductImport] Error downloading template:', error);
