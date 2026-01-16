@@ -53,9 +53,9 @@ export class ProductImportService {
     };
 
     try {
-      // Detectar o delimitador automaticamente
-      const delimiter = this.detectDelimiter(fileBuffer);
-      console.log(`[ProductImport] Detected delimiter: "${delimiter}"`);
+      // Usar sempre ponto e vírgula como delimitador
+      const delimiter = ';';
+      console.log(`[ProductImport] Using semicolon (;) as delimiter`);
 
       const stream = Readable.from(fileBuffer);
 
@@ -124,135 +124,6 @@ export class ProductImportService {
     }
 
     return result;
-  }
-
-  private detectDelimiter(buffer: Buffer): string {
-    try {
-      // Converter buffer para string e normalizar line endings
-      let text = buffer.toString('utf-8').replace(/^\uFEFF/, ''); // Remove BOM
-      text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'); // Normaliza line endings
-      
-      const allLines = text.split('\n').filter(line => line.trim());
-      
-      if (allLines.length === 0) {
-        return ','; // Default para vírgula
-      }
-
-      // Pegar apenas linhas que parecem ter estrutura de CSV (múltiplos delimitadores)
-      const lines = allLines.slice(0, 10).filter(line => {
-        // Linha deve ter pelo menos 3 ocorrências de algum delimitador
-        const hasSemicolon = line.split(';').length > 3;
-        const hasComma = line.split(',').length > 3;
-        const hasTab = line.split('\t').length > 3;
-        const hasPipe = line.split('|').length > 3;
-        
-        return hasSemicolon || hasComma || hasTab || hasPipe;
-      }).slice(0, 5); // Analisar até 5 linhas válidas
-
-      if (lines.length === 0) {
-        console.warn('[ProductImport] No valid CSV lines found for delimiter detection, using semicolon');
-        return ';';
-      }
-      
-      console.log(`[ProductImport] Analyzing ${lines.length} lines for delimiter detection`);
-      lines.forEach((line, idx) => {
-        const preview = line.length > 100 ? line.substring(0, 100) + '...' : line;
-        console.log(`[ProductImport] Line ${idx + 1} preview: ${preview}`);
-      });
-
-      // Contar ocorrências de cada delimitador comum
-      const delimiters = [';', ',', '\t', '|'];
-      const counts: { [key: string]: number[] } = {};
-
-      for (const delimiter of delimiters) {
-        counts[delimiter] = [];
-        
-        for (const line of lines) {
-          // Contar delimitadores fora de aspas
-          let inQuotes = false;
-          let count = 0;
-          
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            const nextChar = i + 1 < line.length ? line[i + 1] : '';
-            
-            if (char === '"') {
-              // Verificar se é uma aspa de escape (duas aspas seguidas)
-              if (nextChar === '"') {
-                i++; // Pular a próxima aspa
-              } else {
-                // Alternar estado de dentro/fora de aspas
-                inQuotes = !inQuotes;
-              }
-            } else if (!inQuotes && char === delimiter) {
-              count++;
-            }
-          }
-          
-          counts[delimiter].push(count);
-        }
-      }
-
-      // Encontrar o delimitador mais consistente
-      let bestDelimiter = ',';
-      let bestScore = -1;
-      let bestAvgCount = -1;
-
-      for (const delimiter of delimiters) {
-        const delimiterCounts = counts[delimiter];
-        
-        if (delimiterCounts.length === 0) continue;
-
-        const totalCount = delimiterCounts.reduce((a, b) => a + b, 0);
-        const avgCount = totalCount / delimiterCounts.length;
-        
-        // Ignorar se média é muito baixa
-        if (avgCount < 3) continue;
-
-        // Calcular desvio padrão para medir consistência
-        const mean = avgCount;
-        const squaredDiffs = delimiterCounts.map(c => Math.pow(c - mean, 2));
-        const variance = squaredDiffs.reduce((a, b) => a + b, 0) / delimiterCounts.length;
-        const stdDev = Math.sqrt(variance);
-        
-        // Calcular score: prioriza total alto e baixo desvio padrão (mais consistente)
-        // Score maior = melhor
-        const consistencyScore = avgCount > 0 ? (1 / (1 + stdDev)) : 0;
-        const score = totalCount * consistencyScore;
-
-        console.log(`[ProductImport] ${delimiter} score:`, {
-          totalCount,
-          avgCount: avgCount.toFixed(2),
-          stdDev: stdDev.toFixed(2),
-          consistencyScore: consistencyScore.toFixed(2),
-          score: score.toFixed(2)
-        });
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestDelimiter = delimiter;
-          bestAvgCount = avgCount;
-        } else if (score === bestScore && avgCount > bestAvgCount) {
-          // Em caso de empate, prefere o que tem mais ocorrências
-          bestDelimiter = delimiter;
-          bestAvgCount = avgCount;
-        }
-      }
-
-      console.log(`[ProductImport] Delimiter analysis:`, {
-        linesAnalyzed: lines.length,
-        semicolon: counts[';'],
-        comma: counts[','],
-        tab: counts['\t'],
-        pipe: counts['|'],
-        selected: bestDelimiter
-      });
-
-      return bestDelimiter;
-    } catch (error) {
-      console.error('[ProductImport] Error detecting delimiter, using semicolon as default:', error);
-      return ';';
-    }
   }
 
   private isHeaderOrEmptyRow(row: any): boolean {
