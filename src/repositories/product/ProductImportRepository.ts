@@ -1,4 +1,4 @@
-import type { Advertiser, Ad } from '@prisma/client';
+import type { Advertiser, Ad, Product } from '@prisma/client';
 
 export interface ProductImportRepository {
   findAdvertiserByUserId(userId: string): Promise<Advertiser | null>;
@@ -11,5 +11,6 @@ export interface ProductImportRepository {
     startDate: Date;
     endDate: Date | null;
   }): Promise<Ad>;
+  findByNameAndBrand(name: string, brand: string | null, userId: string): Promise<Product | null>;
 }
 

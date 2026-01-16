@@ -77,6 +77,7 @@ export class ProductImportService {
       );
 
       let rowIndex = 0;
+      const processedInThisImport = new Set<string>(); // Para detectar duplicatas no mesmo arquivo
 
       for await (const row of parser) {
         rowIndex++;
@@ -100,13 +101,34 @@ export class ProductImportService {
 
         try {
           const csvRow = this.mapRowToCSVProduct(row);
-          const { product, ad } = await this.processRow(csvRow, userId);
+          
+          // Verificar duplicatas no mesmo arquivo
+          const productKey = `${csvRow.productName.toLowerCase().trim()}-${csvRow.variation.toLowerCase().trim()}`;
+          
+          if (processedInThisImport.has(productKey)) {
+            console.log(`[ProductImport] Skipping row ${rowIndex} - duplicate in same file: ${csvRow.productName} ${csvRow.variation}`);
+            result.errorCount++;
+            result.errors.push({
+              row: rowIndex,
+              data: row,
+              error: 'Duplicate product in same file (same name and variation already processed)',
+            });
+            continue;
+          }
+          
+          processedInThisImport.add(productKey);
+          
+          const { product, ad, isUpdate } = await this.processRow(csvRow, userId);
           
           result.createdProducts.push(product);
           if (ad) {
             result.createdAds.push(ad);
           }
           result.successCount++;
+          
+          if (isUpdate) {
+            console.log(`[ProductImport] Row ${rowIndex} - Updated existing product: ${product.name}`);
+          }
         } catch (error: any) {
           console.error(`Error processing row ${rowIndex}:`, error);
           result.errorCount++;
@@ -188,7 +210,7 @@ export class ProductImportService {
   private async processRow(
     csvRow: CSVProductRow,
     userId: string
-  ): Promise<{ product: Product; ad: Ad | null }> {
+  ): Promise<{ product: Product; ad: Ad | null; isUpdate: boolean }> {
     if (!csvRow.productName || csvRow.productName.trim() === '') {
       throw new Error('Product name is required');
     }
@@ -196,12 +218,10 @@ export class ProductImportService {
     const price = this.parsePrice(csvRow.unitPrice);
     const quantity = this.parseQuantity(csvRow.stock);
     const markers = this.parseMarkers(csvRow.marker);
-    const sku = this.generateSKU(csvRow.productName, csvRow.variation);
 
     const productData = {
       name: csvRow.productName.trim(),
       description: this.buildDescription(csvRow),
-      sku: sku,
       price: price,
       cost: null,
       quantity: quantity,
@@ -214,14 +234,34 @@ export class ProductImportService {
       externalUrl: null,
     };
 
-    const product = await productService.create(productData, userId);
+    // Buscar produto existente por nome (case-insensitive)
+    const existingProduct = await this.repository.findByNameAndBrand(
+      csvRow.productName.trim(),
+      csvRow.provider?.trim() || null,
+      userId
+    );
+
+    let product: Product;
+    let isUpdate = false;
+
+    if (existingProduct) {
+      // Atualizar produto existente
+      product = await productService.update(existingProduct.id, productData);
+      isUpdate = true;
+      console.log(`[ProductImport] Updated existing product: ${product.name} (ID: ${product.id})`);
+    } else {
+      // Criar novo produto com SKU
+      const sku = this.generateSKU(csvRow.productName, csvRow.variation);
+      product = await productService.create({ ...productData, sku }, userId);
+      console.log(`[ProductImport] Created new product: ${product.name} (ID: ${product.id})`);
+    }
 
     let ad: Ad | null = null;
     if (csvRow.provider && csvRow.provider.trim() !== '') {
       ad = await this.createAdForProduct(product.id, csvRow, userId);
     }
 
-    return { product, ad };
+    return { product, ad, isUpdate };
   }
 
   private buildDescription(csvRow: CSVProductRow): string {
@@ -293,19 +333,23 @@ export class ProductImportService {
   }
 
   private generateSKU(productName: string, variation: string): string {
-    const namePart = productName
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .substring(0, 20);
-
-    const variationPart = variation
-      ? variation.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 10)
-      : '';
-
-    const timestamp = Date.now().toString(36);
+    // Gerar hash numérico baseado no nome + variação
+    let hash = 0;
+    const fullName = (productName + variation).toLowerCase();
     
-    return `${namePart}${variationPart ? '-' + variationPart : ''}-${timestamp}`;
+    for (let i = 0; i < fullName.length; i++) {
+      const char = fullName.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    // Timestamp em milissegundos (apenas números)
+    const timestamp = Date.now();
+    
+    // SKU: 8 dígitos do hash + timestamp (apenas números)
+    const hashPart = Math.abs(hash).toString().padStart(8, '0').substring(0, 8);
+    
+    return `${hashPart}${timestamp}`;
   }
 
   private async createAdForProduct(

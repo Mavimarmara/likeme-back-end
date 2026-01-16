@@ -1,5 +1,5 @@
 import prisma from '@/config/database';
-import type { Advertiser, Ad } from '@prisma/client';
+import type { Advertiser, Ad, Product } from '@prisma/client';
 import type { ProductImportRepository } from './ProductImportRepository';
 
 export class PrismaProductImportRepository implements ProductImportRepository {
@@ -39,6 +39,29 @@ export class PrismaProductImportRepository implements ProductImportRepository {
         startDate: data.startDate,
         endDate: data.endDate,
       },
+    });
+  }
+
+  async findByNameAndBrand(name: string, brand: string | null, userId: string): Promise<Product | null> {
+    const whereCondition: any = {
+      name: {
+        equals: name,
+        mode: 'insensitive', // Case-insensitive
+      },
+      sellerId: userId,
+      deletedAt: null,
+    };
+
+    // Se brand for fornecido, adicionar ao filtro
+    if (brand) {
+      whereCondition.brand = {
+        equals: brand,
+        mode: 'insensitive',
+      };
+    }
+
+    return prisma.product.findFirst({
+      where: whereCondition,
     });
   }
 }
