@@ -53,6 +53,10 @@ export class ProductImportService {
     };
 
     try {
+      // Detectar o delimitador automaticamente
+      const delimiter = this.detectDelimiter(fileBuffer);
+      console.log(`[ProductImport] Detected delimiter: "${delimiter}"`);
+
       const stream = Readable.from(fileBuffer);
 
       const parser = stream.pipe(
@@ -62,6 +66,9 @@ export class ProductImportService {
           trim: true,
           bom: true,
           relaxColumnCount: true,
+          delimiter: delimiter,
+          quote: '"',
+          escape: '"',
         })
       );
 
@@ -103,6 +110,84 @@ export class ProductImportService {
     }
 
     return result;
+  }
+
+  private detectDelimiter(buffer: Buffer): string {
+    try {
+      // Converter buffer para string e pegar as primeiras linhas
+      const text = buffer.toString('utf-8').replace(/^\uFEFF/, ''); // Remove BOM
+      const lines = text.split('\n').slice(0, 3); // Analisa as primeiras 3 linhas
+      
+      if (lines.length === 0) {
+        return ','; // Default para vírgula
+      }
+
+      // Contar ocorrências de cada delimitador comum
+      const delimiters = [';', ',', '\t', '|'];
+      const counts: { [key: string]: number[] } = {};
+
+      for (const delimiter of delimiters) {
+        counts[delimiter] = [];
+        
+        for (const line of lines) {
+          if (line.trim()) {
+            // Contar delimitadores fora de aspas
+            let inQuotes = false;
+            let count = 0;
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              
+              if (char === '"') {
+                // Verificar se é uma aspa de escape
+                if (i + 1 < line.length && line[i + 1] === '"') {
+                  i++; // Pular a próxima aspa
+                } else {
+                  inQuotes = !inQuotes;
+                }
+              } else if (!inQuotes && char === delimiter) {
+                count++;
+              }
+            }
+            
+            counts[delimiter].push(count);
+          }
+        }
+      }
+
+      // Encontrar o delimitador mais consistente (mesmo número em todas as linhas)
+      let bestDelimiter = ',';
+      let bestScore = -1;
+
+      for (const delimiter of delimiters) {
+        const delimiterCounts = counts[delimiter];
+        
+        if (delimiterCounts.length === 0) continue;
+
+        // Calcular a consistência (todas as linhas devem ter o mesmo número de delimitadores)
+        const firstCount = delimiterCounts[0];
+        const isConsistent = delimiterCounts.every(c => c === firstCount);
+        const totalCount = delimiterCounts.reduce((a, b) => a + b, 0);
+
+        if (isConsistent && firstCount > 0 && totalCount > bestScore) {
+          bestScore = totalCount;
+          bestDelimiter = delimiter;
+        }
+      }
+
+      console.log(`[ProductImport] Delimiter analysis:`, {
+        semicolon: counts[';'],
+        comma: counts[','],
+        tab: counts['\t'],
+        pipe: counts['|'],
+        selected: bestDelimiter
+      });
+
+      return bestDelimiter;
+    } catch (error) {
+      console.error('[ProductImport] Error detecting delimiter, using comma as default:', error);
+      return ',';
+    }
   }
 
   private isHeaderOrEmptyRow(row: any): boolean {
