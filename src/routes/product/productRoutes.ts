@@ -9,7 +9,6 @@ import {
 } from '@/controllers/product/productController';
 import {
   importProductsFromCSV,
-  getImportTemplate,
   downloadImportTemplate,
 } from '@/controllers/product/productImportController';
 import '@/controllers/product/productImportController.docs';
@@ -31,8 +30,7 @@ router.use(requireAuth);
 
 // Rotas de importação CSV
 router.post('/import/csv', generalRateLimiter, uploadCSV, importProductsFromCSV);
-router.get('/import/template', generalRateLimiter, getImportTemplate);
-router.get('/import/template/download', generalRateLimiter, downloadImportTemplate);
+router.get('/import/template', generalRateLimiter, downloadImportTemplate);
 
 // Rotas de produtos
 router.post('/', generalRateLimiter, validate(createProductSchema), createProduct);

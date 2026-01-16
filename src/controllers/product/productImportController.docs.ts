@@ -175,80 +175,8 @@
  * @swagger
  * /api/products/import/template:
  *   get:
- *     summary: Get CSV import template information
- *     description: Returns information about the expected CSV format, column descriptions, and an example row
- *     tags:
- *       - Products
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Template information retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Import template information
- *                 data:
- *                   type: object
- *                   properties:
- *                     columns:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           name:
- *                             type: string
- *                             example: "Product Name"
- *                           required:
- *                             type: boolean
- *                             example: true
- *                           description:
- *                             type: string
- *                             example: "Product name"
- *                     example:
- *                       type: object
- *                       additionalProperties:
- *                         type: string
- *                       example:
- *                         Provider: "Provider Name"
- *                         Marker: "Tag1, Tag2, Tag3"
- *                         Community: "Community Name"
- *                         Product Name: "Product Name"
- *                         Variation: "60 Caps"
- *                         Target Audience: "Profile A, Profile B"
- *                         Full Description: "Product description..."
- *                         Technical Specifications: "Spec 1, Spec 2"
- *                         Stock: "100"
- *                         Unit Price: "R$ 150,00"
- *                         Main Image: "https://example.com/image.png"
- *                         Secondary Images: ""
- *                     notes:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example:
- *                         - "File must be in CSV format"
- *                         - "Product name is required"
- *                         - "Price can be in Brazilian (R$ 100,00) or American ($100.00) format"
- *       401:
- *         description: Unauthorized - Invalid or missing token
- *       500:
- *         description: Internal server error
- */
-
-/**
- * @swagger
- * /api/products/import/template/download:
- *   get:
  *     summary: Download CSV import template
- *     description: Downloads a ready-to-use CSV template file with example data. Simply fill in with your products and upload.
+ *     description: Downloads a ready-to-use CSV template file with example data using semicolon (;) as delimiter. Simply fill in with your products and upload.
  *     tags:
  *       - Products
  *     security:
