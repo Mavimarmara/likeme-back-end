@@ -63,12 +63,15 @@ export class ProductImportService {
         parse({
           columns: true,
           skip_empty_lines: true,
+          skip_records_with_empty_values: false,
           trim: true,
           bom: true,
           relaxColumnCount: true,
+          relax_quotes: true,
           delimiter: delimiter,
           quote: '"',
           escape: '"',
+          record_delimiter: ['\n', '\r\n', '\r'],
         })
       );
 
@@ -114,12 +117,28 @@ export class ProductImportService {
 
   private detectDelimiter(buffer: Buffer): string {
     try {
-      // Converter buffer para string e pegar as primeiras linhas
-      const text = buffer.toString('utf-8').replace(/^\uFEFF/, ''); // Remove BOM
-      const lines = text.split('\n').slice(0, 3); // Analisa as primeiras 3 linhas
+      // Converter buffer para string e normalizar line endings
+      let text = buffer.toString('utf-8').replace(/^\uFEFF/, ''); // Remove BOM
+      text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'); // Normaliza line endings
       
-      if (lines.length === 0) {
+      const allLines = text.split('\n').filter(line => line.trim());
+      
+      if (allLines.length === 0) {
         return ','; // Default para vírgula
+      }
+
+      // Pegar apenas linhas que parecem ter estrutura de CSV (múltiplos delimitadores)
+      const lines = allLines.slice(0, 5).filter(line => {
+        // Linha deve ter pelo menos 3 ocorrências de algum delimitador
+        return line.split(';').length > 3 || 
+               line.split(',').length > 3 || 
+               line.split('\t').length > 3 ||
+               line.split('|').length > 3;
+      }).slice(0, 3);
+
+      if (lines.length === 0) {
+        console.warn('[ProductImport] No valid CSV lines found for delimiter detection, using semicolon');
+        return ';';
       }
 
       // Contar ocorrências de cada delimitador comum
@@ -130,28 +149,26 @@ export class ProductImportService {
         counts[delimiter] = [];
         
         for (const line of lines) {
-          if (line.trim()) {
-            // Contar delimitadores fora de aspas
-            let inQuotes = false;
-            let count = 0;
+          // Contar delimitadores fora de aspas
+          let inQuotes = false;
+          let count = 0;
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
             
-            for (let i = 0; i < line.length; i++) {
-              const char = line[i];
-              
-              if (char === '"') {
-                // Verificar se é uma aspa de escape
-                if (i + 1 < line.length && line[i + 1] === '"') {
-                  i++; // Pular a próxima aspa
-                } else {
-                  inQuotes = !inQuotes;
-                }
-              } else if (!inQuotes && char === delimiter) {
-                count++;
+            if (char === '"') {
+              // Verificar se é uma aspa de escape
+              if (i + 1 < line.length && line[i + 1] === '"') {
+                i++; // Pular a próxima aspa
+              } else {
+                inQuotes = !inQuotes;
               }
+            } else if (!inQuotes && char === delimiter) {
+              count++;
             }
-            
-            counts[delimiter].push(count);
           }
+          
+          counts[delimiter].push(count);
         }
       }
 
@@ -164,18 +181,30 @@ export class ProductImportService {
         
         if (delimiterCounts.length === 0) continue;
 
-        // Calcular a consistência (todas as linhas devem ter o mesmo número de delimitadores)
-        const firstCount = delimiterCounts[0];
-        const isConsistent = delimiterCounts.every(c => c === firstCount);
+        // Pegar o valor mais comum
+        const countMap = new Map<number, number>();
+        for (const count of delimiterCounts) {
+          countMap.set(count, (countMap.get(count) || 0) + 1);
+        }
+        
+        const mostCommonCount = Math.max(...Array.from(countMap.values()));
         const totalCount = delimiterCounts.reduce((a, b) => a + b, 0);
+        
+        // Calcular score: total de delimitadores * consistência
+        const score = totalCount * mostCommonCount;
 
-        if (isConsistent && firstCount > 0 && totalCount > bestScore) {
-          bestScore = totalCount;
-          bestDelimiter = delimiter;
+        if (mostCommonCount >= 2 && totalCount > bestScore && score > bestScore) {
+          // Deve aparecer em pelo menos 2 linhas
+          const avgCount = totalCount / delimiterCounts.length;
+          if (avgCount >= 3) { // Deve ter pelo menos 3 delimitadores por linha em média
+            bestScore = score;
+            bestDelimiter = delimiter;
+          }
         }
       }
 
       console.log(`[ProductImport] Delimiter analysis:`, {
+        linesAnalyzed: lines.length,
         semicolon: counts[';'],
         comma: counts[','],
         tab: counts['\t'],
@@ -185,8 +214,8 @@ export class ProductImportService {
 
       return bestDelimiter;
     } catch (error) {
-      console.error('[ProductImport] Error detecting delimiter, using comma as default:', error);
-      return ',';
+      console.error('[ProductImport] Error detecting delimiter, using semicolon as default:', error);
+      return ';';
     }
   }
 
