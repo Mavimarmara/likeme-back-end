@@ -219,6 +219,19 @@ export class ProductImportService {
     const quantity = this.parseQuantity(csvRow.stock);
     const markers = this.parseMarkers(csvRow.marker);
 
+    // Determinar status baseado no estoque
+    // - null: active (não controla estoque)
+    // - > 0: active (tem estoque)
+    // - 0: out_of_stock (sem estoque)
+    let status: string;
+    if (quantity === null) {
+      status = 'active'; // Produto sem controle de estoque
+    } else if (quantity > 0) {
+      status = 'active'; // Produto com estoque
+    } else {
+      status = 'out_of_stock'; // Produto sem estoque
+    }
+
     const productData = {
       name: csvRow.productName.trim(),
       description: this.buildDescription(csvRow),
@@ -228,7 +241,7 @@ export class ProductImportService {
       image: csvRow.mainImage?.trim() || null,
       category: 'physical product',
       brand: csvRow.provider?.trim() || null,
-      status: quantity && quantity > 0 ? 'active' : 'out_of_stock',
+      status: status,
       weight: null,
       dimensions: null,
       externalUrl: null,
