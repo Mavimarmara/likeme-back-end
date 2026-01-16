@@ -234,7 +234,10 @@ export class ProductImportService {
 
     const productData = {
       name: csvRow.productName.trim(),
-      description: this.buildDescription(csvRow),
+      description: csvRow.fullDescription?.trim() || null,
+      variation: csvRow.variation?.trim() || null,
+      targetAudience: csvRow.targetAudience?.trim() || null,
+      technicalSpecifications: csvRow.technicalSpecifications?.trim() || null,
       price: price,
       cost: null,
       quantity: quantity,

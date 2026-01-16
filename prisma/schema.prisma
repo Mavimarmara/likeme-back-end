@@ -239,24 +239,27 @@ model CommunityMember {
 // ============================================
 
 model Product {
-  id          String    @id @default(uuid())
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-  name        String
-  description String?
-  sku         String?   @unique
-  price       Decimal?  @db.Decimal(10, 2) // Optional when externalUrl is provided
-  cost        Decimal?  @db.Decimal(10, 2)
-  quantity    Int? // Optional when externalUrl is provided (Available stock)
-  image       String?
-  category    String? // amazon product, physical product, program
-  brand       String?
-  status      String    @default("active") // active, inactive, out_of_stock
-  weight      Decimal?  @db.Decimal(10, 3) // in kg
-  dimensions  String? // format: "LxHxW" (length x height x width)
-  externalUrl String?   @map("external_url") // External URL for the product (e.g., Amazon product link)
-  sellerId    String?   @map("seller_id") // User who sells this product
+  id                       String    @id @default(uuid())
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  deletedAt                DateTime? @map("deleted_at")
+  name                     String
+  description              String?
+  variation                String? // Product variation (size, color, flavor, volume, etc)
+  targetAudience           String?   @map("target_audience") // Who is this product for
+  technicalSpecifications  String?   @map("technical_specifications") // Technical specs and composition
+  sku                      String?   @unique
+  price                    Decimal?  @db.Decimal(10, 2) // Optional when externalUrl is provided
+  cost                     Decimal?  @db.Decimal(10, 2)
+  quantity                 Int? // Optional when externalUrl is provided (Available stock)
+  image                    String?
+  category                 String? // amazon product, physical product, program
+  brand                    String?
+  status                   String    @default("active") // active, inactive, out_of_stock
+  weight                   Decimal?  @db.Decimal(10, 3) // in kg
+  dimensions               String? // format: "LxHxW" (length x height x width)
+  externalUrl              String?   @map("external_url") // External URL for the product (e.g., Amazon product link)
+  sellerId                 String?   @map("seller_id") // User who sells this product
 
   // Relations
   seller     User?       @relation("UserProducts", fields: [sellerId], references: [id])
