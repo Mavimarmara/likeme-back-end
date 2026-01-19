@@ -674,20 +674,23 @@ export class OrderService {
           continue;
         }
 
-        const availableQuantity = product.quantity ?? 0;
+        // Se quantity é null, ignora verificação de estoque (produto externo ou sem controle)
+        if (product.quantity !== null) {
+          const availableQuantity = product.quantity;
 
-        if (availableQuantity === 0) {
-          validation.reason = 'out_of_stock';
-          validation.availableQuantity = 0;
-          invalidItems.push(validation);
-          continue;
-        }
+          if (availableQuantity === 0) {
+            validation.reason = 'out_of_stock';
+            validation.availableQuantity = 0;
+            invalidItems.push(validation);
+            continue;
+          }
 
-        if (availableQuantity < item.quantity) {
-          validation.reason = 'insufficient_stock';
-          validation.availableQuantity = availableQuantity;
-          invalidItems.push(validation);
-          continue;
+          if (availableQuantity < item.quantity) {
+            validation.reason = 'insufficient_stock';
+            validation.availableQuantity = availableQuantity;
+            invalidItems.push(validation);
+            continue;
+          }
         }
 
         validation.valid = true;
