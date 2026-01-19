@@ -67,10 +67,14 @@ export class OrderService {
       await this.validateProductForOrder(item.productId);
       
       const product = await productService.findById(item.productId);
-      const availableQuantity = product!.quantity ?? 0;
       
-      if (availableQuantity < item.quantity) {
-        throw new Error(`Insufficient stock for product ${product!.name}`);
+      // Se quantity é null, ignora verificação de estoque (produto externo ou sem controle)
+      if (product!.quantity !== null) {
+        const availableQuantity = product!.quantity;
+        
+        if (availableQuantity < item.quantity) {
+          throw new Error(`Insufficient stock for product ${product!.name}`);
+        }
       }
     }
   }
