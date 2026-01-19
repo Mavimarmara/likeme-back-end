@@ -25,6 +25,7 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:products": "ts-node -r tsconfig-paths/register scripts/seed-products.ts",
     "db:seed:ads": "ts-node -r tsconfig-paths/register scripts/seed-ads.ts",
+    "db:seed:anamnesis": "ts-node -r tsconfig-paths/register scripts/seed-anamnesis-from-csv.ts",
     "db:reset": "prisma migrate reset",
     "db:cleanup-tests": "ts-node -r tsconfig-paths/register scripts/cleanup-old-test-data.ts --confirm",
     "diagrams": "bash scripts/generate-diagrams.sh high",

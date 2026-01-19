@@ -463,6 +463,9 @@ model AnamnesisQuestionConcept {
   // Tipo de resposta esperada
   type QuestionType
 
+  // Ordem de exibição da pergunta
+  order Int @default(0)
+
   // Relações
   texts         AnamnesisQuestionText[]
   answerOptions AnamnesisAnswerOption[]
@@ -470,6 +473,7 @@ model AnamnesisQuestionConcept {
 
   @@index([key])
   @@index([type])
+  @@index([order])
   @@map("anamnesis_question_concept")
 }
 
@@ -504,6 +508,9 @@ model AnamnesisAnswerOption {
 
   // Identificador lógico da opção (yes, no, low, high, grave, moderado, etc)
   key String
+
+  // Valor da resposta (pode ser numérico ou texto)
+  value String @default("0")
 
   // Ordem de exibição
   order Int @default(0)
