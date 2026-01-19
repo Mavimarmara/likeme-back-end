@@ -49,12 +49,9 @@ export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload>
       algorithms: ['RS256'],
     };
 
-    // Adicionar audience se configurado (opcional)
+    // Adicionar audience se configurado
     if (config.auth0.audience) {
-      console.log('Validating token with audience:', config.auth0.audience);
       verifyOptions.audience = config.auth0.audience;
-    } else {
-      console.log('No audience validation configured');
     }
 
     jwt.verify(
