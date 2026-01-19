@@ -10,18 +10,29 @@ const client = jwksClient({
   cacheMaxAge: 600000,
 });
 
-function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
+async function getKeyAsync(header: jwt.JwtHeader): Promise<string> {
   if (!config.auth0.domain) {
-    return callback(new Error('AUTH0_DOMAIN não configurado'));
+    throw new Error('AUTH0_DOMAIN não configurado');
   }
 
-  client.getSigningKey(header.kid, (err, key) => {
-    if (err) {
-      return callback(err);
-    }
-    const signingKey = key?.getPublicKey();
-    callback(null, signingKey);
-  });
+  // Verificar se o kid existe no header
+  if (!header.kid) {
+    console.warn('Token JWT não contém o campo "kid" no header.');
+    throw new Error('Token JWT não contém o campo "kid" (Key ID) no header. Verifique se o token é um ID Token válido do Auth0.');
+  }
+
+  try {
+    const key = await client.getSigningKey(header.kid);
+    return key.getPublicKey();
+  } catch (err) {
+    throw new Error(`Erro ao buscar chave de assinatura: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+  }
+}
+
+function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
+  getKeyAsync(header)
+    .then((publicKey) => callback(null, publicKey))
+    .catch((err) => callback(err));
 }
 
 export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload> => {
