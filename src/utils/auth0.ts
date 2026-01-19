@@ -49,6 +49,11 @@ export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload>
       algorithms: ['RS256'],
     };
 
+    // Adicionar audience se configurado
+    if (config.auth0.audience) {
+      verifyOptions.audience = config.auth0.audience;
+    }
+
     jwt.verify(
       idToken,
       getKey,
@@ -57,10 +62,11 @@ export const verifyAuth0Token = async (idToken: string): Promise<jwt.JwtPayload>
         if (err) {
           console.error('JWT verification error:', err.message);
           console.error('Token issuer expected:', config.auth0.issuer);
+          console.error('Token audience expected:', config.auth0.audience || 'not configured');
           if (decoded && typeof decoded !== 'string' && 'iss' in decoded) {
             console.error('Token issuer received:', decoded.iss);
             if ('aud' in decoded) {
-              console.error('Token audience:', decoded.aud);
+              console.error('Token audience received:', decoded.aud);
             }
           }
           return reject(err);

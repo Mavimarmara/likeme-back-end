@@ -64,6 +64,7 @@ export const config = {
     clientId: process.env.AUTH0_CLIENT_ID || '',
     clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
     issuer: process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}/` : '',
+    audience: process.env.AUTH0_AUDIENCE || '',
   },
   socialPlus: (() => {
     const region = process.env.SOCIAL_PLUS_REGION || 'EU'; // US, EU, SG - padrão EU conforme exemplo
