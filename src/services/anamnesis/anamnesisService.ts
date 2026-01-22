@@ -2,6 +2,7 @@ import type { AnamnesisUserAnswer } from '@prisma/client';
 import type { AnamnesisDomain, AnamnesisQuestion, CreateUserAnswerData, UserAnswer } from '@/interfaces/anamnesis';
 import { getAnamnesisRepository } from '@/utils/repositoryContainer';
 import type { AnamnesisRepository } from '@/repositories';
+import type { QuestionWithOptions } from '@/repositories/anamnesis/AnamnesisRepository';
 
 function getAnamnesisDomainFromKey(key: string): AnamnesisDomain {
   const prefix = key.split('_')[0]?.toLowerCase();
@@ -20,6 +21,7 @@ function getAnamnesisDomainFromKey(key: string): AnamnesisDomain {
 
 export class AnamnesisService {
   private anamnesisRepository: AnamnesisRepository;
+  private maxScoresCache: { mental: number; physical: number } | null = null;
 
   constructor(anamnesisRepository?: AnamnesisRepository) {
     this.anamnesisRepository = anamnesisRepository || getAnamnesisRepository();
@@ -154,6 +156,114 @@ export class AnamnesisService {
   async getCompleteAnamnesisByLocale(locale: string) {
     return this.anamnesisRepository.findAllQuestionsWithDetails(locale);
   }
+
+  private getQuestionMaxValue(question: QuestionWithOptions): number {
+    if (!question.answerOptions || question.answerOptions.length === 0) {
+      return 0;
+    }
+
+    const values = question.answerOptions
+      .map(opt => parseFloat(opt.value || '0'))
+      .filter(val => !isNaN(val));
+
+    return values.length > 0 ? Math.max(...values) : 0;
+  }
+
+  private getQuestionCategory(key: string): 'mental' | 'physical' | null {
+    const prefix = key.toLowerCase().split('_')[0];
+    
+    if (prefix === 'mind' || prefix === 'mental') {
+      return 'mental';
+    }
+    if (prefix === 'body' || prefix === 'physical') {
+      return 'physical';
+    }
+    
+    return null;
+  }
+
+  private calculatePercentage(score: number, maxScore: number): number {
+    if (maxScore <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round((score / maxScore) * 100)));
+  }
+
+  async getMaxScores(): Promise<{ mental: number; physical: number }> {
+    if (this.maxScoresCache) {
+      return this.maxScoresCache;
+    }
+
+    const questions = await this.anamnesisRepository.findQuestionsWithOptionsForScores();
+
+    const scores = questions.reduce(
+      (acc, question) => {
+        const category = this.getQuestionCategory(question.key);
+        if (!category) return acc;
+
+        const maxValue = this.getQuestionMaxValue(question);
+        acc[category] += maxValue;
+        return acc;
+      },
+      { mental: 0, physical: 0 }
+    );
+
+    this.maxScoresCache = scores;
+    return scores;
+  }
+
+  clearMaxScoresCache(): void {
+    this.maxScoresCache = null;
+  }
+
+  async getUserScores(userId: string): Promise<{ 
+    mental: number; 
+    physical: number;
+    maxMental: number;
+    maxPhysical: number;
+    mentalPercentage: number;
+    physicalPercentage: number;
+  }> {
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      throw new Error('Invalid userId');
+    }
+
+    const [answers, maxScores] = await Promise.all([
+      this.anamnesisRepository.findAnswersWithDetailsById(userId),
+      this.getMaxScores(),
+    ]);
+    
+    const scores = answers.reduce(
+      (acc, answer) => {
+        if (!answer.answerOptionId || !answer.answerOption) {
+          return acc;
+        }
+
+        const optionValue = parseFloat(answer.answerOption.value || '0');
+        if (isNaN(optionValue)) {
+          return acc;
+        }
+        
+        const category = this.getQuestionCategory(answer.questionConcept.key);
+        
+        if (category === 'mental') {
+          acc.mental += optionValue;
+        } else if (category === 'physical') {
+          acc.physical += optionValue;
+        }
+        
+        return acc;
+      },
+      { mental: 0, physical: 0 }
+    );
+
+    return {
+      mental: scores.mental,
+      physical: scores.physical,
+      maxMental: maxScores.mental,
+      maxPhysical: maxScores.physical,
+      mentalPercentage: this.calculatePercentage(scores.mental, maxScores.mental),
+      physicalPercentage: this.calculatePercentage(scores.physical, maxScores.physical),
+    };
+  }
 }
 
 const anamnesisServiceInstance = new AnamnesisService();
@@ -175,3 +285,6 @@ export const getUserAnswerByQuestion = (userId: string, questionConceptId: strin
 
 export const getCompleteAnamnesisByLocale = (locale: string) =>
   anamnesisServiceInstance.getCompleteAnamnesisByLocale(locale);
+
+export const getUserScores = (userId: string) =>
+  anamnesisServiceInstance.getUserScores(userId);

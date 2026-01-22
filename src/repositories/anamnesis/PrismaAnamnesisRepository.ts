@@ -9,6 +9,7 @@ import type {
   QuestionBasic,
   AnswerOptionBasic,
   AnswerWithDetails,
+  QuestionWithOptions,
 } from './AnamnesisRepository';
 
 export class PrismaAnamnesisRepository implements AnamnesisRepository {
@@ -193,16 +194,21 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
               }
             : undefined,
         },
-        answerOption: locale
-          ? {
-              include: {
-                texts: {
-                  where: { locale },
-                  take: 1,
-                },
-              },
-            }
-          : true,
+        answerOption: {
+          select: {
+            id: true,
+            key: true,
+            value: true,
+            ...(locale
+              ? {
+                  texts: {
+                    where: { locale },
+                    take: 1,
+                  },
+                }
+              : {}),
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -228,6 +234,35 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  async findQuestionsWithOptionsForScores(): Promise<QuestionWithOptions[]> {
+    const questions = await prisma.anamnesisQuestionConcept.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { key: { startsWith: 'mind_' } },
+          { key: { startsWith: 'mental_' } },
+          { key: { startsWith: 'body_' } },
+          { key: { startsWith: 'physical_' } },
+        ],
+      },
+      select: {
+        id: true,
+        key: true,
+        answerOptions: {
+          select: { value: true },
+        },
+      },
+    });
+
+    return questions.map((q) => ({
+      id: q.id,
+      key: q.key,
+      answerOptions: q.answerOptions.map((opt) => ({
+        value: opt.value,
+      })),
+    }));
   }
 
   private mapToAnamnesisAnswerData(answer: any): AnamnesisAnswerData {

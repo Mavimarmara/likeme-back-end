@@ -7,6 +7,7 @@ import {
   getUserAnswers,
   getUserAnswerByQuestion,
   getCompleteAnamnesisByLocale,
+  getUserScores,
 } from '@/services/anamnesis/anamnesisService';
 import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
 
@@ -303,6 +304,69 @@ export const getCompleteAnamnesis = async (req: Request, res: Response): Promise
     sendSuccess(res, anamnesis, 'Complete anamnesis retrieved successfully');
   } catch (error: any) {
     sendError(res, error.message || 'Error retrieving complete anamnesis', 500);
+  }
+};
+
+/**
+ * @swagger
+ * /api/anamnesis/scores/user/{userId}:
+ *   get:
+ *     summary: Calcula os scores de mental e physical baseado nas respostas do usuário
+ *     tags: [Anamnesis]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário
+ *     responses:
+ *       200:
+ *         description: Scores calculados com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     mental:
+ *                       type: number
+ *                       description: Score total de mental
+ *                     physical:
+ *                       type: number
+ *                       description: Score total de physical
+ *                     maxMental:
+ *                       type: number
+ *                       description: Score máximo possível de mental
+ *                     maxPhysical:
+ *                       type: number
+ *                       description: Score máximo possível de physical
+ *                     mentalPercentage:
+ *                       type: number
+ *                       description: Porcentagem de mental (0-100)
+ *                     physicalPercentage:
+ *                       type: number
+ *                       description: Porcentagem de physical (0-100)
+ *       500:
+ *         description: Erro ao calcular scores
+ */
+export const getUserScoresController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      sendError(res, 'userId parameter is required', 400);
+      return;
+    }
+
+    const scores = await getUserScores(userId);
+    sendSuccess(res, scores, 'User scores calculated successfully');
+  } catch (error: any) {
+    sendError(res, error.message || 'Error calculating user scores', 500);
   }
 };
 

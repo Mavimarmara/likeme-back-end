@@ -6,6 +6,7 @@ import {
   getUserAnswersList,
   getUserAnswer,
   getCompleteAnamnesis,
+  getUserScoresController,
 } from '@/controllers/anamnesis/anamnesisController';
 
 const router = Router();
@@ -34,6 +35,9 @@ router.get('/answers/user/:userId', getUserAnswersList);
 
 // GET /api/anamnesis/answers/user/:userId/question/:questionConceptId - Busca resposta específica
 router.get('/answers/user/:userId/question/:questionConceptId', getUserAnswer);
+
+// GET /api/anamnesis/scores/user/:userId - Calcula scores de mental e physical
+router.get('/scores/user/:userId', getUserScoresController);
 
 export default router;
 

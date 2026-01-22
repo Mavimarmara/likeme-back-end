@@ -12,6 +12,7 @@ export interface AnamnesisRepository {
   findAnswerOptionByIdAndQuestion(optionId: string, questionId: string): Promise<AnswerOptionBasic | null>;
   findAnswersWithDetailsById(userId: string, locale?: string): Promise<AnswerWithDetails[]>;
   findAllQuestionsWithDetails(locale: string): Promise<any>;
+  findQuestionsWithOptionsForScores(): Promise<QuestionWithOptions[]>;
 }
 
 export interface CreateAnamnesisAnswerData {
@@ -83,7 +84,17 @@ export interface AnswerWithDetails {
     texts?: QuestionText[];
   };
   answerOption: {
+    id: string;
     key: string;
+    value: string;
     texts?: AnswerOptionText[];
   } | null;
+}
+
+export interface QuestionWithOptions {
+  id: string;
+  key: string;
+  answerOptions: Array<{
+    value: string;
+  }>;
 }
