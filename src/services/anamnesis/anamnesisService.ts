@@ -266,22 +266,19 @@ export class AnamnesisService {
   }
 
   private getMarkerFromKey(key: string): string | null {
-    // As perguntas de markers têm o formato: habits_${marker}_...
+    // As perguntas de markers têm o formato: habits_${marker}... ou habits_${marker}_...
     const lowerKey = key.toLowerCase();
     
     if (!lowerKey.startsWith('habits_')) {
       return null;
     }
 
-    // Remove o prefixo "habits_" e pega a próxima parte
-    const parts = lowerKey.split('_');
-    if (parts.length < 2) {
-      return null;
-    }
-
-    const markerKey = parts[1]; // Segunda parte após "habits_"
+    // Remove o prefixo "habits_"
+    const afterHabits = lowerKey.substring(7); // Remove "habits_"
     
+    // Mapeamento de nomes em português e inglês para IDs dos markers
     const markerMap: Record<string, string> = {
+      // Inglês
       activity: 'activity',
       connection: 'connection',
       environment: 'environment',
@@ -296,9 +293,38 @@ export class AnamnesisService {
       smile: 'smile',
       spirituality: 'spirituality',
       stress: 'stress',
+      // Português
+      movimento: 'activity', // movimento = activity
+      relacionamentos: 'connection', // relacionamentos = connection
+      ambiente: 'environment', // ambiente = environment
+      nutricao: 'nutrition', // nutricao = nutrition
+      proposito: 'purpose-vision', // proposito = purpose-vision
+      autoestima: 'self-esteem', // autoestima = self-esteem
+      sono: 'sleep', // sono = sleep
+      'saude-bucal': 'smile', // saude-bucal = smile
+      'saude_bucal': 'smile', // saude_bucal = smile
+      sorriso: 'smile', // sorriso = smile
+      espiritualidade: 'spirituality', // espiritualidade = spirituality
+      estresse: 'stress', // estresse = stress
     };
     
-    return markerMap[markerKey] || null;
+    // Tenta encontrar o marker verificando se a string começa com algum dos nomes
+    for (const [markerKey, markerId] of Object.entries(markerMap)) {
+      if (afterHabits.startsWith(markerKey)) {
+        return markerId;
+      }
+    }
+    
+    // Se não encontrou, tenta pegar a primeira parte após habits_
+    const parts = afterHabits.split('_');
+    if (parts.length > 0) {
+      const firstPart = parts[0];
+      if (markerMap[firstPart]) {
+        return markerMap[firstPart];
+      }
+    }
+    
+    return null;
   }
 
   async getUserMarkers(userId: string): Promise<Array<{
