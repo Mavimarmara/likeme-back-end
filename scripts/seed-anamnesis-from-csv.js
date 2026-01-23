@@ -313,11 +313,14 @@ async function processMarkerCSV(csvPath, category) {
   }
   
   // Inserir no banco
+  // category agora é o nome padronizado do marker (ex: 'self-esteem', 'activity')
   for (const question of questions) {
     if (question.options.length === 0) continue;
     
-    const categoryKey = normalizeKey(category);
-    const key = `habits_${categoryKey}${normalizeKey(question.text.substring(0, 40))}`;
+    // Usar o nome padronizado do marker diretamente
+    const markerKey = category; // category já é o nome padronizado (ex: 'self-esteem', 'activity')
+    const questionKey = normalizeKey(question.text.substring(0, 40));
+    const key = `habits_${markerKey}_${questionKey}`;
     
     try {
       await prisma.anamnesisQuestionConcept.upsert({
@@ -371,16 +374,30 @@ async function main() {
     // Processar Mental
     await processMentalCSV(path.join(csvDir, 'Perguntas Anamnese - Mental.csv'));
     
-    // Processar Markers
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Autoestima.csv'), 'Autoestima');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Relacionamentos.csv'), 'Relacionamentos');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Estresse (1).csv'), 'Estresse');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Nutrição.csv'), 'Nutrição');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Movimento.csv'), 'Movimento');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Saúde Bucal.csv'), 'Saúde Bucal');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Propósito.csv'), 'Propósito');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Sono.csv'), 'Sono');
-    await processMarkerCSV(path.join(csvDir, 'Perguntas Anamnese - Marker_ Espiritualidade.csv'), 'Espiritualidade');
+    // Processar Markers (usando nomes padronizados em inglês)
+    // Mapeamento: nome do arquivo CSV -> nome padronizado do marker
+    const markerFiles = [
+      { file: 'Perguntas Anamnese - Marker_ Autoestima.csv', marker: 'self-esteem' },
+      { file: 'Perguntas Anamnese - Marker_ Relacionamentos.csv', marker: 'connection' },
+      { file: 'Perguntas Anamnese - Marker_ Estresse (1).csv', marker: 'stress' },
+      { file: 'Perguntas Anamnese - Marker_ Estresse.csv', marker: 'stress' },
+      { file: 'Perguntas Anamnese - Marker_ Nutrição.csv', marker: 'nutrition' },
+      { file: 'Perguntas Anamnese - Marker_ Movimento.csv', marker: 'activity' },
+      { file: 'Perguntas Anamnese - Marker_ Saúde Bucal.csv', marker: 'smile' },
+      { file: 'Perguntas Anamnese - Marker_ Propósito.csv', marker: 'purpose-vision' },
+      { file: 'Perguntas Anamnese - Marker_ Sono.csv', marker: 'sleep' },
+      { file: 'Perguntas Anamnese - Marker_ Espiritualidade.csv', marker: 'spirituality' },
+      { file: 'Perguntas Anamnese - Marker_ Ambiente.csv', marker: 'environment' },
+    ];
+
+    for (const { file, marker } of markerFiles) {
+      const filePath = path.join(csvDir, file);
+      if (fs.existsSync(filePath)) {
+        await processMarkerCSV(filePath, marker);
+      } else {
+        console.log(`⚠️  Arquivo não encontrado: ${file}`);
+      }
+    }
     
     console.log('\n✅ Importação concluída com sucesso!');
   } catch (error) {
