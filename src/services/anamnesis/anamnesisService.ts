@@ -298,9 +298,12 @@ export class AnamnesisService {
       relacionamentos: 'connection', // relacionamentos = connection
       ambiente: 'environment', // ambiente = environment
       nutricao: 'nutrition', // nutricao = nutrition
+      nutricao: 'nutrition', // nutricao = nutrition (prefixo comum)
       proposito: 'purpose-vision', // proposito = purpose-vision
       autoestima: 'self-esteem', // autoestima = self-esteem
+      autoestimavoce: 'self-esteem', // autoestimavoce = self-esteem (prefixo comum)
       sono: 'sleep', // sono = sleep
+      sonovoce: 'sleep', // sonovoce = sleep (prefixo comum)
       'saude-bucal': 'smile', // saude-bucal = smile
       'saude_bucal': 'smile', // saude_bucal = smile
       sorriso: 'smile', // sorriso = smile
@@ -308,10 +311,13 @@ export class AnamnesisService {
       estresse: 'stress', // estresse = stress
     };
     
+    // Ordena as chaves por tamanho (maior primeiro) para fazer match mais específico primeiro
+    const sortedKeys = Object.keys(markerMap).sort((a, b) => b.length - a.length);
+    
     // Tenta encontrar o marker verificando se a string começa com algum dos nomes
-    for (const [markerKey, markerId] of Object.entries(markerMap)) {
+    for (const markerKey of sortedKeys) {
       if (afterHabits.startsWith(markerKey)) {
-        return markerId;
+        return markerMap[markerKey];
       }
     }
     
@@ -393,8 +399,14 @@ export class AnamnesisService {
     });
 
     // Calcular scores do usuário por marker
+    // Apenas considerar respostas de perguntas que começam com habits_
     answers.forEach((answer) => {
       if (!answer.answerOptionId || !answer.answerOption) {
+        return;
+      }
+
+      // Ignorar respostas de perguntas que não são de habits
+      if (!answer.questionConcept.key.toLowerCase().startsWith('habits_')) {
         return;
       }
 
