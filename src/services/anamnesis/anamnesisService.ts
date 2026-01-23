@@ -278,28 +278,36 @@ export class AnamnesisService {
     // Remove o prefixo "habits_"
     const afterHabits = lowerKey.substring(7); // Remove "habits_"
     
-    // Lista de markers padronizados
+    // Lista de markers padronizados (ordenados por tamanho, maior primeiro para match mais específico)
     const standardizedMarkers = [
-      'activity',
+      'purpose-vision', // Mais longo primeiro
+      'self-esteem',
+      'spirituality',
       'connection',
       'environment',
       'nutrition',
-      'purpose-vision',
-      'self-esteem',
+      'activity',
+      'stress',
       'sleep',
       'smile',
-      'spirituality',
-      'stress',
     ];
     
     // Verifica se começa com algum dos markers padronizados
-    for (const marker of standardizedMarkers) {
+    // Ordena por tamanho (maior primeiro) para fazer match mais específico primeiro
+    const sortedMarkers = [...standardizedMarkers].sort((a, b) => b.length - a.length);
+    
+    for (const marker of sortedMarkers) {
       if (afterHabits.startsWith(marker)) {
-        return marker;
+        // Verifica se é exatamente o marker ou se tem underscore após
+        const nextChar = afterHabits[marker.length];
+        if (!nextChar || nextChar === '_') {
+          return marker;
+        }
       }
     }
     
     // Fallback: tenta pegar a primeira parte após habits_ e verificar se é um marker válido
+    // Útil para keys como habits_self-esteem_algumacoisa onde o split por _ funciona
     const parts = afterHabits.split('_');
     if (parts.length > 0) {
       const firstPart = parts[0];
