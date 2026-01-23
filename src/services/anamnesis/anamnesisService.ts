@@ -266,7 +266,9 @@ export class AnamnesisService {
   }
 
   private getMarkerFromKey(key: string): string | null {
-    // As perguntas de markers têm o formato: habits_${marker}... ou habits_${marker}_...
+    // As perguntas de markers têm o formato padronizado: habits_${marker}_...
+    // Markers padronizados: activity, connection, environment, nutrition, 
+    // purpose-vision, self-esteem, sleep, smile, spirituality, stress
     const lowerKey = key.toLowerCase();
     
     if (!lowerKey.startsWith('habits_')) {
@@ -276,57 +278,33 @@ export class AnamnesisService {
     // Remove o prefixo "habits_"
     const afterHabits = lowerKey.substring(7); // Remove "habits_"
     
-    // Mapeamento de nomes em português e inglês para IDs dos markers
-    const markerMap: Record<string, string> = {
-      // Inglês
-      activity: 'activity',
-      connection: 'connection',
-      environment: 'environment',
-      nutrition: 'nutrition',
-      purpose: 'purpose-vision',
-      vision: 'purpose-vision',
-      'purpose-vision': 'purpose-vision',
-      'purposevision': 'purpose-vision',
-      'self-esteem': 'self-esteem',
-      'selfesteem': 'self-esteem',
-      sleep: 'sleep',
-      smile: 'smile',
-      spirituality: 'spirituality',
-      stress: 'stress',
-      // Português
-      movimento: 'activity', // movimento = activity
-      relacionamentos: 'connection', // relacionamentos = connection
-      ambiente: 'environment', // ambiente = environment
-      nutricao: 'nutrition', // nutricao = nutrition
-      nutricao: 'nutrition', // nutricao = nutrition (prefixo comum)
-      proposito: 'purpose-vision', // proposito = purpose-vision
-      autoestima: 'self-esteem', // autoestima = self-esteem
-      autoestimavoce: 'self-esteem', // autoestimavoce = self-esteem (prefixo comum)
-      sono: 'sleep', // sono = sleep
-      sonovoce: 'sleep', // sonovoce = sleep (prefixo comum)
-      'saude-bucal': 'smile', // saude-bucal = smile
-      'saude_bucal': 'smile', // saude_bucal = smile
-      sorriso: 'smile', // sorriso = smile
-      espiritualidade: 'spirituality', // espiritualidade = spirituality
-      estresse: 'stress', // estresse = stress
-    };
+    // Lista de markers padronizados
+    const standardizedMarkers = [
+      'activity',
+      'connection',
+      'environment',
+      'nutrition',
+      'purpose-vision',
+      'self-esteem',
+      'sleep',
+      'smile',
+      'spirituality',
+      'stress',
+    ];
     
-    // Ordena as chaves por tamanho (maior primeiro) para fazer match mais específico primeiro
-    const sortedKeys = Object.keys(markerMap).sort((a, b) => b.length - a.length);
-    
-    // Tenta encontrar o marker verificando se a string começa com algum dos nomes
-    for (const markerKey of sortedKeys) {
-      if (afterHabits.startsWith(markerKey)) {
-        return markerMap[markerKey];
+    // Verifica se começa com algum dos markers padronizados
+    for (const marker of standardizedMarkers) {
+      if (afterHabits.startsWith(marker)) {
+        return marker;
       }
     }
     
-    // Se não encontrou, tenta pegar a primeira parte após habits_
+    // Fallback: tenta pegar a primeira parte após habits_ e verificar se é um marker válido
     const parts = afterHabits.split('_');
     if (parts.length > 0) {
       const firstPart = parts[0];
-      if (markerMap[firstPart]) {
-        return markerMap[firstPart];
+      if (standardizedMarkers.includes(firstPart)) {
+        return firstPart;
       }
     }
     
