@@ -269,7 +269,11 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
     const questions = await prisma.anamnesisQuestionConcept.findMany({
       where: {
         deletedAt: null,
-        key: { startsWith: 'habits_' },
+        OR: [
+          { key: { startsWith: 'habits_' } },
+          { key: { startsWith: 'mind_' } },
+          { key: { startsWith: 'body_' } },
+        ],
       },
       select: {
         id: true,

@@ -4,6 +4,35 @@ import { getAnamnesisRepository } from '@/utils/repositoryContainer';
 import type { AnamnesisRepository } from '@/repositories';
 import type { QuestionWithOptions } from '@/repositories/anamnesis/AnamnesisRepository';
 
+// Constantes para markers padronizados
+const STANDARDIZED_MARKERS = [
+  'purpose-vision',
+  'self-esteem',
+  'spirituality',
+  'connection',
+  'environment',
+  'nutrition',
+  'activity',
+  'stress',
+  'sleep',
+  'smile',
+] as const;
+
+const MARKER_NAMES: Record<string, string> = {
+  activity: 'Activity',
+  connection: 'Connection',
+  environment: 'Environment',
+  nutrition: 'Nutrition',
+  'purpose-vision': 'Purpose & vision',
+  'self-esteem': 'Self-esteem',
+  sleep: 'Sleep',
+  smile: 'Smile',
+  spirituality: 'Spirituality',
+  stress: 'Stress',
+} as const;
+
+type StandardizedMarker = (typeof STANDARDIZED_MARKERS)[number];
+
 function getAnamnesisDomainFromKey(key: string): AnamnesisDomain {
   const prefix = key.split('_')[0]?.toLowerCase();
   const allowed: Record<string, AnamnesisDomain> = {
@@ -222,9 +251,7 @@ export class AnamnesisService {
     mentalPercentage: number;
     physicalPercentage: number;
   }> {
-    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
-      throw new Error('Invalid userId');
-    }
+    this.validateUserId(userId);
 
     const [answers, maxScores] = await Promise.all([
       this.anamnesisRepository.findAnswersWithDetailsById(userId),
@@ -265,54 +292,56 @@ export class AnamnesisService {
     };
   }
 
-  private getMarkerFromKey(key: string): string | null {
-    // As perguntas de markers têm o formato padronizado: habits_${marker}_...
-    // Markers padronizados: activity, connection, environment, nutrition, 
-    // purpose-vision, self-esteem, sleep, smile, spirituality, stress
+  private validateUserId(userId: string): void {
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      throw new Error('Invalid userId');
+    }
+  }
+
+  private getMarkerFromKey(key: string): StandardizedMarker | null {
+    // As perguntas de markers podem ter o formato:
+    // - habits_${marker}_...
+    // - mind_${marker}_...
+    // - body_${marker}_...
     const lowerKey = key.toLowerCase();
     
-    if (!lowerKey.startsWith('habits_')) {
+    // Verifica se começa com habits_, mind_ ou body_
+    let prefix: string | null = null;
+    let afterPrefix: string;
+    
+    if (lowerKey.startsWith('habits_')) {
+      prefix = 'habits_';
+      afterPrefix = lowerKey.substring(7);
+    } else if (lowerKey.startsWith('mind_')) {
+      prefix = 'mind_';
+      afterPrefix = lowerKey.substring(5);
+    } else if (lowerKey.startsWith('body_')) {
+      prefix = 'body_';
+      afterPrefix = lowerKey.substring(5);
+    } else {
       return null;
     }
-
-    // Remove o prefixo "habits_"
-    const afterHabits = lowerKey.substring(7); // Remove "habits_"
     
-    // Lista de markers padronizados (ordenados por tamanho, maior primeiro para match mais específico)
-    const standardizedMarkers = [
-      'purpose-vision', // Mais longo primeiro
-      'self-esteem',
-      'spirituality',
-      'connection',
-      'environment',
-      'nutrition',
-      'activity',
-      'stress',
-      'sleep',
-      'smile',
-    ];
+    // Ordena markers por tamanho (maior primeiro) para match mais específico
+    const sortedMarkers = [...STANDARDIZED_MARKERS].sort((a, b) => b.length - a.length);
     
     // Verifica se começa com algum dos markers padronizados
-    // Ordena por tamanho (maior primeiro) para fazer match mais específico primeiro
-    const sortedMarkers = [...standardizedMarkers].sort((a, b) => b.length - a.length);
-    
     for (const marker of sortedMarkers) {
-      if (afterHabits.startsWith(marker)) {
+      if (afterPrefix.startsWith(marker)) {
         // Verifica se é exatamente o marker ou se tem underscore após
-        const nextChar = afterHabits[marker.length];
+        const nextChar = afterPrefix[marker.length];
         if (!nextChar || nextChar === '_') {
-          return marker;
+          return marker as StandardizedMarker;
         }
       }
     }
     
-    // Fallback: tenta pegar a primeira parte após habits_ e verificar se é um marker válido
-    // Útil para keys como habits_self-esteem_algumacoisa onde o split por _ funciona
-    const parts = afterHabits.split('_');
+    // Fallback: tenta pegar a primeira parte após o prefixo e verificar se é um marker válido
+    const parts = afterPrefix.split('_');
     if (parts.length > 0) {
       const firstPart = parts[0];
-      if (standardizedMarkers.includes(firstPart)) {
-        return firstPart;
+      if (STANDARDIZED_MARKERS.includes(firstPart as StandardizedMarker)) {
+        return firstPart as StandardizedMarker;
       }
     }
     
@@ -325,41 +354,19 @@ export class AnamnesisService {
     percentage: number;
     trend: 'increasing' | 'decreasing' | 'stable';
   }>> {
-    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
-      throw new Error('Invalid userId');
-    }
+    this.validateUserId(userId);
 
-    const answers = await this.anamnesisRepository.findAnswersWithDetailsById(userId);
-    const questions = await this.anamnesisRepository.findQuestionsWithOptionsForMarkers();
+    const [answers, questions] = await Promise.all([
+      this.anamnesisRepository.findAnswersWithDetailsById(userId),
+      this.anamnesisRepository.findQuestionsWithOptionsForMarkers(),
+    ]);
 
-    console.log('[getUserMarkers] Debug:', {
-      userId,
-      answersCount: answers.length,
-      questionsCount: questions.length,
-      sampleQuestionKeys: questions.slice(0, 5).map((q) => q.key),
-      sampleAnswerKeys: answers.slice(0, 5).map((a) => a.questionConcept?.key),
-    });
+    // Inicializar estruturas de dados para todos os markers conhecidos
+    const markerQuestions: Record<StandardizedMarker, QuestionWithOptions[]> = {} as Record<StandardizedMarker, QuestionWithOptions[]>;
+    const markerMaxScores: Record<StandardizedMarker, number> = {} as Record<StandardizedMarker, number>;
+    const markerScores: Record<StandardizedMarker, number> = {} as Record<StandardizedMarker, number>;
 
-    // Agrupar perguntas por marker
-    const markerQuestions: Record<string, QuestionWithOptions[]> = {};
-    const markerMaxScores: Record<string, number> = {};
-    const markerScores: Record<string, number> = {};
-
-    // Inicializar todos os markers conhecidos
-    const knownMarkers = [
-      'activity',
-      'connection',
-      'environment',
-      'nutrition',
-      'purpose-vision',
-      'self-esteem',
-      'sleep',
-      'smile',
-      'spirituality',
-      'stress',
-    ];
-
-    knownMarkers.forEach((marker) => {
+    STANDARDIZED_MARKERS.forEach((marker) => {
       markerQuestions[marker] = [];
       markerMaxScores[marker] = 0;
       markerScores[marker] = 0;
@@ -372,27 +379,22 @@ export class AnamnesisService {
         markerQuestions[marker].push(question);
         const maxValue = this.getQuestionMaxValue(question);
         markerMaxScores[marker] += maxValue;
-      } else {
-        console.log('[getUserMarkers] Question not mapped to marker:', question.key);
       }
     });
 
-    console.log('[getUserMarkers] Marker questions grouped:', {
-      markerQuestionsCounts: Object.keys(markerQuestions).map(
-        (marker) => `${marker}: ${markerQuestions[marker].length} questions`
-      ),
-      markerMaxScores,
-    });
-
     // Calcular scores do usuário por marker
-    // Apenas considerar respostas de perguntas que começam com habits_
+    // Considerar respostas de perguntas que começam com habits_, mind_ ou body_
     answers.forEach((answer) => {
       if (!answer.answerOptionId || !answer.answerOption) {
         return;
       }
 
-      // Ignorar respostas de perguntas que não são de habits
-      if (!answer.questionConcept.key.toLowerCase().startsWith('habits_')) {
+      const questionKey = answer.questionConcept.key.toLowerCase();
+      
+      // Considerar apenas perguntas de markers (habits_, mind_, body_)
+      if (!questionKey.startsWith('habits_') && 
+          !questionKey.startsWith('mind_') && 
+          !questionKey.startsWith('body_')) {
         return;
       }
 
@@ -404,28 +406,11 @@ export class AnamnesisService {
       const marker = this.getMarkerFromKey(answer.questionConcept.key);
       if (marker) {
         markerScores[marker] += optionValue;
-      } else {
-        console.log('[getUserMarkers] Answer not mapped to marker:', answer.questionConcept.key);
       }
     });
 
-    console.log('[getUserMarkers] Marker scores:', markerScores);
-
     // Calcular porcentagens e determinar trends
-    const markerNames: Record<string, string> = {
-      activity: 'Activity',
-      connection: 'Connection',
-      environment: 'Environment',
-      nutrition: 'Nutrition',
-      'purpose-vision': 'Purpose & vision',
-      'self-esteem': 'Self-esteem',
-      sleep: 'Sleep',
-      smile: 'Smile',
-      spirituality: 'Spirituality',
-      stress: 'Stress',
-    };
-
-    const result = knownMarkers.map((markerId) => {
+    const result = STANDARDIZED_MARKERS.map((markerId) => {
       const maxScore = markerMaxScores[markerId] || 0;
       const score = markerScores[markerId] || 0;
       const percentage = this.calculatePercentage(score, maxScore);
@@ -440,13 +425,12 @@ export class AnamnesisService {
 
       return {
         id: markerId,
-        name: markerNames[markerId] || markerId,
+        name: MARKER_NAMES[markerId] || markerId,
         percentage,
         trend,
       };
     });
 
-    console.log('[getUserMarkers] Final result:', result);
     return result;
   }
 }
