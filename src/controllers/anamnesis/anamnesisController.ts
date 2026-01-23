@@ -8,6 +8,7 @@ import {
   getUserAnswerByQuestion,
   getCompleteAnamnesisByLocale,
   getUserScores,
+  getUserMarkers,
 } from '@/services/anamnesis/anamnesisService';
 import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
 
@@ -367,6 +368,66 @@ export const getUserScoresController = async (req: Request, res: Response): Prom
     sendSuccess(res, scores, 'User scores calculated successfully');
   } catch (error: any) {
     sendError(res, error.message || 'Error calculating user scores', 500);
+  }
+};
+
+/**
+ * @swagger
+ * /api/anamnesis/markers/user/{userId}:
+ *   get:
+ *     summary: Calcula os markers (indicadores) baseado nas respostas do usuário
+ *     tags: [Anamnesis]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário
+ *     responses:
+ *       200:
+ *         description: Markers calculados com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: ID do marker (activity, connection, etc.)
+ *                       name:
+ *                         type: string
+ *                         description: Nome do marker
+ *                       percentage:
+ *                         type: number
+ *                         description: Porcentagem do marker (0-100)
+ *                       trend:
+ *                         type: string
+ *                         enum: [increasing, decreasing, stable]
+ *                         description: Tendência do marker
+ *       500:
+ *         description: Erro ao calcular markers
+ */
+export const getUserMarkersController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      sendError(res, 'userId parameter is required', 400);
+      return;
+    }
+
+    const markers = await getUserMarkers(userId);
+    sendSuccess(res, markers, 'User markers calculated successfully');
+  } catch (error: any) {
+    sendError(res, error.message || 'Error calculating user markers', 500);
   }
 };
 

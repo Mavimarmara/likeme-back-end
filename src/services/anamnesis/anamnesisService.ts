@@ -264,6 +264,167 @@ export class AnamnesisService {
       physicalPercentage: this.calculatePercentage(scores.physical, maxScores.physical),
     };
   }
+
+  private getMarkerFromKey(key: string): string | null {
+    // As perguntas de markers têm o formato: habits_${marker}_...
+    const lowerKey = key.toLowerCase();
+    
+    if (!lowerKey.startsWith('habits_')) {
+      return null;
+    }
+
+    // Remove o prefixo "habits_" e pega a próxima parte
+    const parts = lowerKey.split('_');
+    if (parts.length < 2) {
+      return null;
+    }
+
+    const markerKey = parts[1]; // Segunda parte após "habits_"
+    
+    const markerMap: Record<string, string> = {
+      activity: 'activity',
+      connection: 'connection',
+      environment: 'environment',
+      nutrition: 'nutrition',
+      purpose: 'purpose-vision',
+      vision: 'purpose-vision',
+      'purpose-vision': 'purpose-vision',
+      'purposevision': 'purpose-vision',
+      'self-esteem': 'self-esteem',
+      'selfesteem': 'self-esteem',
+      sleep: 'sleep',
+      smile: 'smile',
+      spirituality: 'spirituality',
+      stress: 'stress',
+    };
+    
+    return markerMap[markerKey] || null;
+  }
+
+  async getUserMarkers(userId: string): Promise<Array<{
+    id: string;
+    name: string;
+    percentage: number;
+    trend: 'increasing' | 'decreasing' | 'stable';
+  }>> {
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      throw new Error('Invalid userId');
+    }
+
+    const answers = await this.anamnesisRepository.findAnswersWithDetailsById(userId);
+    const questions = await this.anamnesisRepository.findQuestionsWithOptionsForMarkers();
+
+    console.log('[getUserMarkers] Debug:', {
+      userId,
+      answersCount: answers.length,
+      questionsCount: questions.length,
+      sampleQuestionKeys: questions.slice(0, 5).map((q) => q.key),
+      sampleAnswerKeys: answers.slice(0, 5).map((a) => a.questionConcept?.key),
+    });
+
+    // Agrupar perguntas por marker
+    const markerQuestions: Record<string, QuestionWithOptions[]> = {};
+    const markerMaxScores: Record<string, number> = {};
+    const markerScores: Record<string, number> = {};
+
+    // Inicializar todos os markers conhecidos
+    const knownMarkers = [
+      'activity',
+      'connection',
+      'environment',
+      'nutrition',
+      'purpose-vision',
+      'self-esteem',
+      'sleep',
+      'smile',
+      'spirituality',
+      'stress',
+    ];
+
+    knownMarkers.forEach((marker) => {
+      markerQuestions[marker] = [];
+      markerMaxScores[marker] = 0;
+      markerScores[marker] = 0;
+    });
+
+    // Agrupar perguntas por marker
+    questions.forEach((question) => {
+      const marker = this.getMarkerFromKey(question.key);
+      if (marker) {
+        markerQuestions[marker].push(question);
+        const maxValue = this.getQuestionMaxValue(question);
+        markerMaxScores[marker] += maxValue;
+      } else {
+        console.log('[getUserMarkers] Question not mapped to marker:', question.key);
+      }
+    });
+
+    console.log('[getUserMarkers] Marker questions grouped:', {
+      markerQuestionsCounts: Object.keys(markerQuestions).map(
+        (marker) => `${marker}: ${markerQuestions[marker].length} questions`
+      ),
+      markerMaxScores,
+    });
+
+    // Calcular scores do usuário por marker
+    answers.forEach((answer) => {
+      if (!answer.answerOptionId || !answer.answerOption) {
+        return;
+      }
+
+      const optionValue = parseFloat(answer.answerOption.value || '0');
+      if (isNaN(optionValue)) {
+        return;
+      }
+
+      const marker = this.getMarkerFromKey(answer.questionConcept.key);
+      if (marker) {
+        markerScores[marker] += optionValue;
+      } else {
+        console.log('[getUserMarkers] Answer not mapped to marker:', answer.questionConcept.key);
+      }
+    });
+
+    console.log('[getUserMarkers] Marker scores:', markerScores);
+
+    // Calcular porcentagens e determinar trends
+    const markerNames: Record<string, string> = {
+      activity: 'Activity',
+      connection: 'Connection',
+      environment: 'Environment',
+      nutrition: 'Nutrition',
+      'purpose-vision': 'Purpose & vision',
+      'self-esteem': 'Self-esteem',
+      sleep: 'Sleep',
+      smile: 'Smile',
+      spirituality: 'Spirituality',
+      stress: 'Stress',
+    };
+
+    const result = knownMarkers.map((markerId) => {
+      const maxScore = markerMaxScores[markerId] || 0;
+      const score = markerScores[markerId] || 0;
+      const percentage = this.calculatePercentage(score, maxScore);
+
+      // Determinar trend baseado na porcentagem (simplificado - pode ser melhorado com histórico)
+      let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
+      if (percentage >= 70) {
+        trend = 'increasing';
+      } else if (percentage <= 30) {
+        trend = 'decreasing';
+      }
+
+      return {
+        id: markerId,
+        name: markerNames[markerId] || markerId,
+        percentage,
+        trend,
+      };
+    });
+
+    console.log('[getUserMarkers] Final result:', result);
+    return result;
+  }
 }
 
 const anamnesisServiceInstance = new AnamnesisService();
@@ -288,3 +449,6 @@ export const getCompleteAnamnesisByLocale = (locale: string) =>
 
 export const getUserScores = (userId: string) =>
   anamnesisServiceInstance.getUserScores(userId);
+
+export const getUserMarkers = (userId: string) =>
+  anamnesisServiceInstance.getUserMarkers(userId);

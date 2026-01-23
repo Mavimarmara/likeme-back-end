@@ -200,15 +200,15 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
             key: true,
             value: true,
             ...(locale
-              ? {
-                  texts: {
-                    where: { locale },
-                    take: 1,
+          ? {
+                texts: {
+                  where: { locale },
+                  take: 1,
                   },
                 }
               : {}),
-          },
-        },
+                },
+              },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -246,6 +246,30 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
           { key: { startsWith: 'body_' } },
           { key: { startsWith: 'physical_' } },
         ],
+      },
+      select: {
+        id: true,
+        key: true,
+        answerOptions: {
+          select: { value: true },
+        },
+      },
+    });
+
+    return questions.map((q) => ({
+      id: q.id,
+      key: q.key,
+      answerOptions: q.answerOptions.map((opt) => ({
+        value: opt.value,
+      })),
+    }));
+  }
+
+  async findQuestionsWithOptionsForMarkers(): Promise<QuestionWithOptions[]> {
+    const questions = await prisma.anamnesisQuestionConcept.findMany({
+      where: {
+        deletedAt: null,
+        key: { startsWith: 'habits_' },
       },
       select: {
         id: true,

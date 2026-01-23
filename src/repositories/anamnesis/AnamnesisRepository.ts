@@ -13,6 +13,7 @@ export interface AnamnesisRepository {
   findAnswersWithDetailsById(userId: string, locale?: string): Promise<AnswerWithDetails[]>;
   findAllQuestionsWithDetails(locale: string): Promise<any>;
   findQuestionsWithOptionsForScores(): Promise<QuestionWithOptions[]>;
+  findQuestionsWithOptionsForMarkers(): Promise<QuestionWithOptions[]>;
 }
 
 export interface CreateAnamnesisAnswerData {
