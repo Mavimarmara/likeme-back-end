@@ -9,6 +9,12 @@ import {
   getUserScoresController,
   getUserMarkersController,
 } from '@/controllers/anamnesis/anamnesisController';
+import {
+  importAnamnesisFromCSV,
+  downloadImportTemplate,
+} from '@/controllers/anamnesis/anamnesisImportController';
+import { generalRateLimiter } from '@/middleware/rateLimiter';
+import { uploadCSV } from '@/middleware/upload';
 
 const router = Router();
 
@@ -18,6 +24,13 @@ const router = Router();
  *   name: Anamnesis
  *   description: Endpoints para gerenciamento de anamnesis clínica com suporte a i18n
  */
+
+// Rotas de importação CSV (devem vir antes das rotas com parâmetros)
+// POST /api/anamnesis/import/csv - Importa perguntas de anamnese via CSV
+router.post('/import/csv', generalRateLimiter, uploadCSV, importAnamnesisFromCSV);
+
+// GET /api/anamnesis/import/template - Baixa template CSV para importação
+router.get('/import/template', generalRateLimiter, downloadImportTemplate);
 
 // GET /api/anamnesis/questions - Lista todas as perguntas com traduções
 router.get('/questions', getQuestions);
