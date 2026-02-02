@@ -12,6 +12,41 @@ import type {
   QuestionWithOptions,
 } from './AnamnesisRepository';
 
+/**
+ * Mapeamento de aliases para unificar keys em português e inglês.
+ * Quando o app busca por um prefixo em português, o backend também busca pelo equivalente em inglês (e vice-versa).
+ */
+const KEY_PREFIX_ALIASES: Record<string, string[]> = {
+  // Português -> Inglês
+  'habits_movimento': ['habits_movimento', 'habits_activity'],
+  'habits_espiritualidade': ['habits_espiritualidade', 'habits_spirituality'],
+  'habits_sono': ['habits_sono', 'habits_sleep'],
+  'habits_nutricao': ['habits_nutricao', 'habits_nutrition'],
+  'habits_estresse': ['habits_estresse', 'habits_stress'],
+  'habits_autoestima': ['habits_autoestima', 'habits_self-esteem'],
+  'habits_relacionamentos': ['habits_relacionamentos', 'habits_connection'],
+  'habits_saude_bucal': ['habits_saude_bucal', 'habits_smile'],
+  'habits_proposito': ['habits_proposito', 'habits_purpose-vision'],
+  // Inglês -> Português (para buscas inversas)
+  'habits_activity': ['habits_activity', 'habits_movimento'],
+  'habits_spirituality': ['habits_spirituality', 'habits_espiritualidade'],
+  'habits_sleep': ['habits_sleep', 'habits_sono'],
+  'habits_nutrition': ['habits_nutrition', 'habits_nutricao'],
+  'habits_stress': ['habits_stress', 'habits_estresse'],
+  'habits_self-esteem': ['habits_self-esteem', 'habits_autoestima'],
+  'habits_connection': ['habits_connection', 'habits_relacionamentos'],
+  'habits_smile': ['habits_smile', 'habits_saude_bucal'],
+  'habits_purpose-vision': ['habits_purpose-vision', 'habits_proposito'],
+};
+
+/**
+ * Expande um keyPrefix para incluir aliases (português/inglês).
+ * Ex: 'habits_movimento' -> ['habits_movimento', 'habits_activity']
+ */
+function expandKeyPrefixAliases(keyPrefix: string): string[] {
+  return KEY_PREFIX_ALIASES[keyPrefix] || [keyPrefix];
+}
+
 export class PrismaAnamnesisRepository implements AnamnesisRepository {
   async saveAnswer(data: CreateAnamnesisAnswerData): Promise<{ id: string }> {
     const answer = await prisma.anamnesisUserAnswer.create({
@@ -85,9 +120,13 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
     };
 
     if (keyPrefix) {
-      whereClause.key = {
-        startsWith: keyPrefix,
-      };
+      // Expande o prefixo para incluir aliases (português/inglês)
+      const prefixes = expandKeyPrefixAliases(keyPrefix);
+      if (prefixes.length === 1) {
+        whereClause.key = { startsWith: prefixes[0] };
+      } else {
+        whereClause.OR = prefixes.map((p) => ({ key: { startsWith: p } }));
+      }
     }
 
     const questions = await prisma.anamnesisQuestionConcept.findMany({

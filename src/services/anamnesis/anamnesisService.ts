@@ -198,14 +198,20 @@ export class AnamnesisService {
     return values.length > 0 ? Math.max(...values) : 0;
   }
 
-  /** Domínios de hábitos que contam para o score mental (mente) */
+  /** Domínios de hábitos que contam para o score mental (mente) - português e inglês */
   private static readonly HABITS_MENTAL_DOMAINS = new Set([
-    'espiritualidade', 'estresse', 'autoestima', 'proposito', 'purpose', 'spirituality', 'stress', 'self-esteem',
+    // Português
+    'espiritualidade', 'estresse', 'autoestima', 'proposito',
+    // Inglês
+    'spirituality', 'stress', 'self-esteem', 'purpose-vision',
   ]);
 
-  /** Domínios de hábitos que contam para o score physical (corpo) */
+  /** Domínios de hábitos que contam para o score physical (corpo) - português e inglês */
   private static readonly HABITS_PHYSICAL_DOMAINS = new Set([
-    'movimento', 'sono', 'nutricao', 'saude_bucal', 'relacionamentos', 'activity', 'sleep', 'nutrition', 'smile', 'connection',
+    // Português
+    'movimento', 'sono', 'nutricao', 'saude_bucal', 'relacionamentos',
+    // Inglês
+    'activity', 'sleep', 'nutrition', 'smile', 'connection',
   ]);
 
   private getQuestionCategory(key: string): 'mental' | 'physical' | null {
