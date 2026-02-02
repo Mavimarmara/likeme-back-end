@@ -13,10 +13,14 @@ import {
   importAnamnesisFromCSV,
   downloadImportTemplate,
 } from '@/controllers/anamnesis/anamnesisImportController';
+import { authenticateToken, requireAuth } from '@/middleware/auth';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
 import { uploadCSV } from '@/middleware/upload';
 
 const router = Router();
+
+router.use(authenticateToken);
+router.use(requireAuth);
 
 /**
  * @swagger
