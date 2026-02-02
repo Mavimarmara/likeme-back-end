@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { sendSuccess, sendError } from '@/utils/response';
 import { anamnesisImportService } from '@/services/anamnesis/anamnesisImportService';
+import { clearMaxScoresCache } from '@/services/anamnesis/anamnesisService';
 
 export const importAnamnesisFromCSV = async (
   req: AuthenticatedRequest,
@@ -35,6 +36,9 @@ export const importAnamnesisFromCSV = async (
     console.log(`[AnamnesisImport] File: ${req.file.originalname} (${req.file.size} bytes)`);
 
     const result = await anamnesisImportService.importFromCSV(req.file.buffer);
+
+    // Limpar cache de max scores para que o próximo GET /scores recalcule com as novas perguntas
+    clearMaxScoresCache();
 
     console.log(`[AnamnesisImport] Import completed:`);
     console.log(`  - Total rows: ${result.totalRows}`);
