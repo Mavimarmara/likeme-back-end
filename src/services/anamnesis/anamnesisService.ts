@@ -198,16 +198,38 @@ export class AnamnesisService {
     return values.length > 0 ? Math.max(...values) : 0;
   }
 
+  /** Domínios de hábitos que contam para o score mental (mente) */
+  private static readonly HABITS_MENTAL_DOMAINS = new Set([
+    'espiritualidade', 'estresse', 'autoestima', 'proposito', 'purpose', 'spirituality', 'stress', 'self-esteem',
+  ]);
+
+  /** Domínios de hábitos que contam para o score physical (corpo) */
+  private static readonly HABITS_PHYSICAL_DOMAINS = new Set([
+    'movimento', 'sono', 'nutricao', 'saude_bucal', 'relacionamentos', 'activity', 'sleep', 'nutrition', 'smile', 'connection',
+  ]);
+
   private getQuestionCategory(key: string): 'mental' | 'physical' | null {
-    const prefix = key.toLowerCase().split('_')[0];
-    
+    const parts = key.toLowerCase().split('_');
+    const prefix = parts[0];
+
     if (prefix === 'mind' || prefix === 'mental') {
       return 'mental';
     }
     if (prefix === 'body' || prefix === 'physical') {
       return 'physical';
     }
-    
+    if (prefix === 'habits' && parts.length >= 2) {
+      const domain = parts[1];
+      if (AnamnesisService.HABITS_MENTAL_DOMAINS.has(domain)) {
+        return 'mental';
+      }
+      if (AnamnesisService.HABITS_PHYSICAL_DOMAINS.has(domain)) {
+        return 'physical';
+      }
+      // fallback: domínios não mapeados contam como physical (ex.: movimento, etc.)
+      return 'physical';
+    }
+
     return null;
   }
 

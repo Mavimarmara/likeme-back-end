@@ -29,6 +29,7 @@
     "db:migrate:markers": "ts-node -r tsconfig-paths/register scripts/migrate-standardize-markers.ts",
     "db:reset": "prisma migrate reset",
     "db:cleanup-tests": "ts-node -r tsconfig-paths/register scripts/cleanup-old-test-data.ts --confirm",
+    "db:delete-anamnesis-answers": "ts-node -r tsconfig-paths/register scripts/delete-anamnesis-answers.ts",
     "diagrams": "bash scripts/generate-diagrams.sh high",
     "diagrams:low": "bash scripts/generate-diagrams.sh low",
     "diagrams:medium": "bash scripts/generate-diagrams.sh medium",

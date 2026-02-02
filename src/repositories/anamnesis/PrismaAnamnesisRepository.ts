@@ -245,6 +245,7 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
           { key: { startsWith: 'mental_' } },
           { key: { startsWith: 'body_' } },
           { key: { startsWith: 'physical_' } },
+          { key: { startsWith: 'habits_' } },
         ],
       },
       select: {
