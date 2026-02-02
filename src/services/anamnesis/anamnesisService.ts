@@ -274,9 +274,8 @@ export class AnamnesisService {
 
   /**
    * Retorna scores e porcentagens **individuais** para mente e corpo.
-   * - mentalPercentage: só respostas de perguntas "mental" (score mental / max mental).
-   * - physicalPercentage: só respostas de perguntas "physical" (score physical / max physical).
-   * Cada avatar usa apenas sua própria porcentagem.
+   * Porcentagem calculada sobre o máximo das **perguntas respondidas** pelo usuário
+   * (não sobre o total de perguntas do banco).
    */
   async getUserScores(userId: string): Promise<{
     mental: number;
@@ -288,10 +287,15 @@ export class AnamnesisService {
   }> {
     this.validateUserId(userId);
 
-    const [answers, maxScores] = await Promise.all([
+    const [answers, questionsWithOptions] = await Promise.all([
       this.anamnesisRepository.findAnswersWithDetailsById(userId),
-      this.getMaxScores(),
+      this.anamnesisRepository.findQuestionsWithOptionsForScores(),
     ]);
+
+    const questionMaxByKey = new Map<string, number>();
+    questionsWithOptions.forEach((q) => {
+      questionMaxByKey.set(q.id, this.getQuestionMaxValue(q));
+    });
 
     const scores = answers.reduce(
       (acc, answer) => {
@@ -305,36 +309,29 @@ export class AnamnesisService {
         }
 
         const category = this.getQuestionCategory(answer.questionConcept.key);
+        const questionMax = questionMaxByKey.get(answer.questionConceptId) ?? 0;
 
         if (category === 'mental') {
           acc.mental += optionValue;
+          acc.maxMental += questionMax;
         } else if (category === 'physical') {
           acc.physical += optionValue;
+          acc.maxPhysical += questionMax;
         }
 
         return acc;
       },
-      { mental: 0, physical: 0 }
+      { mental: 0, physical: 0, maxMental: 0, maxPhysical: 0 }
     );
 
-    const mentalPercentage = this.calculatePercentage(scores.mental, maxScores.mental);
-    const physicalPercentage = this.calculatePercentage(scores.physical, maxScores.physical);
-
-    console.log('[AnamnesisScores] getUserScores', {
-      userId,
-      mental: scores.mental,
-      maxMental: maxScores.mental,
-      mentalPercentage,
-      physical: scores.physical,
-      maxPhysical: maxScores.physical,
-      physicalPercentage,
-    });
+    const mentalPercentage = this.calculatePercentage(scores.mental, scores.maxMental);
+    const physicalPercentage = this.calculatePercentage(scores.physical, scores.maxPhysical);
 
     return {
       mental: scores.mental,
       physical: scores.physical,
-      maxMental: maxScores.mental,
-      maxPhysical: maxScores.physical,
+      maxMental: scores.maxMental,
+      maxPhysical: scores.maxPhysical,
       mentalPercentage,
       physicalPercentage,
     };
