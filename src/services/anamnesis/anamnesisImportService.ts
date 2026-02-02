@@ -4,13 +4,15 @@ import prisma from '@/config/database';
 import type { AnamnesisQuestionConcept, QuestionType } from '@prisma/client';
 
 export interface CSVAnamnesisRow {
+  domain: string;   // Marker (ex: MOVIMENTO)
+  section: string;  // Seção (ex: Hábitos, Mecânica)
   key: string;
   type: string;
   order: string;
   text_ptBR: string;
   text_enUS: string;
   text_esES: string;
-  options: string; // formato: "key1:value1:ptBR1:enUS1:esES1|key2:value2:ptBR2:enUS2:esES2"
+  options: string;  // formato: "key:valor:Label pt-BR" ou "key:valor:pt-BR:en-US:es-ES". Separador entre opções: |
 }
 
 export interface ImportResult {
@@ -131,13 +133,15 @@ export class AnamnesisImportService {
     };
 
     return {
+      domain: getField(['domain', 'Domain', 'marker', 'Marker']),
+      section: getField(['section', 'Section', 'seção', 'Seção']),
       key: getField(['key', 'Key', 'KEY']),
       type: getField(['type', 'Type', 'TYPE', 'answerType', 'answer_type']),
       order: getField(['order', 'Order', 'ORDER']),
-      text_ptBR: getField(['text_pt-BR', 'text_ptBR', 'pt-BR', 'ptBR', 'portugues']),
+      text_ptBR: getField(['text_pt-BR', 'text_ptBR', 'pt-BR', 'ptBR', 'portugues', 'texto']),
       text_enUS: getField(['text_en-US', 'text_enUS', 'en-US', 'enUS', 'english']),
       text_esES: getField(['text_es-ES', 'text_esES', 'es-ES', 'esES', 'espanhol']),
-      options: getField(['options', 'Options', 'OPTIONS']),
+      options: getField(['options', 'Options', 'OPTIONS', 'opções', 'Opções']),
     };
   }
 
@@ -171,7 +175,7 @@ export class AnamnesisImportService {
   }> {
     if (!optionsStr || optionsStr.trim() === '') return [];
 
-    // formato: "key1:value1:ptBR1:enUS1:esES1|key2:value2:ptBR2:enUS2:esES2"
+    // formato: "key:valor:Label pt-BR" (label pode conter ":") ou "key:valor:pt-BR:en-US:es-ES"
     const options: Array<{
       key: string;
       value: string;
@@ -184,23 +188,30 @@ export class AnamnesisImportService {
       const segments = part.split(':');
       if (segments.length < 2) continue;
 
-      const [key, value, ptBR, enUS, esES] = segments;
+      const key = segments[0].trim();
+      const value = (segments[1] ?? '').trim() || '0';
+
+      // 3 segmentos = key:valor:Label (um único rótulo pt-BR)
+      // 4 segmentos = key:valor:pt-BR:en-US
+      // 5+ segmentos = key:valor:pt-BR:en-US:es-ES
       const texts: { locale: string; value: string }[] = [];
-
-      if (ptBR && ptBR.trim()) texts.push({ locale: 'pt-BR', value: ptBR.trim() });
-      if (enUS && enUS.trim()) texts.push({ locale: 'en-US', value: enUS.trim() });
-      if (esES && esES.trim()) texts.push({ locale: 'es-ES', value: esES.trim() });
-
-      // Se não houver traduções, usar a key como texto padrão
-      if (texts.length === 0) {
-        texts.push({ locale: 'pt-BR', value: key.trim() });
+      if (segments.length === 3) {
+        const label = segments[2].trim();
+        if (label) texts.push({ locale: 'pt-BR', value: label });
+      } else if (segments.length >= 4) {
+        const ptBR = segments[2]?.trim();
+        const enUS = segments[3]?.trim();
+        const esES = segments[4]?.trim();
+        if (ptBR) texts.push({ locale: 'pt-BR', value: ptBR });
+        if (enUS) texts.push({ locale: 'en-US', value: enUS });
+        if (esES) texts.push({ locale: 'es-ES', value: esES });
       }
 
-      options.push({
-        key: key.trim(),
-        value: value?.trim() || '0',
-        texts,
-      });
+      if (texts.length === 0) {
+        texts.push({ locale: 'pt-BR', value: key });
+      }
+
+      options.push({ key, value, texts });
     }
 
     return options;
