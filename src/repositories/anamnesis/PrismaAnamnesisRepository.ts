@@ -242,9 +242,9 @@ export class PrismaAnamnesisRepository implements AnamnesisRepository {
         deletedAt: null,
         OR: [
           { key: { startsWith: 'mind_' } },
-          { key: { startsWith: 'mental_' } },
+          { key: { startsWith: 'mental' } }, // mental_ e mental (sem underscore)
           { key: { startsWith: 'body_' } },
-          { key: { startsWith: 'physical_' } },
+          { key: { startsWith: 'physical' } }, // physical_ e physical (sem underscore)
           { key: { startsWith: 'habits_' } },
         ],
       },

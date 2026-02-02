@@ -209,15 +209,16 @@ export class AnamnesisService {
   ]);
 
   private getQuestionCategory(key: string): 'mental' | 'physical' | null {
-    const parts = key.toLowerCase().split('_');
-    const prefix = parts[0];
-
-    if (prefix === 'mind' || prefix === 'mental') {
+    const lower = key.toLowerCase();
+    // Aceita mind_, mental*, body_, physical*, habits_*
+    if (lower.startsWith('mind_') || lower.startsWith('mental')) {
       return 'mental';
     }
-    if (prefix === 'body' || prefix === 'physical') {
+    if (lower.startsWith('body_') || lower.startsWith('physical')) {
       return 'physical';
     }
+    const parts = lower.split('_');
+    const prefix = parts[0];
     if (prefix === 'habits' && parts.length >= 2) {
       const domain = parts[1];
       if (AnamnesisService.HABITS_MENTAL_DOMAINS.has(domain)) {
