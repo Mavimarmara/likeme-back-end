@@ -6,13 +6,11 @@ import type { AnamnesisQuestionConcept, QuestionType } from '@prisma/client';
 export interface CSVAnamnesisRow {
   domain: string;   // Marker (ex: MOVIMENTO)
   section: string;  // Seção (ex: Hábitos, Mecânica)
-  key: string;
+  key: string;      // Opcional: gerado por section+domain+order se vazio
   type: string;
   order: string;
-  text_ptBR: string;
-  text_enUS: string;
-  text_esES: string;
-  options: string;  // formato: "key:valor:Label pt-BR" ou "key:valor:pt-BR:en-US:es-ES". Separador entre opções: |
+  text: string;     // Texto da pergunta (único campo por enquanto)
+  options: string;  // formato: "key:valor:Label". Separador entre opções: |
 }
 
 export interface ImportResult {
@@ -115,8 +113,15 @@ export class AnamnesisImportService {
 
     if (allEmpty) return true;
 
-    const key = row['key'] || row['Key'] || row['KEY'];
-    if (!key || String(key).trim() === '') return true;
+    const key = (row['key'] ?? row['Key'] ?? row['KEY'] ?? '').toString().trim();
+    const section = (row['section'] ?? row['Section'] ?? row['seção'] ?? row['Seção'] ?? '').toString().trim();
+    const domain = (row['domain'] ?? row['Domain'] ?? row['marker'] ?? row['Marker'] ?? '').toString().trim();
+    const text = (row['text'] ?? row['texto'] ?? row['Text'] ?? row['text_pt-BR'] ?? '').toString().trim();
+
+    // Linha válida se tem key OU (section + domain) para gerar key, e tem texto da pergunta
+    const hasKey = key.length > 0;
+    const canGenerateKey = section.length > 0 && domain.length > 0;
+    if (!text || (!hasKey && !canGenerateKey)) return true;
 
     return false;
   }
@@ -138,9 +143,7 @@ export class AnamnesisImportService {
       key: getField(['key', 'Key', 'KEY']),
       type: getField(['type', 'Type', 'TYPE', 'answerType', 'answer_type']),
       order: getField(['order', 'Order', 'ORDER']),
-      text_ptBR: getField(['text_pt-BR', 'text_ptBR', 'pt-BR', 'ptBR', 'portugues', 'texto']),
-      text_enUS: getField(['text_en-US', 'text_enUS', 'en-US', 'enUS', 'english']),
-      text_esES: getField(['text_es-ES', 'text_esES', 'es-ES', 'esES', 'espanhol']),
+      text: getField(['text', 'texto', 'Text', 'text_pt-BR']),
       options: getField(['options', 'Options', 'OPTIONS', 'opções', 'Opções']),
     };
   }
@@ -217,16 +220,31 @@ export class AnamnesisImportService {
     return options;
   }
 
+  /** Gera key a partir de section + domain + order (ex: habits_movimento_1) */
+  private buildKey(section: string, domain: string, order: number): string {
+    const slug = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '');
+    return `${slug(section)}_${slug(domain)}_${order}`;
+  }
+
   private async processRow(
     csvRow: CSVAnamnesisRow
   ): Promise<{ question: AnamnesisQuestionConcept; isUpdate: boolean }> {
-    if (!csvRow.key || csvRow.key.trim() === '') {
-      throw new Error('Question key is required');
+    const order = parseInt(csvRow.order, 10) || 0;
+    let key = (csvRow.key ?? '').trim();
+    if (!key && csvRow.section && csvRow.domain) {
+      key = this.buildKey(csvRow.section.trim(), csvRow.domain.trim(), order);
+    }
+    if (!key) {
+      throw new Error('Question key is required, or provide section, domain and order to generate it');
     }
 
-    const key = csvRow.key.trim();
     const type = this.parseQuestionType(csvRow.type);
-    const order = parseInt(csvRow.order, 10) || 0;
 
     // Verificar se já existe
     const existingQuestion = await prisma.anamnesisQuestionConcept.findUnique({
@@ -263,21 +281,11 @@ export class AnamnesisImportService {
       console.log(`[AnamnesisImport] Created question: ${key}`);
     }
 
-    // Criar textos da pergunta
-    const textsToCreate: { questionConceptId: string; locale: string; value: string }[] = [];
-
-    if (csvRow.text_ptBR && csvRow.text_ptBR.trim()) {
-      textsToCreate.push({ questionConceptId: question.id, locale: 'pt-BR', value: csvRow.text_ptBR.trim() });
-    }
-    if (csvRow.text_enUS && csvRow.text_enUS.trim()) {
-      textsToCreate.push({ questionConceptId: question.id, locale: 'en-US', value: csvRow.text_enUS.trim() });
-    }
-    if (csvRow.text_esES && csvRow.text_esES.trim()) {
-      textsToCreate.push({ questionConceptId: question.id, locale: 'es-ES', value: csvRow.text_esES.trim() });
-    }
-
-    if (textsToCreate.length > 0) {
-      await prisma.anamnesisQuestionText.createMany({ data: textsToCreate });
+    // Criar texto da pergunta (pt-BR por enquanto)
+    if (csvRow.text && csvRow.text.trim()) {
+      await prisma.anamnesisQuestionText.create({
+        data: { questionConceptId: question.id, locale: 'pt-BR', value: csvRow.text.trim() },
+      });
     }
 
     // Criar opções de resposta
