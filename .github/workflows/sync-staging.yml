@@ -1,0 +1,23 @@
+# Atualiza a branch staging para o mesmo commit da main quando main recebe push.
+name: Sync staging with main
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  sync-staging:
+    name: Update staging from main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push main to staging
+        run: |
+          git push origin main:staging
