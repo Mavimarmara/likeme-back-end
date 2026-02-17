@@ -1,0 +1,9 @@
+#!/bin/sh
+# Build local obrigatório antes do push
+echo "🔨 Rodando build local (prisma generate + tsc + swagger)..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Push bloqueado: build falhou. Corrija os erros antes de fazer push."
+  exit 1
+fi
+echo "✅ Build OK. Prosseguindo com o push."
