@@ -1012,6 +1012,31 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const acceptPrivacyPolicy = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      sendError(res, 'Usuário não encontrado', 404);
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { privacyPolicyAcceptedAt: new Date() },
+    });
+
+    sendSuccess(res, { privacyPolicyAcceptedAt: new Date().toISOString() }, 'Política de privacidade aceita');
+  } catch (error) {
+    console.error('Accept privacy policy error:', error);
+    sendError(res, 'Erro ao registrar aceite da política de privacidade');
+  }
+};
+
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;

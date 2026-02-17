@@ -12,7 +12,8 @@ import {
   getAmityAuthToken,
   logout,
   getProfile, 
-  updateProfile, 
+  updateProfile,
+  acceptPrivacyPolicy,
   deleteAccount 
 } from '@/controllers/auth/authController';
 import { 
@@ -44,6 +45,7 @@ router.get('/amity-token', authenticateToken, requireAuth, getAmityAuthToken);
 router.post('/logout', authenticateToken, requireAuth, logout);
 router.get('/profile', authenticateToken, requireAuth, getProfile);
 router.put('/profile', authenticateToken, requireAuth, validate(updateUserSchema), updateProfile);
+router.post('/accept-privacy-policy', authenticateToken, requireAuth, acceptPrivacyPolicy);
 router.delete('/account', authenticateToken, requireAuth, deleteAccount);
 
 export default router;
