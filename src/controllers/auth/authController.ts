@@ -296,6 +296,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         avatar: true,
         isActive: true,
         socialPlusUserId: true,
+        privacyPolicyAcceptedAt: true,
         person: {
           include: {
             contacts: true,
