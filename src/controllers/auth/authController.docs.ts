@@ -614,3 +614,21 @@
  *         description: Não autenticado
  */
 
+/**
+ * @swagger
+ * /api/auth/accept-privacy-policy:
+ *   post:
+ *     summary: Registrar aceite da política de privacidade
+ *     description: Atualiza o campo privacyPolicyAcceptedAt do usuário autenticado.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Aceite registrado com sucesso
+ *       401:
+ *         description: Token necessário ou inválido
+ *       404:
+ *         description: Usuário não encontrado
+ */
+
