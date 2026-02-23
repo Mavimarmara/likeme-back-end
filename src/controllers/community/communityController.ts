@@ -221,6 +221,29 @@ export const addCommentReaction = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
+export const joinCommunity = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { communityId } = req.params;
+
+    if (!communityId) {
+      sendError(res, 'communityId é obrigatório', 400);
+      return;
+    }
+
+    const result = await communityService.joinCommunity(userId, communityId);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao entrar na comunidade', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Usuário adicionado à comunidade com sucesso');
+  } catch (error) {
+    handleError(res, error, 'entrar na comunidade');
+  }
+};
+
 export const removeCommentReaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;

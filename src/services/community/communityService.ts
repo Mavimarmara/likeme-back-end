@@ -217,6 +217,30 @@ export class CommunityService {
     return socialPlusClient.votePoll(pollId, answerIds, token);
   }
 
+  async joinCommunity(
+    userId: string | undefined,
+    communityId: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userId) {
+      return { success: false, error: 'Usuário não autenticado' };
+    }
+
+    const tokenResult = await userTokenService.getToken(userId, false);
+    const token = tokenResult.token || undefined;
+
+    if (!token) {
+      return { success: false, error: 'Token de acesso do usuário não disponível' };
+    }
+
+    const response = await socialPlusClient.addMemberToCommunity(communityId, token);
+
+    if (!response.success) {
+      return { success: false, error: response.error || 'Erro ao entrar na comunidade' };
+    }
+
+    return { success: true, data: { communityId, joined: true } };
+  }
+
   async addUserToAllCommunities(
     userId: string,
     userToken: string
