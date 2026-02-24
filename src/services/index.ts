@@ -7,3 +7,4 @@ export { userService, UserService } from './user/userService';
 export { userTokenService } from './user/userTokenService';
 export { paymentSplitService } from './payment/paymentSplitService';
 export * from './anamnesis/anamnesisService';
+export { notificationService, NotificationService } from './notification/notificationService';

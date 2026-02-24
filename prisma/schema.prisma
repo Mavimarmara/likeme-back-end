@@ -76,6 +76,7 @@ model User {
   activities         Activity[]              @relation("UserActivities")
   products           Product[]               @relation("UserProducts")
   anamnesisAnswers    AnamnesisUserAnswer[]    @relation("UserAnamnesisAnswers")
+  deviceTokens        DeviceToken[]            @relation("UserDeviceTokens")
 
   @@index([personId])
   @@index([username])
@@ -439,6 +440,29 @@ model PagarmeRecipient {
   @@index([isDefault])
   @@index([status])
   @@map("pagarme_recipient")
+}
+
+// ============================================
+// PUSH NOTIFICATION MODELS
+// ============================================
+
+model DeviceToken {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  userId    String    @map("user_id")
+  token     String
+  platform  String    // ios, android
+  isActive  Boolean   @default(true) @map("is_active")
+
+  user User @relation("UserDeviceTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@index([userId])
+  @@index([token])
+  @@index([isActive])
+  @@map("device_token")
 }
 
 // ============================================
