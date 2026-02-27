@@ -398,7 +398,8 @@ model Activity {
   location        String?
   description     String?
   reminderEnabled Boolean   @default(false) @map("reminder_enabled")
-  reminderOffset  String?   @map("reminder_offset") // e.g., "5 min before", "10 min after"
+  reminderOffset  String?   @map("reminder_offset") // minutes before the event
+  reminderSent    Boolean   @default(false) @map("reminder_sent")
 
   // Relations
   user User @relation("UserActivities", fields: [userId], references: [id], onDelete: Cascade)
@@ -407,6 +408,7 @@ model Activity {
   @@index([type])
   @@index([startDate])
   @@index([endDate])
+  @@index([reminderEnabled, reminderSent, deletedAt])
   @@map("activity")
 }
 

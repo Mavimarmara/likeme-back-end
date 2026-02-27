@@ -139,6 +139,25 @@ export class PrismaActivityRepository implements ActivityRepository {
     return activities.map((a) => this.mapToActivityData(a));
   }
 
+  async findPendingReminders(): Promise<ActivityData[]> {
+    const activities = await prisma.activity.findMany({
+      where: {
+        reminderEnabled: true,
+        reminderSent: false,
+        deletedAt: null,
+      },
+    });
+
+    return activities.map((a) => this.mapToActivityData(a));
+  }
+
+  async markReminderSent(id: string): Promise<void> {
+    await prisma.activity.update({
+      where: { id },
+      data: { reminderSent: true },
+    });
+  }
+
   async update(id: string, data: UpdateActivityData): Promise<void> {
     await prisma.activity.update({
       where: { id },
@@ -153,6 +172,7 @@ export class PrismaActivityRepository implements ActivityRepository {
         description: data.description,
         reminderEnabled: data.reminderEnabled,
         reminderOffset: data.reminderOffset,
+        reminderSent: data.reminderSent,
       },
     });
   }
@@ -181,6 +201,7 @@ export class PrismaActivityRepository implements ActivityRepository {
       description: activity.description,
       reminderEnabled: activity.reminderEnabled,
       reminderOffset: activity.reminderOffset,
+      reminderSent: activity.reminderSent,
       createdAt: activity.createdAt,
       updatedAt: activity.updatedAt,
       deletedAt: activity.deletedAt,

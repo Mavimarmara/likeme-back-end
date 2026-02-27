@@ -5,6 +5,8 @@ export interface ActivityRepository {
   findAll(filters?: ActivityFilters): Promise<ActivityData[]>;
   findAllWithUser(page: number, limit: number, filters?: ActivityFilters): Promise<{ activities: ActivityWithUserData[]; total: number }>;
   findByUserId(userId: string): Promise<ActivityData[]>;
+  findPendingReminders(): Promise<ActivityData[]>;
+  markReminderSent(id: string): Promise<void>;
   update(id: string, data: UpdateActivityData): Promise<void>;
   delete(id: string): Promise<void>;
 }
@@ -36,6 +38,7 @@ export interface ActivityData {
   description: string | null;
   reminderEnabled: boolean;
   reminderOffset: string | null;
+  reminderSent: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -64,6 +67,7 @@ export interface UpdateActivityData {
   description?: string;
   reminderEnabled?: boolean;
   reminderOffset?: string;
+  reminderSent?: boolean;
 }
 
 export interface ActivityFilters {

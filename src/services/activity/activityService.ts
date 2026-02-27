@@ -146,6 +146,16 @@ export class ActivityService {
     if (normalizedData.description === '') normalizedData.description = null;
     if (normalizedData.reminderOffset === '') normalizedData.reminderOffset = null;
 
+    const shouldResetReminder =
+      normalizedData.startDate !== undefined ||
+      normalizedData.startTime !== undefined ||
+      normalizedData.reminderOffset !== undefined ||
+      normalizedData.reminderEnabled !== undefined;
+
+    if (shouldResetReminder) {
+      normalizedData.reminderSent = false;
+    }
+
     await this.activityRepository.update(id, normalizedData);
 
     // Retornar activity atualizada com includes

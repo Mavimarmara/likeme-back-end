@@ -29,6 +29,7 @@ import amazonRoutes from '@/routes/amazon/amazonRoutes';
 import activityRoutes from '@/routes/activity/activityRoutes';
 import anamnesisRoutes from '@/routes/anamnesis/anamnesisRoutes';
 import notificationRoutes from '@/routes/notification/notificationRoutes';
+import cronRoutes from '@/routes/cron/cronRoutes';
 
 const app = express();
 
@@ -267,6 +268,7 @@ app.use('/api/amazon', amazonRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/anamnesis', anamnesisRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/cron', cronRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({
