@@ -96,6 +96,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         const emailContact = user.person.contacts.find((c) => c.type === 'email');
         const result = await userService.createUserAndSyncToDatabase(user.id, {
           username: user.username || undefined,
+          displayName: [user.person.firstName, user.person.lastName].filter(Boolean).join(' ') || user.username || undefined,
           email: emailContact?.value || userData.email,
           firstName: user.person.firstName,
           lastName: user.person.lastName,
@@ -216,6 +217,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           const emailContact = user.person?.contacts?.find((c: { type: string }) => c.type === 'email');
           const result = await userService.createUserAndSyncToDatabase(user.id, {
             username: user.username || undefined,
+            displayName: [existingPerson.firstName, existingPerson.lastName].filter(Boolean).join(' ') || user.username || undefined,
             email: emailContact?.value || email,
             firstName: existingPerson.firstName,
             lastName: existingPerson.lastName,
@@ -266,6 +268,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
       try {
         const result = await userService.createUserAndSyncToDatabase(user.id, {
+          displayName: [newPerson.firstName, newPerson.lastName].filter(Boolean).join(' ') || email.split('@')[0],
           email: email,
           firstName: newPerson.firstName,
           lastName: newPerson.lastName,

@@ -3,6 +3,7 @@ import { config } from '@/config';
 export interface SocialPlusUser {
   id?: string;
   username?: string;
+  displayName?: string;
   email?: string;
   firstName?: string;
   lastName?: string;
