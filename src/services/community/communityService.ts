@@ -396,11 +396,9 @@ export class CommunityService {
               const messages = (msgRes.data as any)?.messages;
               if (messages?.[0]?.data?.text) {
                 ch.lastMessagePreview = messages[0].data.text;
-              } else {
-                (ch as any)._debug = { success: msgRes.success, error: msgRes.error, dataKeys: Object.keys(msgRes.data || {}), messagesLen: messages?.length };
               }
-            } catch (err) {
-              (ch as any)._debug = { caught: err instanceof Error ? err.message : String(err) };
+            } catch {
+              // silently ignore per-channel errors
             }
           })
       );
