@@ -290,12 +290,14 @@ export interface AmityChannel {
   type?: 'conversation' | 'broadcast' | 'live' | 'community';
   metadata?: Record<string, unknown>;
   memberCount?: number;
+  messageCount?: number;
   unreadCount?: number;
   isMuted?: boolean;
   isFlaggedByMe?: boolean;
   createdAt?: string;
   updatedAt?: string;
   lastActivity?: string;
+  lastMessagePreview?: string;
   [key: string]: unknown;
 }
 

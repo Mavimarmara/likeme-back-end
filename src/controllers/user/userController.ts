@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import prisma from '@/config/database';
 import { sendSuccess, sendError } from '@/utils/response';
-import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
+import { socialPlusClient } from '@/clients/socialPlus';
 import { userTokenService } from '@/services/user/userTokenService';
 
 export const createUser = async (req: Request, res: Response): Promise<void> => {

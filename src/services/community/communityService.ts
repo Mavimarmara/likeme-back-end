@@ -1,5 +1,5 @@
 import { AmityUserFeedResponse, AmityUserFeedData, AmityChannelsResponse, AmityChannel, AmityReactionResponse, AmityPost } from '@/types/amity';
-import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus/socialPlusClient';
+import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus';
 import { userTokenService } from '../user/userTokenService';
 import { normalizeAmityResponse, buildAmityFeedResponse, filterPostsBySearch } from '@/utils/amityResponseNormalizer';
 import prisma from '@/config/database';
@@ -377,6 +377,7 @@ export class CommunityService {
         type: channel.type,
         metadata: channel.metadata,
         memberCount: channel.memberCount,
+        messageCount: channel.messageCount,
         unreadCount: channel.unreadCount,
         isMuted: channel.isMuted,
         isFlaggedByMe: channel.isFlaggedByMe,
@@ -385,6 +386,22 @@ export class CommunityService {
         lastActivity: channel.lastActivity,
         ...channel,
       }));
+
+      await Promise.all(
+        channels
+          .filter(ch => (ch.messageCount as number) > 0 && ch.channelId)
+          .map(async (ch) => {
+            try {
+              const msgRes = await socialPlusClient.getMessages(ch.channelId!, userAccessToken!, 1);
+              const messages = (msgRes.data as any)?.messages;
+              if (messages?.[0]?.data?.text) {
+                ch.lastMessagePreview = messages[0].data.text;
+              }
+            } catch {
+              // silently ignore per-channel errors
+            }
+          })
+      );
 
       const hasNextPage = !!(data.paging && data.paging.next);
 

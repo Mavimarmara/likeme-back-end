@@ -1,4 +1,4 @@
-import { socialPlusClient, SocialPlusUser } from '@/clients/socialPlus/socialPlusClient';
+import { socialPlusClient, SocialPlusUser } from '@/clients/socialPlus';
 import { communityService } from '../community/communityService';
 import { userTokenService } from './userTokenService';
 import { getUserRepository } from '@/utils/repositoryContainer';

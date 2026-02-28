@@ -1,6 +1,6 @@
 import { userService, UserService } from '@/services/user/userService';
 import prisma from '@/config/database';
-import { socialPlusClient, SocialPlusUser } from '@/clients/socialPlus/socialPlusClient';
+import { socialPlusClient, SocialPlusUser } from '@/clients/socialPlus';
 import { communityService } from '@/services/community/communityService';
 import { userTokenService } from '@/services/user/userTokenService';
 

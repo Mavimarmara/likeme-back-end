@@ -1,5 +1,5 @@
 import { AmityUserFeedResponse, AmityUserFeedData, AmityPost, AmityPoll } from '@/types/amity';
-import { socialPlusClient } from '@/clients/socialPlus/socialPlusClient';
+import { socialPlusClient } from '@/clients/socialPlus';
 
 export const deduplicatePosts = (posts: AmityPost[]): AmityPost[] => {
   const seenIds = new Set<string>();
