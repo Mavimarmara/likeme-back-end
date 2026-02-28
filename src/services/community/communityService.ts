@@ -394,11 +394,12 @@ export class CommunityService {
             try {
               const msgRes = await socialPlusClient.getMessages(ch.channelId!, userAccessToken!, 1);
               const messages = (msgRes.data as any)?.messages;
+              console.log(`[CommunityService] getMessages for ${ch.channelId}: success=${msgRes.success}, messagesFound=${messages?.length || 0}, text=${messages?.[0]?.data?.text || '(none)'}`);
               if (messages?.[0]?.data?.text) {
                 ch.lastMessagePreview = messages[0].data.text;
               }
-            } catch {
-              // silently ignore per-channel errors
+            } catch (err) {
+              console.error(`[CommunityService] getMessages error for ${ch.channelId}:`, err);
             }
           })
       );
