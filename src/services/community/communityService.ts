@@ -417,6 +417,36 @@ export class CommunityService {
     }
   }
 
+  async getChannelMessages(
+    userId: string | undefined,
+    channelId: string,
+    limit = 20
+  ): Promise<SocialPlusResponse<unknown>> {
+    try {
+      if (!userId) {
+        throw new Error('Usuário não autenticado.');
+      }
+
+      const tokenResult = await userTokenService.getToken(userId, false);
+      const userAccessToken = tokenResult.token || undefined;
+
+      if (!userAccessToken) {
+        throw new Error('Token de acesso do usuário não disponível.');
+      }
+
+      const response = await socialPlusClient.getMessages(channelId, userAccessToken, limit);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Erro ao buscar mensagens do canal');
+      }
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('[CommunityService] Erro ao buscar mensagens:', error);
+      throw error;
+    }
+  }
+
   async addCommentReaction(
     userId: string | undefined,
     commentId: string,

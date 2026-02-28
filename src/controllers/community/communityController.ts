@@ -196,6 +196,30 @@ export const getChannels = async (req: AuthenticatedRequest, res: Response): Pro
   }
 };
 
+export const getChannelMessages = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { channelId } = req.params;
+    const limit = parseInt(String(req.query.limit || '20'), 10);
+
+    if (!channelId) {
+      sendError(res, 'channelId é obrigatório', 400);
+      return;
+    }
+
+    const result = await communityService.getChannelMessages(userId, channelId, limit);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao obter mensagens', 400);
+      return;
+    }
+
+    sendSuccess(res, { ...(result.data as object), currentUserId: userId }, 'Mensagens obtidas com sucesso');
+  } catch (error) {
+    handleError(res, error, 'obter mensagens do canal');
+  }
+};
+
 export const addCommentReaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;

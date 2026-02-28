@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listCommunities, getUserFeed, votePoll, getChannels, joinCommunity, addCommentReaction, removeCommentReaction } from '@/controllers/community/communityController';
+import { listCommunities, getUserFeed, votePoll, getChannels, getChannelMessages, joinCommunity, addCommentReaction, removeCommentReaction } from '@/controllers/community/communityController';
 import { authenticateToken } from '@/middleware/auth';
 
 const router = Router();
@@ -9,6 +9,7 @@ router.use(authenticateToken);
 router.get('/', listCommunities);
 router.get('/feed', getUserFeed);
 router.get('/channels', getChannels);
+router.get('/channels/:channelId/messages', getChannelMessages);
 router.post('/:communityId/join', joinCommunity);
 router.put('/polls/:pollId/votes', votePoll);
 router.post('/comments/:commentId/reactions', addCommentReaction);
