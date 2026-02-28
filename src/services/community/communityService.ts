@@ -447,6 +447,53 @@ export class CommunityService {
     }
   }
 
+  async blockUser(
+    userId: string | undefined,
+    targetUserId: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userId) return { success: false, error: 'Usuário não autenticado.' };
+
+    const tokenResult = await userTokenService.getToken(userId, false);
+    if (!tokenResult.token) return { success: false, error: 'Token de acesso não disponível.' };
+
+    return socialPlusClient.blockUser(targetUserId, tokenResult.token);
+  }
+
+  async unblockUser(
+    userId: string | undefined,
+    targetUserId: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userId) return { success: false, error: 'Usuário não autenticado.' };
+
+    const tokenResult = await userTokenService.getToken(userId, false);
+    if (!tokenResult.token) return { success: false, error: 'Token de acesso não disponível.' };
+
+    return socialPlusClient.unblockUser(targetUserId, tokenResult.token);
+  }
+
+  async getBlockedUsers(
+    userId: string | undefined
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userId) return { success: false, error: 'Usuário não autenticado.' };
+
+    const tokenResult = await userTokenService.getToken(userId, false);
+    if (!tokenResult.token) return { success: false, error: 'Token de acesso não disponível.' };
+
+    return socialPlusClient.getBlockedUsers(tokenResult.token);
+  }
+
+  async leaveChannel(
+    userId: string | undefined,
+    channelId: string
+  ): Promise<SocialPlusResponse<unknown>> {
+    if (!userId) return { success: false, error: 'Usuário não autenticado.' };
+
+    const tokenResult = await userTokenService.getToken(userId, false);
+    if (!tokenResult.token) return { success: false, error: 'Token de acesso não disponível.' };
+
+    return socialPlusClient.leaveChannel(channelId, tokenResult.token);
+  }
+
   async addCommentReaction(
     userId: string | undefined,
     commentId: string,

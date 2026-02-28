@@ -20,5 +20,17 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
         bearerToken: userAccessToken,
       });
     }
+
+    async leaveChannel(
+      channelId: string,
+      userAccessToken: string
+    ): Promise<SocialPlusResponse<unknown>> {
+      return this.makeRequest<unknown>(
+        'DELETE',
+        `/v3/channels/${encodeURIComponent(channelId)}/join`,
+        undefined,
+        { useApiKey: true, bearerToken: userAccessToken }
+      );
+    }
   };
 }

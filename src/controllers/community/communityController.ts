@@ -220,6 +220,91 @@ export const getChannelMessages = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
+export const blockUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { targetUserId } = req.body;
+
+    if (!targetUserId) {
+      sendError(res, 'targetUserId é obrigatório', 400);
+      return;
+    }
+
+    const result = await communityService.blockUser(userId, targetUserId);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao bloquear usuário', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Usuário bloqueado com sucesso');
+  } catch (error) {
+    handleError(res, error, 'bloquear usuário');
+  }
+};
+
+export const unblockUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { targetUserId } = req.params;
+
+    if (!targetUserId) {
+      sendError(res, 'targetUserId é obrigatório', 400);
+      return;
+    }
+
+    const result = await communityService.unblockUser(userId, targetUserId);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao desbloquear usuário', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Usuário desbloqueado com sucesso');
+  } catch (error) {
+    handleError(res, error, 'desbloquear usuário');
+  }
+};
+
+export const getBlockedUsers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const result = await communityService.getBlockedUsers(userId);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao obter usuários bloqueados', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Usuários bloqueados obtidos com sucesso');
+  } catch (error) {
+    handleError(res, error, 'obter usuários bloqueados');
+  }
+};
+
+export const leaveChannel = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { channelId } = req.params;
+
+    if (!channelId) {
+      sendError(res, 'channelId é obrigatório', 400);
+      return;
+    }
+
+    const result = await communityService.leaveChannel(userId, channelId);
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao sair do canal', 400);
+      return;
+    }
+
+    sendSuccess(res, result.data, 'Saiu do canal com sucesso');
+  } catch (error) {
+    handleError(res, error, 'sair do canal');
+  }
+};
+
 export const addCommentReaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;

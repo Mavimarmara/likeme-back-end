@@ -27,5 +27,40 @@ export function UserMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
       }
       return this.requestWithFallback<unknown>('GET', `/v3/users/${userId}?type=${type}`, userAccessToken);
     }
+
+    async blockUser(
+      targetUserId: string,
+      userAccessToken: string
+    ): Promise<SocialPlusResponse<unknown>> {
+      return this.makeRequest<unknown>(
+        'POST',
+        `/v3/me/blocked`,
+        { userIds: [targetUserId] },
+        { useApiKey: true, bearerToken: userAccessToken }
+      );
+    }
+
+    async unblockUser(
+      targetUserId: string,
+      userAccessToken: string
+    ): Promise<SocialPlusResponse<unknown>> {
+      return this.makeRequest<unknown>(
+        'DELETE',
+        `/v3/me/blocked/${targetUserId}`,
+        undefined,
+        { useApiKey: true, bearerToken: userAccessToken }
+      );
+    }
+
+    async getBlockedUsers(
+      userAccessToken: string
+    ): Promise<SocialPlusResponse<unknown>> {
+      return this.makeRequest<unknown>(
+        'GET',
+        `/v3/me/blocked`,
+        undefined,
+        { useApiKey: true, bearerToken: userAccessToken }
+      );
+    }
   };
 }
