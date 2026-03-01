@@ -20,6 +20,7 @@ import personalObjectiveRoutes from '@/routes/objective/personalObjectiveRoutes'
 import userPersonalObjectiveRoutes from '@/routes/objective/userPersonalObjectiveRoutes';
 import tipRoutes from '@/routes/tip/tipRoutes';
 import communityRoutes from '@/routes/community/communityRoutes';
+import chatRoutes from '@/routes/chat/chatRoutes';
 import productRoutes from '@/routes/product/productRoutes';
 import orderRoutes from '@/routes/order/orderRoutes';
 import paymentRoutes from '@/routes/payment/paymentRoutes';
@@ -259,6 +260,7 @@ app.use('/api/personal-objectives', personalObjectiveRoutes);
 app.use('/api/user-personal-objectives', userPersonalObjectiveRoutes);
 app.use('/api/tips', tipRoutes);
 app.use('/api/communities', communityRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);

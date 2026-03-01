@@ -21,6 +21,23 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
       });
     }
 
+    async sendMessage(
+      channelId: string,
+      text: string,
+      userAccessToken: string
+    ): Promise<SocialPlusResponse<unknown>> {
+      return this.makeRequest<unknown>(
+        'POST',
+        '/v3/messages',
+        {
+          channelId,
+          data: { text },
+          type: 'text',
+        },
+        { useApiKey: true, bearerToken: userAccessToken }
+      );
+    }
+
     async leaveChannel(
       channelId: string,
       userAccessToken: string

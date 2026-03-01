@@ -3,6 +3,7 @@ export { productService, ProductService } from './product/productService';
 export { orderService, OrderService, OrderAuthorizationError } from './order/orderService';
 export { activityService, ActivityService } from './activity/activityService';
 export { communityService, CommunityService } from './community/communityService';
+export { chatService, ChatService } from './chat/chatService';
 export { userService, UserService } from './user/userService';
 export { userTokenService } from './user/userTokenService';
 export { paymentSplitService } from './payment/paymentSplitService';
