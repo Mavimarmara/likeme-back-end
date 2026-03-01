@@ -56,7 +56,7 @@ export const getChannelMessages = async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    sendSuccess(res, { ...(result.data as object), currentUserId: userId }, 'Mensagens obtidas com sucesso');
+    sendSuccess(res, result.data, 'Mensagens obtidas com sucesso');
   } catch (error) {
     handleError(res, error, 'obter mensagens do canal');
   }

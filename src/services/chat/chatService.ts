@@ -1,6 +1,7 @@
 import { AmityChannelsResponse, AmityChannel } from '@/types/amity';
 import { socialPlusClient, SocialPlusResponse } from '@/clients/socialPlus';
 import { userTokenService } from '../user/userTokenService';
+import prisma from '@/config/database';
 
 class ChatService {
   private async getUserToken(userId: string | undefined): Promise<string> {
@@ -88,6 +89,8 @@ class ChatService {
     channelId: string,
     limit = 20
   ): Promise<SocialPlusResponse<unknown>> {
+    if (!userId) throw new Error('Usuário não autenticado.');
+
     const userAccessToken = await this.getUserToken(userId);
     const response = await socialPlusClient.getMessages(channelId, userAccessToken, limit);
 
@@ -95,7 +98,15 @@ class ChatService {
       throw new Error(response.error || 'Erro ao buscar mensagens do canal');
     }
 
-    return { success: true, data: response.data };
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { socialPlusUserId: true },
+    });
+
+    return {
+      success: true,
+      data: { ...(response.data as object), currentUserId: user?.socialPlusUserId ?? userId },
+    };
   }
 
   async sendMessage(
