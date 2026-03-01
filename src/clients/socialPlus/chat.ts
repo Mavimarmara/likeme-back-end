@@ -12,10 +12,15 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
     async getMessages(
       channelId: string,
       userAccessToken: string,
-      limit = 1
+      limit = 1,
+      sortBy: 'asc' | 'desc' = 'desc'
     ): Promise<SocialPlusResponse<unknown>> {
-      const endpoint = `/v3/messages?channelId=${encodeURIComponent(channelId)}&limit=${limit}`;
-      return this.makeRequest<unknown>('GET', endpoint, undefined, {
+      const params = new URLSearchParams({
+        channelId,
+        limit: String(limit),
+        'options[sortBy]': sortBy,
+      });
+      return this.makeRequest<unknown>('GET', `/v3/messages?${params}`, undefined, {
         useApiKey: true,
         bearerToken: userAccessToken,
       });

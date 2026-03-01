@@ -60,13 +60,14 @@ class ChatService {
 
     await Promise.all(
       channels
-        .filter(ch => (ch.messageCount as number) > 0 && ch.channelId)
+        .filter(ch => ch.channelId)
         .map(async (ch) => {
           try {
-            const msgRes = await socialPlusClient.getMessages(ch.channelId!, userAccessToken!, 1);
-            const messages = (msgRes.data as any)?.messages;
-            if (messages?.[0]?.data?.text) {
-              ch.lastMessagePreview = messages[0].data.text;
+            const msgRes = await socialPlusClient.getMessages(ch.channelId!, userAccessToken, 1);
+            const latest = ((msgRes.data as any)?.messages ?? [])[0];
+            if (latest) {
+              ch.lastMessagePreview = latest.data?.text || '';
+              ch.lastMessageTimestamp = latest.createdAt || ch.lastActivity;
             }
           } catch {
             // silently ignore per-channel errors
