@@ -63,8 +63,14 @@ class ChatService {
         .filter(ch => ch.channelId)
         .map(async (ch) => {
           try {
-            const msgRes = await socialPlusClient.getMessages(ch.channelId!, userAccessToken, 1);
-            const latest = ((msgRes.data as any)?.messages ?? [])[0];
+            const msgRes = await socialPlusClient.getMessages(ch.channelId!, userAccessToken, 5);
+            const messages: any[] = (msgRes.data as any)?.messages ?? [];
+            const latest =
+              messages.length > 0
+                ? messages.reduce((a, b) =>
+                    new Date(b.createdAt).getTime() > new Date(a.createdAt).getTime() ? b : a
+                  )
+                : null;
             if (latest) {
               ch.lastMessagePreview = latest.data?.text || '';
               ch.lastMessageTimestamp = latest.createdAt || ch.lastActivity;
