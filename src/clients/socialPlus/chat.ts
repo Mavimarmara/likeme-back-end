@@ -13,7 +13,7 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
       channelId: string,
       userAccessToken: string,
       limit = 1,
-      sortBy: 'asc' | 'desc' = 'desc'
+      sortBy: 'firstCreated' | 'lastCreated' = 'lastCreated'
     ): Promise<SocialPlusResponse<unknown>> {
       const params = new URLSearchParams({
         channelId,
