@@ -74,6 +74,7 @@ dist
 .cache/
 public
 !/public/logo-auth0.svg
+!/public/logo-auth0.png
 
 # Storybook build outputs
 .out
