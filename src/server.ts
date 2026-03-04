@@ -220,6 +220,10 @@ app.use(
 
 app.use(
   '/static',
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
   express.static(path.join(process.cwd(), 'public')),
 );
 
