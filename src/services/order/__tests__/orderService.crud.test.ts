@@ -101,29 +101,29 @@ describe('OrderService - CRUD operations', () => {
 
   describe('findAll', () => {
     it('should find all orders', async () => {
-      const orders = await orderService.findAll(testUser.id);
-      expect(orders.length).toBeGreaterThan(0);
-      expect(orders[0].userId).toBe(testUser.id);
+      const result = await orderService.findAll(1, 10, {}, testUser.id);
+      expect(result.orders.length).toBeGreaterThan(0);
+      expect(result.orders[0].userId).toBe(testUser.id);
     });
 
     it('should filter by status', async () => {
-      const orders = await orderService.findAll(testUser.id, 'pending');
-      expect(orders.length).toBeGreaterThan(0);
-      orders.forEach(order => expect(order.status).toBe('pending'));
+      const result = await orderService.findAll(1, 10, { status: 'pending' }, testUser.id);
+      expect(result.orders.length).toBeGreaterThan(0);
+      result.orders.forEach((order) => expect(order.status).toBe('pending'));
     });
   });
 
   describe('update', () => {
     it('should update order', async () => {
-      const updated = await orderService.update(testOrder.id, testUser.id, {
+      const updated = await orderService.update(testOrder.id, {
         status: 'completed',
-      });
+      }, testUser.id);
       expect(updated.status).toBe('completed');
     });
 
     it('should throw error when order not found', async () => {
       await expect(
-        orderService.update('non-existent-id', testUser.id, { status: 'completed' })
+        orderService.update('non-existent-id', { status: 'completed' }, testUser.id)
       ).rejects.toThrow('Order not found');
     });
   });
@@ -149,7 +149,7 @@ describe('OrderService - CRUD operations', () => {
       await orderService.cancel(testOrder.id, testUser.id);
       await expect(
         orderService.cancel(testOrder.id, testUser.id)
-      ).rejects.toThrow('already been cancelled');
+      ).rejects.toThrow('Order is already cancelled');
     });
   });
 
