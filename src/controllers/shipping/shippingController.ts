@@ -20,17 +20,26 @@ export const quote = async (req: Request, res: Response): Promise<void> => {
       cepDestino: cep.replace(/\D/g, ''),
     }, 'Consulta de frete realizada');
   } catch (error: any) {
-    console.error('Shipping quote error:', error?.message || error);
+    const msg = error?.message ?? (typeof error === 'string' ? error : '');
+    console.error('Shipping quote error:', msg || error);
 
-    if (error?.message?.includes('8 dígitos')) {
+    if (msg.includes('8 dígitos')) {
       sendError(res, 'CEP inválido. Informe 8 dígitos.', 400);
       return;
     }
-    if (error?.message?.includes('Nenhuma opção')) {
+    if (msg.includes('Nenhuma opção')) {
       sendError(res, 'Não há opção de frete para este CEP.', 404);
       return;
     }
+    if (msg.includes('Timeout') || error?.code === 'ECONNABORTED') {
+      sendError(res, 'Consulta aos Correios demorou demais. Tente novamente em instantes.', 504);
+      return;
+    }
+    if (msg.includes('indisponível') || msg.includes('Resposta inválida')) {
+      sendError(res, 'Serviço dos Correios temporariamente indisponível. Tente em alguns minutos.', 502);
+      return;
+    }
 
-    sendError(res, 'Erro ao consultar frete. Tente novamente.', 500, error?.message);
+    sendError(res, 'Não foi possível consultar o frete. Tente novamente em alguns minutos.', 500, msg || undefined);
   }
 };

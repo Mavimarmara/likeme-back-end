@@ -57,7 +57,24 @@ export async function getShippingQuote(cepDestino: string): Promise<ShippingOpti
     ...DEFAULT_PACKAGE,
   };
 
-  const response = await calcularPrecoPrazo(args);
+  const TIMEOUT_MS = 10000; // 10s para caber em limites de serverless
+
+  let response: any;
+  try {
+    response = await Promise.race([
+      calcularPrecoPrazo(args),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout na consulta aos Correios')), TIMEOUT_MS),
+      ),
+    ]);
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    if (/timeout|Timeout/i.test(msg)) throw new Error('Timeout na consulta aos Correios');
+    if (/network|ECONNREFUSED|ETIMEDOUT|ENOTFOUND/i.test(msg)) {
+      throw new Error('Correios indisponível. Tente novamente em instantes.');
+    }
+    throw new Error('Resposta inválida dos Correios');
+  }
 
   if (!Array.isArray(response)) {
     throw new Error('Resposta inválida dos Correios');
