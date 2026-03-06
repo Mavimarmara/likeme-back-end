@@ -44,9 +44,11 @@ export const importProductsFromCSV = async (
     console.log(`  - Ads created: ${result.createdAds.length}`);
 
     const statusCode = result.success ? 201 : 207;
-    const message = result.success
-      ? 'Products imported successfully'
-      : 'Import completed with some errors';
+    const message = result.totalRows === 0
+      ? 'Nenhuma linha de produto encontrada. Verifique o formato do CSV (delimitador ;, primeira linha vazia ou cabeçalhos na segunda linha, coluna "Nome do produto").'
+      : result.success
+        ? 'Products imported successfully'
+        : 'Import completed with some errors';
 
     sendSuccess(
       res,

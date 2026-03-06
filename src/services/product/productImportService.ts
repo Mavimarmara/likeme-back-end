@@ -55,10 +55,11 @@ export class ProductImportService {
 
     try {
       const delimiter = ';';
-      const firstLine = fileBuffer.toString('utf8', 0, Math.min(500, fileBuffer.length)).split(/\r?\n/)[0] || '';
-      const skipFirstLine = /^[\s;]*$/.test(firstLine.trim());
+      let firstLine = fileBuffer.toString('utf8', 0, Math.min(500, fileBuffer.length)).split(/\r?\n/)[0] || '';
+      firstLine = firstLine.replace(/^\uFEFF/, '').trim(); // BOM (export Excel/Numbers)
+      const skipFirstLine = /^[\s;]*$/.test(firstLine);
       const fromLine = skipFirstLine ? 2 : 1;
-      console.log(`[ProductImport] Using semicolon (;) as delimiter, from_line=${fromLine}`);
+      console.log(`[ProductImport] Using semicolon (;) as delimiter, from_line=${fromLine}, firstLinePreview=${JSON.stringify(firstLine.slice(0, 50))}`);
 
       const stream = Readable.from(fileBuffer);
 
@@ -144,6 +145,10 @@ export class ProductImportService {
       }
 
       result.success = result.errorCount === 0;
+      if (result.totalRows === 0) {
+        result.success = false;
+        console.log('[ProductImport] No data rows found - check CSV format (delimiter ; and header row)');
+      }
     } catch (error: any) {
       console.error('Error processing CSV:', error);
       throw new Error(`Error processing CSV file: ${error.message}`);
@@ -153,18 +158,19 @@ export class ProductImportService {
   }
 
   private isHeaderOrEmptyRow(row: any): boolean {
-    const values = Object.values(row);
+    const values = Object.values(row) as string[];
     const allEmpty = values.every(v => !v || String(v).trim() === '');
-    
-    if (allEmpty) {
-      return true;
-    }
+    if (allEmpty) return true;
 
-    const productName = row['Product Name'] || row['Nome do produto'] || row.productName;
-    if (!productName || String(productName).trim() === '') {
-      return true;
-    }
-
+    // Cabeçalho: linha onde o "nome do produto" é um dos rótulos de coluna
+    const productName =
+      row['Nome do produto'] ??
+      row['Product Name'] ??
+      row.productName ??
+      row['\uFEFFNome do produto'];
+    if (!productName || String(productName).trim() === '') return true;
+    const p = String(productName).trim();
+    if (/^(Provider|Categorias|Category|Comunidade|Community|Nome do produto|Product Name|Variação|Variation|Indicado para|Target Audience)$/i.test(p)) return true;
     return false;
   }
 
@@ -183,7 +189,12 @@ export class ProductImportService {
       provider: getField(['Fornecedor', 'Provider', 'provider']),
       category: getField(['Categorias', 'Categoria', 'Category', 'category']),
       community: getField(['Comunidade', 'Community', 'community']),
-      productName: getField(['Nome do produto', 'Product Name', 'productName']),
+      productName: getField([
+        'Nome do produto',
+        '\uFEFFNome do produto',
+        'Product Name',
+        'productName'
+      ]),
       variation: getField([
         'Variação\n(tamanho, cor, sabor, volume etc.)',
         'Variação',
