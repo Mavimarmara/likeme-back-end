@@ -33,6 +33,7 @@ export const updateUserSchema = Joi.object({
 export const saveShippingAddressSchema = Joi.object({
   fullName: Joi.string().min(2).max(200).required(),
   addressLine1: Joi.string().min(2).max(300).required(),
+  streetNumber: Joi.string().max(20).allow('').optional(),
   addressLine2: Joi.string().max(300).allow('').optional(),
   neighborhood: Joi.string().min(2).max(100).required(),
   city: Joi.string().min(2).max(100).required(),
