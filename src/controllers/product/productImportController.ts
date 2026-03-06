@@ -92,11 +92,14 @@ export const downloadImportTemplate = async (
   res: Response
 ): Promise<void> => {
   try {
-    const csvContent = `Provider;Marker;Community;Product Name;Variation;Target Audience;Full Description;Technical Specifications;Stock;Unit Price;Main Image;Secondary Images
-Diogo Lara;Self-esteem, Purpose & vision, Stress;Círculo de Cura e Crescimento;Endura;60 Caps;Perfil Evitativo, Perfil Melancólico;Como tomar: iniciar com 1 cápsula pela manhã. Principais benefícios: melhora cognitiva e redução de estresse.;Lion's Mane 400mg, Cordyceps sinensis 100mg;100;150.00;https://example.com/image.png;https://example.com/image2.png`;
+    // Cabeçalhos alinhados ao "Template Produto Físico Like_Me" (delimitador: ;)
+    // Coluna "Categorias" aceita um valor ou vários em inglês separados por vírgula (ex: Self-esteem, Stress, Spirituality)
+    const csvContent = `;;;;;;;;;;;;
+;Provider;Categorias;Comunidade;Nome do produto;Variação;Indicado para;Descrição completa e benefícios;Lista de especificações técnicas;Estoque;Preço unitário;Imagem principal;Imagens secundárias
+;Exemplo Marca;Autoestima;Círculo de Cura e Crescimento;Produto Exemplo;60 Caps;Perfil Evitativo;Benefícios e como usar.;Lion's Mane 400mg;100;150,00;https://exemplo.com/imagem.png;`;
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="likeme-products-import.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="likeme-template-produto-fisico.csv"');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send('\uFEFF' + csvContent);
   } catch (error: any) {

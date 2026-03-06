@@ -1,5 +1,6 @@
 import { parse } from 'csv-parse';
 import { Readable } from 'stream';
+import prisma from '@/config/database';
 import { productService } from './productService';
 import { getProductImportRepository } from '@/utils/repositoryContainer';
 import type { ProductImportRepository } from '@/repositories/product/ProductImportRepository';
@@ -7,7 +8,7 @@ import type { Product, Ad, Advertiser } from '@prisma/client';
 
 export interface CSVProductRow {
   provider: string;
-  marker: string;
+  category: string;
   community: string;
   productName: string;
   variation: string;
@@ -53,9 +54,11 @@ export class ProductImportService {
     };
 
     try {
-      // Usar sempre ponto e vírgula como delimitador
       const delimiter = ';';
-      console.log(`[ProductImport] Using semicolon (;) as delimiter`);
+      const firstLine = fileBuffer.toString('utf8', 0, Math.min(500, fileBuffer.length)).split(/\r?\n/)[0] || '';
+      const skipFirstLine = /^[\s;]*$/.test(firstLine.trim());
+      const fromLine = skipFirstLine ? 2 : 1;
+      console.log(`[ProductImport] Using semicolon (;) as delimiter, from_line=${fromLine}`);
 
       const stream = Readable.from(fileBuffer);
 
@@ -72,7 +75,7 @@ export class ProductImportService {
           quote: '"',
           escape: '"',
           record_delimiter: ['\n', '\r\n', '\r'],
-          from: 2, // Pula a primeira linha (product-import-template), linha 2 vira header
+          from: fromLine, // 2 se primeira linha for vazia/só ";" (Template Like_Me), senão 1
         })
       );
 
@@ -177,8 +180,8 @@ export class ProductImportService {
     };
 
     return {
-      provider: getField(['Provider', 'provider']),
-      marker: getField(['Marker', 'marker']),
+      provider: getField(['Fornecedor', 'Provider', 'provider']),
+      category: getField(['Categorias', 'Categoria', 'Category', 'category']),
       community: getField(['Comunidade', 'Community', 'community']),
       productName: getField(['Nome do produto', 'Product Name', 'productName']),
       variation: getField([
@@ -196,6 +199,7 @@ export class ProductImportService {
       ]),
       technicalSpecifications: getField([
         'Lista de especificações técnicas',
+        'Especificações técnicas',
         'Technical Specifications List',
         'Technical Specifications',
         'technicalSpecifications'
@@ -217,7 +221,7 @@ export class ProductImportService {
 
     const price = this.parsePrice(csvRow.unitPrice);
     const quantity = this.parseQuantity(csvRow.stock);
-    const markers = this.parseMarkers(csvRow.marker);
+    const categoryId = await this.resolveCategoryId(csvRow.category);
 
     // Determinar status baseado no estoque
     // - null: active (não controla estoque)
@@ -248,6 +252,7 @@ export class ProductImportService {
       weight: null,
       dimensions: null,
       externalUrl: null,
+      categoryId: categoryId,
     };
 
     // Buscar produto existente por nome (case-insensitive)
@@ -337,15 +342,42 @@ export class ProductImportService {
     return quantity;
   }
 
-  private parseMarkers(markerStr: string): string[] {
-    if (!markerStr || markerStr.trim() === '') {
-      return [];
-    }
+  /** Mapeamento inglês (template) -> nome em português na tabela category */
+  private static readonly CATEGORY_NAME_MAP: Record<string, string> = {
+    'Self-esteem': 'Autoestima',
+    'Purpose & vision': 'Propósito',
+    'Purpose': 'Propósito',
+    'Stress': 'Estresse',
+    'Spirituality': 'Espiritualidade',
+    'Environment': 'Ambiente',
+    'Connection': 'Relacionamento',
+    'Movement': 'Movimento',
+    'Nutrition': 'Nutrição',
+    'Sleep': 'Sono',
+    'Smile': 'Saúde Bucal',
+  };
 
-    return markerStr
-      .split(',')
-      .map(m => m.trim())
-      .filter(m => m !== '');
+  private async resolveCategoryId(categoryInput: string): Promise<string | null> {
+    if (!categoryInput || categoryInput.trim() === '') {
+      return null;
+    }
+    const tokens = categoryInput.split(',').map((t) => t.trim()).filter(Boolean);
+    for (const token of tokens) {
+      const byName = await prisma.category.findFirst({
+        where: { name: { equals: token, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (byName) return byName.id;
+      const mapped = ProductImportService.CATEGORY_NAME_MAP[token];
+      if (mapped) {
+        const byMapped = await prisma.category.findFirst({
+          where: { name: { equals: mapped, mode: 'insensitive' } },
+          select: { id: true },
+        });
+        if (byMapped) return byMapped.id;
+      }
+    }
+    return null;
   }
 
   private generateSKU(productName: string, variation: string): string {

@@ -190,7 +190,7 @@
  *               type: string
  *               format: binary
  *             example: |
- *               Provider,Marker,Community,Product Name,Variation,Target Audience,Full Description,Technical Specifications,Stock,Unit Price,Main Image,Secondary Images
+ *               Fornecedor,Categoria,Comunidade,Nome do produto,Variação,Indicado para,Descrição completa e benefícios,Especificações técnicas,Estoque,Preço unitário,Imagem principal,Imagens secundárias
  *               Diogo Lara,"Self-esteem, Purpose & vision, Stress",Círculo de Cura e Crescimento,Endura,60 Caps,"Perfil Evitativo, Perfil Melancólico","Como tomar: iniciar com 1 cápsula pela manhã.","Lion's Mane 400mg",100,150.00,https://example.com/image.png,
  *       401:
  *         description: Unauthorized - Invalid or missing token
