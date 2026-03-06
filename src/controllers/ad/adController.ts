@@ -75,8 +75,8 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
         totalPages: Math.ceil(total / limit),
       },
     }, 'Ads retrieved successfully');
-  } catch (error) {
-    console.error('Get all ads error:', error);
+  } catch (error: any) {
+    console.error('Get all ads error:', error?.message ?? error);
     sendError(res, 'Error retrieving ads');
   }
 };
