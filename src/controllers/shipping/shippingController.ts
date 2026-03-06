@@ -2,6 +2,20 @@ import { Request, Response } from 'express';
 import { sendSuccess, sendError } from '@/utils/response';
 import { getShippingQuote } from '@/services/shipping/correiosService';
 
+/** Fallback de frete em reais quando a consulta aos Correios falha */
+const SHIPPING_FALLBACK_VALUE = 15;
+
+const SHIPPING_FALLBACK_OPTION = {
+  codigo: 'FALLBACK',
+  nome: 'Frete padrão',
+  valor: SHIPPING_FALLBACK_VALUE,
+  prazoEntrega: '-',
+  valorMaoPropria: '0,00',
+  valorAvisoRecebimento: '0,00',
+  entregaDomiciliar: 'S',
+  entregaSabado: 'N',
+};
+
 export const quote = async (req: Request, res: Response): Promise<void> => {
   try {
     const cep = (req.query.cep as string)?.trim();
@@ -27,19 +41,12 @@ export const quote = async (req: Request, res: Response): Promise<void> => {
       sendError(res, 'CEP inválido. Informe 8 dígitos.', 400);
       return;
     }
-    if (msg.includes('Nenhuma opção')) {
-      sendError(res, 'Não há opção de frete para este CEP.', 404);
-      return;
-    }
-    if (msg.includes('Timeout') || error?.code === 'ECONNABORTED') {
-      sendError(res, 'Consulta aos Correios demorou demais. Tente novamente em instantes.', 504);
-      return;
-    }
-    if (msg.includes('indisponível') || msg.includes('Resposta inválida')) {
-      sendError(res, 'Serviço dos Correios temporariamente indisponível. Tente em alguns minutos.', 502);
-      return;
-    }
 
-    sendError(res, 'Não foi possível consultar o frete. Tente novamente em alguns minutos.', 500, msg || undefined);
+    // Fallback: em qualquer outro erro da consulta, retorna frete fixo de R$ 15
+    sendSuccess(res, {
+      options: [SHIPPING_FALLBACK_OPTION],
+      minValue: SHIPPING_FALLBACK_VALUE,
+      cepDestino: (req.query.cep as string)?.trim()?.replace(/\D/g, '') ?? '',
+    }, 'Consulta de frete realizada (valor padrão)');
   }
 };
