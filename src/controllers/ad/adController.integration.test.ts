@@ -155,7 +155,7 @@ describe('Ad Endpoints', () => {
           name: 'Amazon Product',
           description: 'Test product with external URL',
           externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
-          category: 'amazon product',
+          type: 'amazon product',
           price: 0,
           quantity: 0,
           status: 'active',
@@ -264,7 +264,7 @@ describe('Ad Endpoints', () => {
         data: {
           name: 'Product With Invalid URL',
           externalUrl: 'https://www.amazon.com.br/dp/INVALID',
-          category: 'amazon product',
+          type: 'amazon product',
           price: 0,
           quantity: 0,
           status: 'active',
@@ -417,7 +417,7 @@ describe('Ad Endpoints', () => {
       const product = await prisma.product.create({
         data: {
           name: 'Amazon Product',
-          category: 'amazon product',
+          type: 'amazon product',
           price: 10.99,
           quantity: 10,
           status: 'active',
@@ -436,7 +436,7 @@ describe('Ad Endpoints', () => {
 
       const response = await request(app)
         .get('/api/ads')
-        .query({ category: 'amazon product' })
+        .query({ type: 'amazon product' })
         .set('Authorization', `Bearer ${token}`);
 
       expect(response.status).toBe(200);
@@ -444,7 +444,7 @@ describe('Ad Endpoints', () => {
       
       if (response.body.data.ads.length > 0) {
         const allMatchCategory = response.body.data.ads.every(
-          (ad: any) => ad.product?.category === 'amazon product'
+          (ad: any) => ad.product?.type === 'amazon product'
         );
         expect(allMatchCategory).toBe(true);
       }
@@ -462,7 +462,7 @@ describe('Ad Endpoints', () => {
           name: 'New Amazon Product',
           description: 'Test description',
           externalUrl: 'https://www.amazon.com.br/dp/B0BLJTJ38M',
-          category: 'amazon product',
+          type: 'amazon product',
           status: 'active',
         },
         status: 'active',
@@ -477,7 +477,7 @@ describe('Ad Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.product).toBeDefined();
       expect(response.body.data.product.externalUrl).toBe(adData.product.externalUrl);
-      expect(response.body.data.product.category).toBe(adData.product.category);
+      expect(response.body.data.product.type).toBe(adData.product.type);
       if (response.body.data?.id) {
         testDataTracker.add('ad', response.body.data.id);
       }

@@ -55,7 +55,7 @@
  *                         format: decimal
  *                       quantity:
  *                         type: integer
- *                       category:
+ *                       type:
  *                         type: string
  *                         enum: [amazon product, physical product, program]
  *                       externalUrl:
@@ -144,11 +144,11 @@
  *           type: boolean
  *         description: Filter only currently active ads
  *       - in: query
- *         name: category
+ *         name: type
  *         schema:
  *           type: string
  *           enum: [amazon product, physical product, program]
- *         description: Filter ads by product category
+ *         description: Filter ads by product type
  *     responses:
  *       200:
  *         description: List of ads retrieved successfully

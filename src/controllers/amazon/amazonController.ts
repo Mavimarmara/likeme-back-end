@@ -95,7 +95,7 @@ export const getProductByAd = async (req: Request, res: Response): Promise<void>
         id: ad.product.id,
         name: productData.title || ad.product.name,
         description: productData.description || ad.product.description,
-        category: ad.product.category,
+        type: ad.product.type,
       } : null,
     };
 

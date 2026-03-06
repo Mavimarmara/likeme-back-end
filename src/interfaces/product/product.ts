@@ -1,5 +1,6 @@
 export interface ProductQueryFilters {
-  category?: string;
+  type?: string; // product type: amazon product, physical product, program
+  categoryId?: string; // domain category (FK to Category)
   status?: string;
   search?: string;
 }

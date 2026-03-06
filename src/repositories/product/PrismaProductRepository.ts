@@ -15,7 +15,8 @@ export class PrismaProductRepository implements ProductRepository {
         description: data.description,
         price: data.price,
         quantity: data.stock,
-        category: data.category,
+        type: data.type,
+        categoryId: data.categoryId,
         image: data.imageUrl,
         status: data.isActive ? 'active' : 'inactive',
       },
@@ -40,8 +41,12 @@ export class PrismaProductRepository implements ProductRepository {
       where.isActive = filters.isActive;
     }
 
-    if (filters?.category) {
-      where.category = filters.category;
+    if (filters?.type) {
+      where.type = filters.type;
+    }
+
+    if (filters?.categoryId) {
+      where.categoryId = filters.categoryId;
     }
 
     if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
@@ -65,10 +70,10 @@ export class PrismaProductRepository implements ProductRepository {
     return products.map((product) => this.mapToProductData(product));
   }
 
-  async findByCategory(category: string): Promise<ProductData[]> {
+  async findByCategory(type: string): Promise<ProductData[]> {
     const products = await prisma.product.findMany({
       where: {
-        category,
+        type,
         status: 'active',
       },
       orderBy: { name: 'asc' },
@@ -85,7 +90,8 @@ export class PrismaProductRepository implements ProductRepository {
         description: data.description,
         price: data.price,
         quantity: data.stock,
-        category: data.category,
+        type: data.type,
+        categoryId: data.categoryId,
         image: data.imageUrl,
         status: data.isActive !== undefined ? (data.isActive ? 'active' : 'inactive') : undefined,
       },
@@ -125,7 +131,8 @@ export class PrismaProductRepository implements ProductRepository {
       description: product.description,
       price: product.price ? Number(product.price) : 0,
       stock: product.quantity ?? 0,
-      category: product.category,
+      type: product.type,
+      categoryId: product.categoryId ?? null,
       imageUrl: product.image,
       isActive: product.status === 'active',
       createdAt: product.createdAt,

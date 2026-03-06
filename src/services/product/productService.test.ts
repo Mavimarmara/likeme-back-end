@@ -199,11 +199,11 @@ describe('ProductService', () => {
       expect(result.total).toBeGreaterThanOrEqual(0);
     });
 
-    it('should filter by category', async () => {
+    it('should filter by type', async () => {
       const categoryProduct = await prisma.product.create({
         data: {
           name: 'Category Product',
-          category: 'physical product',
+          type: 'physical product',
           price: 20,
           status: 'active',
         },
@@ -211,12 +211,12 @@ describe('ProductService', () => {
       testDataTracker.add('product', categoryProduct.id);
 
       const result = await productService.findAll(1, 10, {
-        category: 'physical product',
+        type: 'physical product',
       });
 
       expect(result.products.length).toBeGreaterThan(0);
       result.products.forEach((product) => {
-        expect(product.category).toBe('physical product');
+        expect(product.type).toBe('physical product');
       });
     });
 

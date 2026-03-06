@@ -55,7 +55,8 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
     const limit = parseInt(req.query.limit as string) || 10;
 
     const filters = {
-      category: req.query.category as string,
+      type: req.query.type as string,
+      categoryId: req.query.categoryId as string,
       status: req.query.status as string,
       search: req.query.search as string,
     };

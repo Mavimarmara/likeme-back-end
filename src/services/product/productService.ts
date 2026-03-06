@@ -65,8 +65,12 @@ export class ProductService {
         { OR: searchConditions },
       ];
 
-      if (filters.category) {
-        andConditions.push({ category: filters.category });
+      if (filters.type) {
+        andConditions.push({ type: filters.type });
+      }
+
+      if (filters.categoryId) {
+        andConditions.push({ categoryId: filters.categoryId });
       }
 
       if (filters.status) {
@@ -77,8 +81,12 @@ export class ProductService {
     }
 
     // Se não há busca, usar condições diretas
-    if (filters.category) {
-      where.category = filters.category;
+    if (filters.type) {
+      where.type = filters.type;
+    }
+
+    if (filters.categoryId) {
+      where.categoryId = filters.categoryId;
     }
 
     if (filters.status) {
@@ -170,13 +178,14 @@ export class ProductService {
         cost: productData.cost,
         quantity: productData.quantity ?? null,
         image: productData.image,
-        category: productData.category,
+        type: productData.type,
         brand: productData.brand,
         status: productData.status || 'active',
         weight: productData.weight,
         dimensions: productData.dimensions,
         externalUrl: productData.externalUrl,
         sellerId: sellerId || null,
+        categoryId: productData.categoryId ?? null,
       },
     });
   }

@@ -110,7 +110,7 @@ describe('Product Endpoints', () => {
       expect(response.body.data.pagination).toBeDefined();
     });
 
-    it('should filter products by category', async () => {
+    it('should filter products by type', async () => {
       const productId = generateTestId();
       const product = await prisma.product.create({
         data: {
@@ -118,7 +118,7 @@ describe('Product Endpoints', () => {
           name: `Categorized Product${TEST_ID_PREFIX}`,
           price: 15.99,
           quantity: 5,
-          category: 'Electronics',
+          type: 'physical product',
           status: 'active',
         },
       });
@@ -126,7 +126,7 @@ describe('Product Endpoints', () => {
 
       const response = await request(app)
         .get('/api/products')
-        .query({ category: 'Electronics' })
+        .query({ type: 'physical product' })
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);

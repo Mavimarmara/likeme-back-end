@@ -218,9 +218,9 @@ describe('AdService', () => {
       });
     });
 
-    it('should filter by category', async () => {
+    it('should filter by type', async () => {
       const result = await adService.findAll(1, 10, {
-        category: 'physical product',
+        type: 'physical product',
       });
 
       expect(result.ads).toBeDefined();

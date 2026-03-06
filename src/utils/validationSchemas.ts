@@ -309,7 +309,7 @@ export const createAdSchema = Joi.object({
     image: Joi.string().uri().max(500).optional(),
     price: Joi.number().positive().precision(2).optional(),
     quantity: Joi.number().integer().min(0).optional(),
-    category: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
+    type: Joi.string().valid('amazon product', 'physical product', 'program').optional(),
     externalUrl: Joi.string().uri().max(1000).optional(),
     status: Joi.string().valid('active', 'inactive', 'out_of_stock').optional(),
   }).optional(),

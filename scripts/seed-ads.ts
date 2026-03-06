@@ -66,13 +66,12 @@ async function main() {
 
   console.log(`📦 Encontrados ${products.length} produtos\n`);
 
-  // Mapear categoria do produto para categoria do anúncio
-  const getAdCategory = (productCategory: string | null | undefined): 'amazon product' | 'physical product' | 'program' => {
-    if (!productCategory) return 'program';
-    
-    const category = productCategory.toLowerCase();
-    if (category === 'programs') return 'program';
-    if (category === 'medicine' || category === 'products') return 'physical product';
+  // Mapear tipo do produto para o anúncio
+  const getAdType = (productType: string | null | undefined): 'amazon product' | 'physical product' | 'program' => {
+    if (!productType) return 'program';
+    const t = productType.toLowerCase();
+    if (t === 'program') return 'program';
+    if (t === 'amazon product') return 'amazon product';
     return 'physical product';
   };
 
@@ -82,14 +81,12 @@ async function main() {
 
   for (const product of products) {
     try {
-      // Determinar a categoria do produto
-      const productCategory = getAdCategory(product.category);
+      const productType = getAdType(product.type);
 
-      // Atualizar produto com categoria se não tiver
-      if (!product.category) {
+      if (!product.type) {
         await prisma.product.update({
           where: { id: product.id },
-          data: { category: productCategory },
+          data: { type: productType },
         });
       }
 
@@ -107,7 +104,7 @@ async function main() {
         status: 'active' as const,
         startDate: new Date(),
         endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 dias a partir de hoje
-        targetAudience: product.category || 'General audience',
+        targetAudience: product.type || 'General audience',
       };
 
       if (existingAd) {

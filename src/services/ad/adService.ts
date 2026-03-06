@@ -27,7 +27,8 @@ export interface AdQueryFilters {
   advertiserId?: string;
   productId?: string;
   status?: string;
-  category?: string;
+  type?: string; // product type: amazon product, physical product, program
+  categoryId?: string; // domain category (product.categoryId)
   activeOnly?: boolean;
 }
 
@@ -64,7 +65,7 @@ export class AdService {
         image: productData.image,
         price: productData.price ?? null,
         quantity: productData.quantity ?? null,
-        category: productData.category,
+        type: productData.type,
         externalUrl: productData.externalUrl,
         status: productData.status || 'active',
       },
@@ -125,9 +126,10 @@ export class AdService {
       where.status = filters.status;
     }
 
-    if (filters.category) {
+    if (filters.type || filters.categoryId) {
       where.product = {
-        category: filters.category,
+        ...(filters.type && { type: filters.type }),
+        ...(filters.categoryId && { categoryId: filters.categoryId }),
       };
     }
 

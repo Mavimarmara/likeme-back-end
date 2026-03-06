@@ -182,6 +182,8 @@ async function main() {
 
   for (const product of products) {
     try {
+      const productType = product.category === 'Programs' ? 'program' : 'physical product';
+      const { category, ...rest } = product;
       const result = await prisma.product.upsert({
         where: { sku: product.sku },
         update: {
@@ -191,13 +193,13 @@ async function main() {
           cost: product.cost,
           quantity: product.quantity,
           image: product.image,
-          category: product.category,
+          type: productType,
           brand: product.brand,
           status: product.status,
           weight: product.weight,
           dimensions: product.dimensions,
         },
-        create: product,
+        create: { ...rest, type: productType },
       });
       
       if (result) {

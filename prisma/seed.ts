@@ -253,22 +253,24 @@ async function main() {
   console.log('🛍️ Criando produtos de teste...');
 
   for (const product of products) {
+    const { category, ...rest } = product;
+    const productType = category === 'Programs' ? 'program' : 'physical product';
     await prisma.product.upsert({
       where: { sku: product.sku },
       update: {
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        cost: product.cost,
-        quantity: product.quantity,
-        image: product.image,
-        category: product.category,
-        brand: product.brand,
-        status: product.status,
-        weight: product.weight,
-        dimensions: product.dimensions,
+        name: rest.name,
+        description: rest.description,
+        price: rest.price,
+        cost: rest.cost,
+        quantity: rest.quantity,
+        image: rest.image,
+        type: productType,
+        brand: rest.brand,
+        status: rest.status,
+        weight: rest.weight,
+        dimensions: rest.dimensions,
       },
-      create: product,
+      create: { ...rest, type: productType },
     });
   }
 

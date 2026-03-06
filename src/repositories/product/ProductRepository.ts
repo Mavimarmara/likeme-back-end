@@ -14,7 +14,8 @@ export interface CreateProductData {
   description?: string;
   price: number;
   stock: number;
-  category?: string;
+  type?: string;
+  categoryId?: string;
   imageUrl?: string;
   isActive?: boolean;
 }
@@ -25,7 +26,8 @@ export interface ProductData {
   description: string | null;
   price: number;
   stock: number;
-  category: string | null;
+  type: string | null;
+  categoryId: string | null;
   imageUrl: string | null;
   isActive: boolean;
   createdAt: Date;
@@ -37,7 +39,8 @@ export interface UpdateProductData {
   description?: string;
   price?: number;
   stock?: number;
-  category?: string;
+  type?: string;
+  categoryId?: string;
   imageUrl?: string;
   isActive?: boolean;
 }
@@ -46,7 +49,8 @@ export interface ProductFilters {
   isActive?: boolean;
   minPrice?: number;
   maxPrice?: number;
-  category?: string;
+  type?: string;
+  categoryId?: string;
   search?: string;
 }
 

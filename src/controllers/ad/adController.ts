@@ -57,7 +57,8 @@ export const getAllAds = async (req: Request, res: Response): Promise<void> => {
       advertiserId: req.query.advertiserId as string,
       productId: req.query.productId as string,
       status: req.query.status as string,
-      category: req.query.category as string,
+      type: req.query.type as string,
+      categoryId: req.query.categoryId as string,
       activeOnly,
     };
 

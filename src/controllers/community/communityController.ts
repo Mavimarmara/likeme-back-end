@@ -78,6 +78,15 @@ const buildFeedFilters = (query: unknown): { filters?: FeedFilterOptions; error?
     filters.order = normalizedOrder as 'asc' | 'desc';
   }
 
+  if (params.categoryId !== undefined && params.categoryId !== null && params.categoryId !== '') {
+    filters.categoryId = String(params.categoryId).trim() || undefined;
+  }
+
+  const solutionIds = parseListParam(params.solutionIds);
+  if (solutionIds) {
+    filters.solutionIds = solutionIds;
+  }
+
   return { filters: Object.keys(filters).length > 0 ? filters : undefined };
 };
 

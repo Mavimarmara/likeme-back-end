@@ -242,7 +242,7 @@ export class ProductImportService {
       cost: null,
       quantity: quantity,
       image: csvRow.mainImage?.trim() || null,
-      category: 'physical product',
+      type: 'physical product',
       brand: csvRow.provider?.trim() || null,
       status: status,
       weight: null,

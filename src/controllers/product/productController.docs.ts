@@ -34,8 +34,9 @@
  *               image:
  *                 type: string
  *                 format: uri
- *               category:
+ *               type:
  *                 type: string
+ *                 description: Product type (amazon product, physical product, program)
  *               brand:
  *                 type: string
  *               status:
@@ -95,9 +96,10 @@
  *           type: integer
  *           default: 10
  *       - in: query
- *         name: category
+ *         name: type
  *         schema:
  *           type: string
+ *           description: Product type (amazon product, physical product, program)
  *       - in: query
  *         name: status
  *         schema:

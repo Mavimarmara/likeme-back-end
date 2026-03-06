@@ -13,5 +13,7 @@ export interface FeedFilterOptions {
   endDate?: Date;
   orderBy?: FeedOrderBy;
   order?: 'asc' | 'desc';
+  categoryId?: string | null;
+  solutionIds?: string[];
 }
 
