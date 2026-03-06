@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError } from '@/utils/response';
-import { getShippingQuote } from '@/services/shipping/correiosService';
+import { getShippingQuote } from '@/services/shipping/cepcertoService';
 
 /** Fallback de frete em reais quando a consulta aos Correios falha */
 const SHIPPING_FALLBACK_VALUE = 15;
@@ -35,7 +35,12 @@ export const quote = async (req: Request, res: Response): Promise<void> => {
     }, 'Consulta de frete realizada');
   } catch (error: any) {
     const msg = error?.message ?? (typeof error === 'string' ? error : '');
-    console.error('Shipping quote error:', msg || error);
+    const reason = /timeout|Timeout/i.test(msg)
+      ? 'timeout'
+      : /network|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|Correios indisponível/i.test(msg)
+        ? 'network'
+        : 'invalid_response';
+    console.error(`Shipping quote error [${reason}]:`, msg || error);
 
     if (msg.includes('8 dígitos')) {
       sendError(res, 'CEP inválido. Informe 8 dígitos.', 400);
