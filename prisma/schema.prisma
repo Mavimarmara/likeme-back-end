@@ -195,6 +195,17 @@ model Tip {
 // SOCIAL.PLUS INTEGRATION MODELS
 // ============================================
 
+model Category {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  name      String    // Nome em português
+
+  @@index([name])
+  @@map("category")
+}
+
 model Community {
   id                    String    @id @default(uuid())
   createdAt             DateTime  @default(now()) @map("created_at")

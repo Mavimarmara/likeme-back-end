@@ -32,6 +32,7 @@ import anamnesisRoutes from '@/routes/anamnesis/anamnesisRoutes';
 import notificationRoutes from '@/routes/notification/notificationRoutes';
 import cronRoutes from '@/routes/cron/cronRoutes';
 import shippingRoutes from '@/routes/shipping/shippingRoutes';
+import categoryRoutes from '@/routes/category/categoryRoutes';
 
 const app = express();
 
@@ -277,6 +278,7 @@ app.use('/api/anamnesis', anamnesisRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/cron', cronRoutes);
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/categories', categoryRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({
