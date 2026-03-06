@@ -950,7 +950,9 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
       include: {
         person: {
           include: {
-            contacts: true,
+            contacts: {
+              where: { deletedAt: null },
+            },
           },
         },
       },
@@ -965,6 +967,53 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
   } catch (error) {
     console.error('Get profile error:', error);
     sendError(res, 'Erro ao obter perfil');
+  }
+};
+
+export const saveShippingAddress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const addressData = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { personId: true },
+    });
+
+    if (!user?.personId) {
+      sendError(res, 'Usuário ou pessoa não encontrado', 404);
+      return;
+    }
+
+    const value = JSON.stringify(addressData);
+
+    const existing = await prisma.personContact.findFirst({
+      where: {
+        personId: user.personId,
+        type: 'shipping_address',
+        deletedAt: null,
+      },
+    });
+
+    if (existing) {
+      await prisma.personContact.update({
+        where: { id: existing.id },
+        data: { value },
+      });
+      sendSuccess(res, { updated: true }, 'Endereço atualizado com sucesso');
+    } else {
+      await prisma.personContact.create({
+        data: {
+          personId: user.personId,
+          type: 'shipping_address',
+          value,
+        },
+      });
+      sendSuccess(res, { created: true }, 'Endereço salvo com sucesso', 201);
+    }
+  } catch (error) {
+    console.error('Save shipping address error:', error);
+    sendError(res, 'Erro ao salvar endereço');
   }
 };
 

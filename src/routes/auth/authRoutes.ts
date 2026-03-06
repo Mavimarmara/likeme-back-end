@@ -13,6 +13,7 @@ import {
   logout,
   getProfile, 
   updateProfile,
+  saveShippingAddress,
   acceptPrivacyPolicy,
   deleteAccount 
 } from '@/controllers/auth/authController';
@@ -21,7 +22,8 @@ import {
   loginSchema,
   exchangeCodeSchema,
   verifyTokenSchema,
-  updateUserSchema 
+  updateUserSchema,
+  saveShippingAddressSchema,
 } from '@/utils/validationSchemas';
 import { validate } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';
@@ -45,6 +47,7 @@ router.get('/amity-token', authenticateToken, requireAuth, getAmityAuthToken);
 router.post('/logout', authenticateToken, requireAuth, logout);
 router.get('/profile', authenticateToken, requireAuth, getProfile);
 router.put('/profile', authenticateToken, requireAuth, validate(updateUserSchema), updateProfile);
+router.put('/profile/shipping-address', authenticateToken, requireAuth, validate(saveShippingAddressSchema), saveShippingAddress);
 router.post('/accept-privacy-policy', authenticateToken, requireAuth, acceptPrivacyPolicy);
 router.delete('/account', authenticateToken, requireAuth, deleteAccount);
 

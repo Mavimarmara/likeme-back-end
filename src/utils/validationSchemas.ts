@@ -30,6 +30,17 @@ export const updateUserSchema = Joi.object({
   isActive: Joi.boolean().optional(),
 });
 
+export const saveShippingAddressSchema = Joi.object({
+  fullName: Joi.string().min(2).max(200).required(),
+  addressLine1: Joi.string().min(2).max(300).required(),
+  addressLine2: Joi.string().max(300).allow('').optional(),
+  neighborhood: Joi.string().min(2).max(100).required(),
+  city: Joi.string().min(2).max(100).required(),
+  state: Joi.string().min(2).max(2).required(),
+  zipCode: Joi.string().pattern(/^[\d\-]+$/).min(8).max(10).required(),
+  phone: Joi.string().min(10).max(20).required(),
+});
+
 export const updateUserCrudSchema = Joi.object({
   username: Joi.string().min(3).max(50).optional(),
   password: Joi.string().min(6).max(100).optional(),
@@ -94,12 +105,12 @@ export const updatePersonSchema = Joi.object({
 
 export const createPersonContactSchema = Joi.object({
   personId: Joi.string().required(),
-  type: Joi.string().valid('email', 'phone', 'whatsapp', 'other').required(),
+  type: Joi.string().valid('email', 'phone', 'whatsapp', 'other', 'shipping_address').required(),
   value: Joi.string().required(),
 });
 
 export const updatePersonContactSchema = Joi.object({
-  type: Joi.string().valid('email', 'phone', 'whatsapp', 'other').optional(),
+  type: Joi.string().valid('email', 'phone', 'whatsapp', 'other', 'shipping_address').optional(),
   value: Joi.string().optional(),
 });
 
