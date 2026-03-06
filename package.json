@@ -61,6 +61,7 @@
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.0",
     "compression": "^1.7.4",
+    "correios-brasil": "^3.0.6",
     "cors": "^2.8.5",
     "csv-parse": "^6.1.0",
     "dotenv": "^16.3.1",

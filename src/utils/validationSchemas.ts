@@ -178,6 +178,10 @@ export const idParamSchema = Joi.object({
   id: Joi.string().required(),
 });
 
+export const shippingQuoteQuerySchema = Joi.object({
+  cep: Joi.string().pattern(/^[\d\s-]+$/).min(8).max(12).required(),
+});
+
 // ============================================
 // PRODUCT VALIDATION SCHEMAS
 // ============================================
