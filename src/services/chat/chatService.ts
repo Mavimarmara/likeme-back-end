@@ -138,8 +138,7 @@ class ChatService {
 
   /**
    * Cria um canal de conversa com o parceiro (advertiser) e opcionalmente envia a primeira mensagem.
-   * Usa o user_id da tabela advertiser para identificar o User do parceiro e seu socialPlusUserId.
-   * Retorna o channelId para o frontend navegar para a tela de chat.
+   * Define displayName como "Nome Sobrenome / Nome Sobrenome" dos dois participantes.
    */
   async createChannel(
     userId: string | undefined,
@@ -149,24 +148,37 @@ class ChatService {
     if (!userId) throw new Error('Usuário não autenticado.');
     const token = await this.getUserToken(userId);
 
-    const advertiser = await prisma.advertiser.findUnique({
-      where: { id: advertiserId, deletedAt: null },
-      select: { userId: true },
-    });
+    const [currentUser, advertiser] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { person: { select: { firstName: true, lastName: true } } },
+      }),
+      prisma.advertiser.findUnique({
+        where: { id: advertiserId, deletedAt: null },
+        select: { userId: true },
+      }),
+    ]);
+
     if (!advertiser?.userId) {
       return { success: false, error: 'Parceiro não encontrado.' };
     }
 
     const partnerUser = await prisma.user.findUnique({
       where: { id: advertiser.userId },
-      select: { socialPlusUserId: true },
+      select: { socialPlusUserId: true, person: { select: { firstName: true, lastName: true } } },
     });
     if (!partnerUser?.socialPlusUserId) {
       return { success: false, error: 'Parceiro sem conta de chat configurada.' };
     }
 
+    const currentName = [currentUser?.person?.firstName, currentUser?.person?.lastName].filter(Boolean).join(' ') || 'Usuário';
+    const partnerName = [partnerUser.person?.firstName, partnerUser.person?.lastName].filter(Boolean).join(' ') || 'Contato';
+    const displayName = `${currentName} / ${partnerName}`;
+
     const targetSocialPlusUserId = partnerUser.socialPlusUserId;
-    const createRes = await socialPlusClient.createConversationChannel([targetSocialPlusUserId], token);
+    const createRes = await socialPlusClient.createConversationChannel([targetSocialPlusUserId], token, {
+      displayName,
+    });
     if (!createRes.success || !createRes.data) {
       return { success: false, error: createRes.error || 'Erro ao criar conversa.' };
     }
