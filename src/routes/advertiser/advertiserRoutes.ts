@@ -8,6 +8,10 @@ import {
   deleteAdvertiser,
 } from '@/controllers/advertiser/advertiserController';
 import {
+  importAdvertiserProfilesFromCSV,
+  downloadAdvertiserProfileTemplate,
+} from '@/controllers/advertiser/advertiserProfileImportController';
+import {
   createAdvertiserSchema,
   updateAdvertiserSchema,
   idParamSchema,
@@ -16,11 +20,25 @@ import {
 import { validate, validateParams } from '@/middleware/validation';
 import { authenticateToken, requireAuth } from '@/middleware/auth';
 import { generalRateLimiter } from '@/middleware/rateLimiter';
+import { uploadCSV } from '@/middleware/upload';
 
 const router = Router();
 
 router.use(authenticateToken);
 router.use(requireAuth);
+
+// Importação de perfis de advertisers (providers)
+router.post(
+  '/profiles/import/csv',
+  generalRateLimiter,
+  uploadCSV,
+  importAdvertiserProfilesFromCSV
+);
+router.get(
+  '/profiles/import/template',
+  generalRateLimiter,
+  downloadAdvertiserProfileTemplate
+);
 
 router.post('/', generalRateLimiter, validate(createAdvertiserSchema), createAdvertiser);
 router.get('/', generalRateLimiter, getAllAdvertisers);
