@@ -1,6 +1,8 @@
 /**
  * Type definitions for pagarme module
+ * @see https://docs.pagarme.com
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module 'pagarme' {
   interface PagarmeClient {
     transactions: {

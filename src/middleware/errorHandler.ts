@@ -1,21 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 
 export const errorHandler = (
-  error: any,
+  error: unknown,
   req: Request,
   res: Response,
   _next: NextFunction
 ) => {
+  const err = error as { code?: string; name?: string; message?: string; statusCode?: number; stack?: string };
   console.error('Error:', error);
 
-  if (error.code === 'P2002') {
+  if (err.code === 'P2002') {
     return res.status(409).json({
       success: false,
       message: 'Dados duplicados. Este registro já existe.',
     });
   }
 
-  if (error.code === 'P2025') {
+  if (err.code === 'P2025') {
     return res.status(404).json({
       success: false,
       message: 'Registro não encontrado.',
@@ -23,45 +24,45 @@ export const errorHandler = (
   }
 
   // Handle Prisma errors for missing tables/models
-  if (error.code === 'P2001' || 
-      error.message?.includes('does not exist') || 
-      error.message?.includes('Unknown table') ||
-      error.message?.includes('relation') && error.message?.includes('does not exist')) {
+  if (err.code === 'P2001' || 
+      err.message?.includes('does not exist') || 
+      err.message?.includes('Unknown table') ||
+      err.message?.includes('relation') && err.message?.includes('does not exist')) {
     return res.status(503).json({
       success: false,
       message: 'Database tables not initialized. Please run Prisma migrations.',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
   }
 
-  if (error.name === 'ValidationError') {
+  if (err.name === 'ValidationError') {
     return res.status(400).json({
       success: false,
       message: 'Dados inválidos',
-      error: error.message,
+      error: err.message,
     });
   }
 
-  if (error.name === 'JsonWebTokenError') {
+  if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
       message: 'Token inválido',
     });
   }
 
-  if (error.name === 'TokenExpiredError') {
+  if (err.name === 'TokenExpiredError') {
     return res.status(401).json({
       success: false,
       message: 'Token expirado',
     });
   }
 
-  const statusCode = error.statusCode || 500;
-  const message = error.message || 'Erro interno do servidor';
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Erro interno do servidor';
 
   return res.status(statusCode).json({
     success: false,
     message,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };

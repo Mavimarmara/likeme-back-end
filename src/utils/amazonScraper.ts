@@ -166,8 +166,9 @@ export const extractAmazonProductData = async (url: string) => {
       url,
       availability: 'Available', // Por padrão, assumimos disponível se a página carregou
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     console.error('Error extracting Amazon product data:', error);
-    throw new Error(`Failed to extract product data: ${error.message}`);
+    throw new Error(`Failed to extract product data: ${err.message}`);
   }
 };

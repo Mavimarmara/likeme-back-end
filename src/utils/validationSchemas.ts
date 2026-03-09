@@ -38,7 +38,7 @@ export const saveShippingAddressSchema = Joi.object({
   neighborhood: Joi.string().min(2).max(100).required(),
   city: Joi.string().min(2).max(100).required(),
   state: Joi.string().min(2).max(2).required(),
-  zipCode: Joi.string().pattern(/^[\d\-]+$/).min(8).max(10).required(),
+  zipCode: Joi.string().pattern(/^[\d-]+$/).min(8).max(10).required(),
   phone: Joi.string().min(10).max(20).required(),
 });
 

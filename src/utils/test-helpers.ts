@@ -2,6 +2,10 @@
  * Helper para verificar se os testes estão usando um banco de dados de teste
  * Previne que testes deletem dados de desenvolvimento/produção
  */
+import { randomUUID } from 'crypto';
+import jwt from 'jsonwebtoken';
+import type { PrismaClient } from '@prisma/client';
+
 export function isTestDatabase(): boolean {
   const dbUrl = process.env.DATABASE_URL || '';
   return (
@@ -28,14 +32,13 @@ export function isTestId(id: string): boolean {
  * Gera um ID de teste com o sufixo -system-test
  */
 export function generateTestId(): string {
-  const { randomUUID } = require('crypto');
   return `${randomUUID()}${TEST_ID_PREFIX}`;
 }
 
 /**
  * Helper para criar um token de teste com IDs seguros
  */
-export async function createTestToken(prisma: any, tracker: TestDataTracker): Promise<string> {
+export async function createTestToken(prisma: PrismaClient, tracker: TestDataTracker): Promise<string> {
   const personId = generateTestId();
   const person = await prisma.person.create({
     data: {
@@ -58,7 +61,6 @@ export async function createTestToken(prisma: any, tracker: TestDataTracker): Pr
   });
   tracker.add('user', user.id);
 
-  const jwt = require('jsonwebtoken');
   return jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
 }
 
@@ -127,7 +129,7 @@ export class TestDataTracker {
  */
 export async function safeTestCleanup(
   tracker: TestDataTracker,
-  prisma: any,
+  prisma: PrismaClient,
   testIdPrefix: string = TEST_ID_PREFIX
 ): Promise<void> {
   try {
@@ -195,9 +197,10 @@ export async function safeTestCleanup(
         await prisma.product.deleteMany({
             where: { id: { in: testProductIds } },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { code?: string };
         // Se falhar por foreign key, tentar soft delete
-        if (error.code === 'P2003') {
+        if (err.code === 'P2003') {
           await prisma.product.updateMany({
               where: { id: { in: testProductIds } },
             data: { deletedAt: new Date() },
