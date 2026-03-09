@@ -67,7 +67,7 @@ import type { CreateUserAnswerData } from '@/interfaces/anamnesis';
  *         schema:
  *           type: string
  *           example: mind_
- *         description: Prefixo opcional para filtrar perguntas por key (ex: mind_, body_, habits_)
+ *         description: "Prefixo opcional para filtrar perguntas por key (ex: mind_, body_, habits_)"
  *     responses:
  *       200:
  *         description: Lista de perguntas com textos e opções traduzidas

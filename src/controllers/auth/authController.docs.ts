@@ -105,7 +105,7 @@
  * /api/auth/login:
  *   post:
  *     summary: Login com Auth0
- *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. O idToken pode ser enviado no body ou no header Authorization (Bearer token).
+ *     description: "Valida o idToken do Auth0 e retorna token de sessão do backend. O idToken pode ser enviado no body ou no header Authorization (Bearer token)."
  *     tags: [Auth]
  *     x-code-samples:
  *       - lang: curl
@@ -174,7 +174,7 @@
  * /api/auth/auth-url:
  *   get:
  *     summary: Obter URL de autorização do Auth0 (Authorization Code Flow)
- *     description: Retorna a URL para redirecionar o usuário ao Auth0 para fazer login usando o Authorization Code Flow. Este é o método recomendado e mais seguro para produção. Após o login, o usuário será redirecionado para /api/auth/callback com um código que pode ser trocado por tokens.
+ *     description: "Retorna a URL para redirecionar o usuário ao Auth0 para fazer login usando o Authorization Code Flow. Este é o método recomendado e mais seguro para produção. Após o login, o usuário será redirecionado para /api/auth/callback com um código que pode ser trocado por tokens."
  *     tags: [Auth]
  *     parameters:
  *       - in: query
@@ -218,7 +218,7 @@
  * /api/auth/callback:
  *   get:
  *     summary: Callback do Auth0 (Authorization Code Flow)
- *     description: Endpoint de callback que recebe o código de autorização do Auth0 após o login. Este endpoint troca o código por tokens e retorna uma página HTML com o idToken para copiar e usar no Swagger.
+ *     description: "Endpoint de callback que recebe o código de autorização do Auth0 após o login. Este endpoint troca o código por tokens e retorna uma página HTML com o idToken para copiar e usar no Swagger."
  *     tags: [Auth]
  *     parameters:
  *       - in: query
@@ -255,7 +255,7 @@
  * /api/auth/exchange-code:
  *   post:
  *     summary: Trocar código de autorização por tokens (Authorization Code Flow)
- *     description: Troca o código de autorização retornado pelo Auth0 por tokens (idToken, accessToken). Use este endpoint se preferir receber os tokens via JSON ao invés da página HTML do callback.
+ *     description: "Troca o código de autorização retornado pelo Auth0 por tokens (idToken, accessToken). Use este endpoint se preferir receber os tokens via JSON ao invés da página HTML do callback."
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -309,7 +309,7 @@
  * /api/auth/verify:
  *   post:
  *     summary: Verificar idToken do Auth0 e obter token de sessão
- *     description: Valida o idToken do Auth0 e retorna token de sessão do backend. Diferente do login, este endpoint não cria usuário automaticamente - o usuário deve estar previamente cadastrado. O idToken pode ser enviado no body ou no header Authorization (Bearer token).
+ *     description: "Valida o idToken do Auth0 e retorna token de sessão do backend. Diferente do login, este endpoint não cria usuário automaticamente - o usuário deve estar previamente cadastrado. O idToken pode ser enviado no body ou no header Authorization (Bearer token)."
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -436,7 +436,7 @@
  * /api/auth/token:
  *   get:
  *     summary: Obter token JWT atual do usuário autenticado
- *     description: Retorna o token JWT do backend para o usuário autenticado. Útil para copiar e usar no Swagger Authorize sem precisar fazer login novamente. O token retornado pode ser usado no header Authorization: Bearer <token>.
+ *     description: "Retorna o token JWT do backend para o usuário autenticado. Útil para copiar e usar no Swagger Authorize sem precisar fazer login novamente. O token retornado pode ser usado no header Authorization: Bearer <token>."
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -508,7 +508,7 @@
  * /api/auth/token:
  *   get:
  *     summary: Obter token JWT atual do usuário autenticado
- *     description: Retorna o token JWT do backend para o usuário autenticado. Útil para copiar e usar no Swagger Authorize sem precisar fazer login novamente. O token retornado pode ser usado no header Authorization: Bearer <token>.
+ *     description: "Retorna o token JWT do backend para o usuário autenticado. Útil para copiar e usar no Swagger Authorize sem precisar fazer login novamente. O token retornado pode ser usado no header Authorization: Bearer <token>."
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
