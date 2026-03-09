@@ -25,6 +25,10 @@ model Person {
   lastName             String    @map("last_name")
   surname              String?
   birthdate            DateTime?
+  gender               String?
+  weight               String?   // kg, enviado como string pelo front
+  height               String?   // cm ou m, enviado como string pelo front
+  insurance            String?   // plano de saúde
 
   // Relations (inverse - apenas para validação Prisma, usar tabelas de relacionamento próprias)
   contacts PersonContact[] @relation("PersonContacts")
