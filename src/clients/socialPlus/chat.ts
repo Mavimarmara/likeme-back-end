@@ -23,16 +23,35 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
 
     /**
      * Cria um canal de conversa 1:1 com o usuário informado.
-     * Retorna o channelId no data. Se já existir conversa com o mesmo membro, a API pode retornar a existente.
+     * Parâmetros conforme doc Amity: userId (obrigatório), displayName, avatarFileId, metaData, tags.
+     * O channelId é sempre gerado pelo SDK. Se já existir conversa com o mesmo membro, a API retorna a existente.
      */
     async createConversationChannel(
       targetUserIds: string[],
-      userAccessToken: string
+      userAccessToken: string,
+      options?: {
+        displayName?: string;
+        avatarFileId?: string;
+        metaData?: Record<string, unknown>;
+        tags?: string[];
+      }
     ): Promise<SocialPlusResponse<{ channelId?: string }>> {
       if (!this.apiKey) {
         return { success: false, error: 'Social.plus API key não configurado.' };
       }
-      const body = { type: 'conversation', userIds: targetUserIds };
+      const targetUserId = targetUserIds?.[0];
+      if (!targetUserId) {
+        return { success: false, error: 'Pelo menos um userId é obrigatório para criar conversa.' };
+      }
+      const body: Record<string, unknown> = {
+        type: 'conversation',
+        userId: targetUserId,
+        displayName: options?.displayName ?? 'Conversation',
+      };
+      if (options?.avatarFileId) body.avatarFileId = options.avatarFileId;
+      if (options?.metaData && Object.keys(options.metaData).length > 0) body.metaData = options.metaData;
+      if (options?.tags?.length) body.tags = options.tags;
+
       const res = await this.makeRequest<{ channelId?: string }>(
         'POST',
         '/v3/channels',
