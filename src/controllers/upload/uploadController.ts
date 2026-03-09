@@ -4,14 +4,14 @@ import { config } from '@/config';
 import { AuthenticatedRequest } from '@/types';
 import { sendSuccess, sendError } from '@/utils/response';
 
-// Cliente Supabase só para Storage de imagens (usa SUPABASE_IMAGES_BUCKET_*; não usa SUPABASE_API_KEY do banco)
-const hasImagesBucketConfig =
+// Cliente Supabase para Storage de imagens (usa SUPABASE_API_KEY padrão do projeto)
+const hasSupabaseConfig =
   !!config.supabase.projectUrl &&
-  !!config.imagesBucket.apiKey;
+  !!config.supabase.apiKey;
 
 const supabaseStorage =
-  hasImagesBucketConfig
-    ? createClient(config.supabase.projectUrl, config.imagesBucket.apiKey)
+  hasSupabaseConfig
+    ? createClient(config.supabase.projectUrl, config.supabase.apiKey)
     : null;
 
 export const uploadProviderImage = async (
@@ -19,7 +19,7 @@ export const uploadProviderImage = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!hasImagesBucketConfig || !supabaseStorage) {
+    if (!hasSupabaseConfig || !supabaseStorage) {
       sendError(res, 'Supabase Storage (imagens) is not configured', 500);
       return;
     }

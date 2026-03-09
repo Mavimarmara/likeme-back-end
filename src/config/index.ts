@@ -41,7 +41,6 @@ export const config = {
   },
   imagesBucket: {
     name: process.env.SUPABASE_IMAGES_BUCKET_NAME || 'images',
-    apiKey: process.env.SUPABASE_IMAGES_BUCKET_API_KEY || '',
   },
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
