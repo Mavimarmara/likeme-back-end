@@ -39,6 +39,10 @@ export const config = {
     projectUrl: process.env.SUPABASE_PROJECT_URL || '',
     apiKey: process.env.SUPABASE_API_KEY || '',
   },
+  imagesBucket: {
+    name: process.env.SUPABASE_IMAGES_BUCKET_NAME || 'images',
+    apiKey: process.env.SUPABASE_IMAGES_BUCKET_API_KEY || '',
+  },
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   email: {
@@ -46,11 +50,6 @@ export const config = {
     port: parseInt(process.env.EMAIL_PORT || '587'),
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
-  },
-  cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
-    apiKey: process.env.CLOUDINARY_API_KEY || '',
-    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),

@@ -47,7 +47,6 @@ graph TB
             AUTH0["Auth0"]
             SOCIAL_PLUS["Social.plus"]
             AMAZON["Amazon"]
-            CLOUDINARY["Cloudinary"]
         end
         
         subgraph Database["💾 Database"]
