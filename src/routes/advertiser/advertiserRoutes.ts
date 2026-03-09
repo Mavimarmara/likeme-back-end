@@ -11,6 +11,7 @@ import {
   importAdvertiserProfilesFromCSV,
   downloadAdvertiserProfileTemplate,
 } from '@/controllers/advertiser/advertiserProfileImportController';
+import { getAdvertiserProfilesByAdvertiserId } from '@/controllers/advertiser/advertiserProfileController';
 import {
   createAdvertiserSchema,
   updateAdvertiserSchema,
@@ -38,6 +39,13 @@ router.get(
   '/profiles/import/template',
   generalRateLimiter,
   downloadAdvertiserProfileTemplate
+);
+
+router.get(
+  '/:id/profiles',
+  generalRateLimiter,
+  validateParams(idParamSchema),
+  getAdvertiserProfilesByAdvertiserId
 );
 
 router.post('/', generalRateLimiter, validate(createAdvertiserSchema), createAdvertiser);
