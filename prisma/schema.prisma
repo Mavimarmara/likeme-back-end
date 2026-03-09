@@ -370,11 +370,49 @@ model Advertiser {
   user             User              @relation("UserAdvertiser", fields: [userId], references: [id], onDelete: Cascade)
   pagarmeRecipient PagarmeRecipient? @relation("AdvertiserPagarmeRecipient", fields: [pagarmeRecipientId], references: [recipientId])
   ads              Ad[]              @relation("AdvertiserAds")
+  profiles         AdvertiserProfile[] @relation("AdvertiserProfiles")
 
   @@index([userId])
   @@index([status])
   @@index([pagarmeRecipientId])
   @@map("advertiser")
+}
+
+model AdvertiserProfile {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  advertiserId String @map("advertiser_id")
+
+  // Identificador lógico do item (ex: headline, bio, story, timeline, differentiators, score.autoestima)
+  key String
+
+  // Locale (ex: "pt-BR", "en-US")
+  locale String @default("pt-BR")
+
+  // Título da seção (para accordion). Pode ser null em seções como headline.
+  title String?
+
+  // Valor (texto/markdown ou número como string, ex: "80")
+  value String
+
+  // Ordem de exibição
+  sortOrder Int @default(0) @map("sort_order")
+
+  // Controle de visibilidade (ex.: esconder seção sem deletar)
+  isVisible Boolean @default(true) @map("is_visible")
+
+  // Relations
+  advertiser Advertiser @relation("AdvertiserProfiles", fields: [advertiserId], references: [id], onDelete: Cascade)
+
+  @@unique([advertiserId, key, locale])
+  @@index([advertiserId])
+  @@index([key])
+  @@index([locale])
+  @@index([sortOrder])
+  @@index([isVisible])
+  @@map("advertiser_profile")
 }
 
 model Ad {
