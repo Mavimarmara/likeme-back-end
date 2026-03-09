@@ -23,7 +23,10 @@ class ChatService {
   ): Promise<AmityChannelsResponse> {
     const userAccessToken = await this.getUserToken(userId);
 
-    const response = await socialPlusClient.getChannels(userAccessToken);
+    const response = await socialPlusClient.getChannels(userAccessToken, {
+      filter: 'member',
+      types,
+    });
 
     if (!response.success || !response.data) {
       throw new Error(response.error || 'Erro ao buscar channels da API');

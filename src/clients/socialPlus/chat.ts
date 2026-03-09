@@ -2,11 +2,23 @@ import { SocialPlusBase, SocialPlusResponse, Constructor } from './base';
 
 export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
   return class extends Base {
-    async getChannels(userAccessToken?: string): Promise<SocialPlusResponse<unknown>> {
+    async getChannels(
+      userAccessToken?: string,
+      options?: { types?: string[]; filter?: 'member' | 'notMember' | 'all' }
+    ): Promise<SocialPlusResponse<unknown>> {
       if (!this.apiKey) {
         return { success: false, error: 'Social.plus API key não configurado. Configure SOCIAL_PLUS_API_KEY nas variáveis de ambiente.' };
       }
-      return this.requestWithFallback<unknown>('GET', '/v3/channels', userAccessToken);
+      const params = new URLSearchParams();
+      if (options?.filter && options.filter !== 'all') {
+        params.set('filter', options.filter);
+      }
+      if (options?.types?.length) {
+        params.set('types', options.types.join(','));
+      }
+      const query = params.toString();
+      const endpoint = query ? `/v3/channels?${query}` : '/v3/channels';
+      return this.requestWithFallback<unknown>('GET', endpoint, userAccessToken);
     }
 
     /**
