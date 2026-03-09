@@ -23,8 +23,9 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
 
     /**
      * Cria um canal de conversa 1:1 com o usuário informado.
-     * Parâmetros conforme doc Amity: userId (obrigatório), displayName, avatarFileId, metaData, tags.
-     * O channelId é sempre gerado pelo SDK. Se já existir conversa com o mesmo membro, a API retorna a existente.
+     * Usa o endpoint dedicado POST /v3/channels/conversation (não POST /v3/channels com type).
+     * Body: userIds (array obrigatório), displayName, avatarFileId, metadata, tags, isDistinct.
+     * Se já existir conversa com o mesmo membro, a API retorna a existente.
      */
     async createConversationChannel(
       targetUserIds: string[],
@@ -39,26 +40,32 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
       if (!this.apiKey) {
         return { success: false, error: 'Social.plus API key não configurado.' };
       }
-      const targetUserId = targetUserIds?.[0];
-      if (!targetUserId) {
+      if (!targetUserIds?.length || !targetUserIds[0]) {
         return { success: false, error: 'Pelo menos um userId é obrigatório para criar conversa.' };
       }
       const body: Record<string, unknown> = {
-        type: 'Conversation', // Valores permitidos pela API: "Community" | "Live" | "Conversation" (capitalizado)
-        userId: targetUserId,
+        userIds: targetUserIds.slice(0, 10),
+        isDistinct: true,
         displayName: options?.displayName ?? 'Conversation',
       };
       if (options?.avatarFileId) body.avatarFileId = options.avatarFileId;
-      if (options?.metaData && Object.keys(options.metaData).length > 0) body.metaData = options.metaData;
-      if (options?.tags?.length) body.tags = options.tags;
+      if (options?.metaData && Object.keys(options.metaData).length > 0) body.metadata = options.metaData;
+      if (options?.tags?.length) body.tags = options.tags.slice(0, 10);
 
-      const res = await this.makeRequest<{ channelId?: string }>(
+      const res = await this.makeRequest<{ channels?: Array<{ channelId?: string }> }>(
         'POST',
-        '/v3/channels',
+        '/v3/channels/conversation',
         body,
         { useApiKey: true, bearerToken: userAccessToken }
       );
-      return res;
+      if (!res.success || !res.data) return { success: res.success, error: res.error };
+
+      const channels = res.data.channels;
+      const channelId = Array.isArray(channels) && channels[0] ? channels[0].channelId : undefined;
+      if (!channelId) {
+        return { success: false, error: 'Resposta da API sem channelId.' };
+      }
+      return { success: true, data: { channelId } };
     }
 
     async getMessages(
