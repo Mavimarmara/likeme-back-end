@@ -15,7 +15,8 @@ jest.mock('@/config/database', () => ({
   },
 }));
 
-jest.mock('@/clients/socialPlus/socialPlusClient', () => ({
+jest.mock('@/clients/socialPlus', () => ({
+  ...(jest.requireActual('@/clients/socialPlus') as object),
   socialPlusClient: {
     createUser: jest.fn(),
   },
@@ -199,6 +200,9 @@ describe('UserService', () => {
 
     beforeEach(() => {
       jest.spyOn(service, 'createUser').mockResolvedValue({ id: socialPlusUserId });
+      (userTokenService.getToken as jest.Mock).mockResolvedValue({
+        token: 'fetched_token_for_communities',
+      });
     });
 
     it('should create user and add to communities successfully', async () => {
@@ -223,7 +227,7 @@ describe('UserService', () => {
       expect(service.createUser).toHaveBeenCalledWith(mockUserData);
       expect(communityService.addUserToAllCommunities).toHaveBeenCalledWith(
         socialPlusUserId,
-        undefined
+        'fetched_token_for_communities'
       );
     });
 

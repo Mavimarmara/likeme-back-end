@@ -204,7 +204,7 @@ describe('Auth0 Utils', () => {
             });
           }),
         };
-        (jwksClient as jest.Mock).mockReturnValue(mockClient);
+        (jwksClient as unknown as jest.Mock).mockReturnValue(mockClient);
       });
 
       it('should verify valid token structure', async () => {
@@ -284,13 +284,13 @@ describe('Auth0 Utils', () => {
             callback(new Error('Failed to retrieve signing key'), null);
           }),
         };
-        (jwksClient as jest.Mock).mockReturnValue(mockClient);
+        (jwksClient as unknown as jest.Mock).mockReturnValue(mockClient);
 
         (jwt.verify as jest.Mock).mockImplementation(
           (token, getKey, options, callback) => {
             if (typeof getKey === 'function') {
               // Simular chamada ao getKey
-              getKey({} as jwt.JwtHeader, (err, key) => {
+              getKey({} as jwt.JwtHeader, (err: Error | null, key: string | undefined) => {
                 if (callback) callback(err as any, undefined);
               });
             }
@@ -308,7 +308,7 @@ describe('Auth0 Utils', () => {
             callback(null, { getPublicKey: () => 'key' });
           }),
         };
-        (jwksClient as jest.Mock).mockReturnValue(mockClient);
+        (jwksClient as unknown as jest.Mock).mockReturnValue(mockClient);
 
         (jwt.verify as jest.Mock).mockImplementation(
           (token, key, options, callback) => {
@@ -329,7 +329,7 @@ describe('Auth0 Utils', () => {
             callback(null, { getPublicKey: () => 'key' });
           }),
         };
-        (jwksClient as jest.Mock).mockReturnValue(mockClient);
+        (jwksClient as unknown as jest.Mock).mockReturnValue(mockClient);
 
         (jwt.verify as jest.Mock).mockImplementation(
           (token, key, options, callback) => {
