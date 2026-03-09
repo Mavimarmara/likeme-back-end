@@ -44,7 +44,7 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
         return { success: false, error: 'Pelo menos um userId é obrigatório para criar conversa.' };
       }
       const body: Record<string, unknown> = {
-        type: 2, // 2 = Conversation (Amity: 0=Community, 1=Live, 2=Conversation, 3=Broadcast)
+        type: 'Conversation', // Valores permitidos pela API: "Community" | "Live" | "Conversation" (capitalizado)
         userId: targetUserId,
         displayName: options?.displayName ?? 'Conversation',
       };
