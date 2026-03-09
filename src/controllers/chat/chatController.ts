@@ -175,3 +175,30 @@ export const getBlockedUsers = async (req: AuthenticatedRequest, res: Response):
     handleError(res, error, 'obter usuários bloqueados');
   }
 };
+
+export const createChannel = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { advertiserId, initialMessage } = req.body;
+
+    if (!advertiserId || typeof advertiserId !== 'string' || advertiserId.trim().length === 0) {
+      sendError(res, 'advertiserId é obrigatório', 400);
+      return;
+    }
+
+    const result = await chatService.createChannel(
+      userId,
+      advertiserId.trim(),
+      typeof initialMessage === 'string' ? initialMessage : undefined
+    );
+
+    if (!result.success) {
+      sendError(res, result.error || 'Erro ao criar canal', 400);
+      return;
+    }
+
+    sendSuccess(res, { channelId: result.channelId }, 'Canal criado com sucesso');
+  } catch (error) {
+    handleError(res, error, 'criar canal');
+  }
+};

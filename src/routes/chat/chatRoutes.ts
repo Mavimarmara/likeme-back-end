@@ -7,6 +7,7 @@ import {
   blockUser,
   unblockUser,
   getBlockedUsers,
+  createChannel,
 } from '@/controllers/chat/chatController';
 import { authenticateToken } from '@/middleware/auth';
 
@@ -15,6 +16,7 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/channels', getChannels);
+router.post('/channels', createChannel);
 router.get('/channels/:channelId/messages', getChannelMessages);
 router.post('/channels/:channelId/messages', sendMessage);
 router.delete('/channels/:channelId/leave', leaveChannel);

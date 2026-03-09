@@ -335,7 +335,7 @@ describe('Authentication Middleware', () => {
         );
         
         // Mock Auth0 verification to also fail
-        (verifyAuth0Token as jest.Mock).mockRejectedValue(new Error('Invalid token'));
+        (auth0Utils.verifyAuth0Token as jest.Mock).mockRejectedValue(new Error('Invalid token'));
 
         await authenticateToken(req as AuthenticatedRequest, res as Response, next);
 
@@ -372,6 +372,7 @@ describe('Authentication Middleware', () => {
         avatar: null,
         isActive: true,
         socialPlusUserId: 'sp123',
+        privacyPolicyAcceptedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,

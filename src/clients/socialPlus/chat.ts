@@ -9,6 +9,27 @@ export function ChatMixin<T extends Constructor<SocialPlusBase>>(Base: T) {
       return this.requestWithFallback<unknown>('GET', '/v3/channels', userAccessToken);
     }
 
+    /**
+     * Cria um canal de conversa 1:1 com o usuário informado.
+     * Retorna o channelId no data. Se já existir conversa com o mesmo membro, a API pode retornar a existente.
+     */
+    async createConversationChannel(
+      targetUserIds: string[],
+      userAccessToken: string
+    ): Promise<SocialPlusResponse<{ channelId?: string }>> {
+      if (!this.apiKey) {
+        return { success: false, error: 'Social.plus API key não configurado.' };
+      }
+      const body = { type: 'conversation', userIds: targetUserIds };
+      const res = await this.makeRequest<{ channelId?: string }>(
+        'POST',
+        '/v3/channels',
+        body,
+        { useApiKey: true, bearerToken: userAccessToken }
+      );
+      return res;
+    }
+
     async getMessages(
       channelId: string,
       userAccessToken: string,

@@ -133,6 +133,60 @@ class ChatService {
     return socialPlusClient.leaveChannel(channelId, token);
   }
 
+  /**
+   * Cria um canal de conversa com o parceiro (advertiser) e opcionalmente envia a primeira mensagem.
+   * Usa o user_id da tabela advertiser para identificar o User do parceiro e seu socialPlusUserId.
+   * Retorna o channelId para o frontend navegar para a tela de chat.
+   */
+  async createChannel(
+    userId: string | undefined,
+    advertiserId: string,
+    initialMessage?: string
+  ): Promise<{ success: boolean; channelId?: string; error?: string }> {
+    if (!userId) throw new Error('Usuário não autenticado.');
+    const token = await this.getUserToken(userId);
+
+    const advertiser = await prisma.advertiser.findUnique({
+      where: { id: advertiserId, deletedAt: null },
+      select: { userId: true },
+    });
+    if (!advertiser?.userId) {
+      return { success: false, error: 'Parceiro não encontrado.' };
+    }
+
+    const partnerUser = await prisma.user.findUnique({
+      where: { id: advertiser.userId },
+      select: { socialPlusUserId: true },
+    });
+    if (!partnerUser?.socialPlusUserId) {
+      return { success: false, error: 'Parceiro sem conta de chat configurada.' };
+    }
+
+    const targetSocialPlusUserId = partnerUser.socialPlusUserId;
+    const createRes = await socialPlusClient.createConversationChannel([targetSocialPlusUserId], token);
+    if (!createRes.success || !createRes.data) {
+      return { success: false, error: createRes.error || 'Erro ao criar conversa.' };
+    }
+
+    const data = createRes.data as Record<string, unknown>;
+    const channelId =
+      (data.channelId as string) ||
+      (data.channel as { channelId?: string })?.channelId ||
+      (Array.isArray(data.channels) && (data.channels[0] as { channelId?: string })?.channelId);
+    if (!channelId) {
+      return { success: false, error: 'Resposta da API sem channelId.' };
+    }
+
+    if (initialMessage && initialMessage.trim()) {
+      const sendRes = await socialPlusClient.sendMessage(channelId, initialMessage.trim(), token);
+      if (!sendRes.success) {
+        console.warn('[createChannel] Channel created but failed to send initial message:', sendRes.error);
+      }
+    }
+
+    return { success: true, channelId };
+  }
+
   async blockUser(
     userId: string | undefined,
     targetUserId: string

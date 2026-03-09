@@ -12,7 +12,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:integration": "NODE_ENV=development jest -- recipientController.integration.test.ts",
+    "test:integration": "jest --config jest.integration.config.js",
     "test:validate-cleanup": "bash scripts/validate-test-cleanup.sh",
     "test:count-data": "ts-node -r tsconfig-paths/register scripts/count-test-data.ts",
     "lint": "eslint src/**/*.ts",
