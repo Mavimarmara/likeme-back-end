@@ -94,6 +94,9 @@ export const createPersonSchema = Joi.object({
   surname: Joi.string().min(2).max(100).optional(),
   nationalRegistration: Joi.string().max(50).optional(),
   birthdate: Joi.date().max('now').optional(),
+  gender: Joi.string().max(50).optional().allow('', null),
+  weight: Joi.string().max(20).optional().allow('', null),
+  height: Joi.string().max(20).optional().allow('', null),
 });
 
 export const updatePersonSchema = Joi.object({
@@ -102,6 +105,9 @@ export const updatePersonSchema = Joi.object({
   surname: Joi.string().min(2).max(100).optional(),
   nationalRegistration: Joi.string().max(50).optional(),
   birthdate: Joi.date().max('now').optional(),
+  gender: Joi.string().max(50).optional().allow('', null),
+  weight: Joi.string().max(20).optional().allow('', null),
+  height: Joi.string().max(20).optional().allow('', null),
 });
 
 export const createPersonContactSchema = Joi.object({
